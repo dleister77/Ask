@@ -3,14 +3,6 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
-class City(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    city = db.Column(db.String(64), nullable=False, index=True)
-    addresses = db.relationship("Address", back_populates="city",  lazy=True)
-
-    def _repr__(self):
-        return f"<City {self.city}>"
-
 class State(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     state = db.Column(db.String(64), nullable=False, index=True)
@@ -20,20 +12,14 @@ class State(db.Model):
     def _repr__(self):
         return f"<State {self.state}>"
 
-class Zip(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    zip = db.Column(db.String(20), index=True, unique=True)
-    addresses = db.relationship("Address", back_populates="zip", lazy=True)
 
 class Address(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     line1 = db.Column(db.String(128))
     line2 = db.Column(db.String(128))
-    zip_id = db.Column(db.Integer, db.ForeignKey("zip.id"))
-    city_id = db.Column(db.Integer, db.ForeignKey("city.id"))
+    zip = db.Column(db.String(20), index=True)
+    city = db.Column(db.String(64), index=True)
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"))
-    zip = db.relationship("Zip", back_populates="addresses", lazy=True)
-    city = db.relationship("City", back_populates="addresses", lazy=True)
     state = db.relationship("State", back_populates="addresses", lazy=True)
 
     def __repr__(self):
@@ -65,3 +51,26 @@ class User(UserMixin, db.Model):
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
+
+#many to many table linking providers to multiple categories
+category_provider_table = Table('association', db.Model.metadata,
+    Column('category_id', Integer, ForeignKey('category.id')), 
+    Column('provider_id', Integer, ForeignKey('provider.id')))
+
+class Category(db.Model):
+    """List service categories."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True, unique=True)
+    providers = db.relationship("provider", secondary=category_provider_table, 
+                              backref="categories")
+
+class Provider(db.Model):
+    """Create service provider record."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True, unique=True)
+    email = db.Column(db.String(120), index=True, unique=True)
+    telephone = db.Column(db.String(24), unique=True)
+    category_id = db.Column(db.Integer, db.ForeignKey("category.id"))
+    address_id = db.Column(db.Integer, db.ForeignKey("address.id"))
+
+    address = db.relationship("Address", backref="provider", lazy=True)
