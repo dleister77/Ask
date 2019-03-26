@@ -1,8 +1,8 @@
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
-from app.forms import LoginForm, RegistrationForm, state_list
-from app.models import User, Address, Zip, City, State
+from app.forms import LoginForm, RegistrationForm
+from app.models import User, Address, State
 from werkzeug.urls import url_parse
 
 @app.route('/')
@@ -39,17 +39,17 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
     form = RegistrationForm()
-    print("reached this point")
     if form.validate_on_submit():
-        print("form validated, need to submit")
+        state_id = (State.query.filter(State.name == form.address.state.data)
+                    .first().id)
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
-                          city=City(city=form.address.city.data), 
-                          state=State(state=form.address.state.data), 
-                          zip=Zip(zip=form.address.zip.data))
+                          city=form.address.city.data, 
+                          state_id=state_id, 
+                          zip=form.address.zip.data)
         user = User(first_name=form.first_name.data, 
                     last_name=form.last_name.data, email=form.email.data, 
-                    address=address)
+                    username=form.username.data, address=address)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
