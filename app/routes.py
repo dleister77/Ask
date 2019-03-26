@@ -1,7 +1,7 @@
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
-from app.forms import LoginForm, RegistrationForm
+from app.forms import LoginForm, RegistrationForm, ReviewForm, AddProviderForm
 from app.models import User, Address, State
 from werkzeug.urls import url_parse
 
@@ -9,7 +9,7 @@ from werkzeug.urls import url_parse
 @app.route('/index')
 @login_required
 def index():
-    user = {'name': "Doug"}
+    user = current_user
     return render_template("index.html", user=user, title="home")
 
 @app.route("/login", methods=["GET", "POST"])
@@ -56,4 +56,10 @@ def register():
         flash("Congratulations! You've successfully registered.")
         return redirect(url_for('login'))
     return render_template("register.html", title='Register', form=form)
-        
+
+@app.route('/review', methods=["GET", "POST"])
+def review():
+    form = ReviewForm(request.form)
+    modalform=AddProviderForm(request.form)
+    return render_template("review.html", title="Review",form=form, 
+                           modalform=modalform)

@@ -1,0 +1,39 @@
+
+<!--Macro to render row-->
+{% macro field_render(field, labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block-submit", fileClass="form-control-file") %}
+    <div class="form-group row">
+        <div class="col">
+            {% if field.type == "FormField" %}
+                {{form_render(field)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class=buttonClass)}}
+            {% elif field.type == "RadioField" %}
+                <legend class="col-form-label">{{field.name.capitalize()}}</legend>
+                {% for subfield in field %}
+                    <div class="form-check">
+                        {{subfield(class_="form-check-input")}}
+                        {{subfield.label(class_="form-check-label")}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" %}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fileClass)}}
+            {%else%}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fieldClass)}}
+            {% endif %}
+            {% for error in field.errors %}
+                <span style="color:red;">[{{error}}]</span>
+            {% endfor %}
+        </div>
+    </div>
+{% endmacro %}
+
+<!--render form -->
+{% macro form_render(form) %}
+    {{form.hidden_tag()}}
+    {% for field in form if field.widget.input_type != "hidden" %}
+        {{field_render(field)}}
+    {% endfor %}
+{% endmacro %}

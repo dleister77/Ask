@@ -63,30 +63,30 @@ class RegistrationForm(FlaskForm):
 class ReviewForm(FlaskForm):
     """Form to submit review."""
     category = SelectField("Service Category", choices=category_list(), 
-                           validators=DataRequired())
-    provider = SelectField("Provider Name", choices=[], 
-                           validators=DataRequired())
+                           validators=[DataRequired()])
+    provider = SelectField("Provider Name", choices=[],
+                           validators=[DataRequired()])
     rating = RadioField("Rating", choices=[
                         (5, "***** (Highest quality work)"),
                         (4, "**** (Above Average)"), 
                         (3, "*** (Satisfied - should be default choice"),
                         (2, "** (Below Average)"),
-                        (1, "* (Stay away from!")], 
-                        validators=DataRequired())
-    description = StringField("Service Description", validators=Optional())
+                        (1, "* (Stay away from!)")],
+                        validators=[DataRequired()] 
+                        )
+    description = StringField("Service Description")
     service_date = DateField("Service Date")
-    comments = TextAreaField("Comments", validators=Length(max=240))
+    comments = TextAreaField("Comments")
     pictures = FileField("Picture")
     submit = SubmitField("Submit")
 
 class AddProviderForm(FlaskForm):
     """Form to add new provider."""
     name = StringField("First Name", validators=[DataRequired()])
-    category = SelectMultipleField("Category", choices=category_list(), 
-                                   validators=DataRequired())
+    category = SelectMultipleField("Category", choices=category_list(), validators=[DataRequired()])
     address = FormField(AddressField)
-    telephone = StringField("Telephone", validators=[DataRequired(), 
+    telephone = StringField("Telephone", validators=[DataRequired(),
                 Regexp("[(]?[0-9]{3}[)-]{0,2}[0-9]{3}[-]?[0-9]{4}")])
-    email = StringField("email", validators=[Email(), Optional()])
+    email = StringField("Email", validators=[Email()])
     submit = SubmitField("Submit")
    
