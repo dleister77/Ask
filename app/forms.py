@@ -1,11 +1,18 @@
+from app import db
 from flask import request
+from flask_login import current_user
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
+from magic import from_file, from_buffer
+import os
 from wtforms import (StringField, PasswordField, BooleanField, SelectField,
-     SubmitField, FormField, FieldList, DateField, FileField, TextAreaField,
-     RadioField, SelectMultipleField)
+     SubmitField, FormField, FieldList, TextAreaField,
+     RadioField, SelectMultipleField, MultipleFileField, HiddenField)
 from wtforms.validators import (DataRequired, Email, EqualTo, Length,
- ValidationError, Optional, Regexp)
-from app.models import State, User, Provider, Review, Category
+ ValidationError, Optional, Regexp, InputRequired, StopValidation)
+from wtforms.ext.dateutil.fields import DateField
+from app.models import State, User, Provider, Review, Category, Group
+from werkzeug import FileStorage
 
 def state_list():
     """Query db to populate state list on forms."""
@@ -13,7 +20,67 @@ def state_list():
 
 def category_list():
     """Query db to populate state list on forms."""
-    return [(c.name, c.name) for c in Category.query.order_by("name")]
+    return [(c.id, c.name) for c in Category.query.order_by("name")]
+
+def Picture_Upload_Check(form, field):
+    """Verify that picture is image type and less than 7.5mb.
+       Stop validation if no file submitted."""
+    allowed = ['jpeg', 'png', 'gif', 'bmp', 'tiff']
+    if not field.data[0]:
+        field.errors[:] = []
+        raise StopValidation
+    for file in field.data:
+        file_type = from_buffer(file.read(), mime=True).split('/')[1]
+        size = file.tell()
+        if file_type not in allowed:
+            raise ValidationError("Please choose an image file.")
+        if size > 7500000:
+            raise ValidationError("Please reduce file size to less than 7.5mb.")
+
+def unique_check(modelClass, columnName):
+    """validate that no other entity in class registered for field.
+    inputs:
+        modelClass: db model class to query
+        columnName: db column in modelclass.columname format
+    """
+    
+    def _unique_check(form, field):
+        key = {"email": "Email address",
+               "telephone": "Telephone number",
+               "name":"Name"}
+        message = f"{key[field.name]} is already registered."
+        entity = modelClass.query.filter(columnName == field.data).first()
+        if entity is not None:
+            raise ValidationError(message)
+    return _unique_check
+
+
+
+def relation_check(relationshipType):
+    """validate that not already in relation with item being added.
+    Inputs:
+        relationshipType: relationship being checked on user (i.e. groups or 
+        friends)
+        """
+    message_dict = {"friends":"Already friends with this person.", 
+                    "groups":"Already a member of this group."}
+    model_dict = {"friends":User, "groups":Group}
+
+    def _relation_check(form, field):   
+        relation = (model_dict[relationshipType].query.filter_by(id=field.data)
+                                               .first())
+        relation_list = getattr(current_user, relationshipType)
+        if relation in relation_list:
+            raise ValidationError(message_dict[relationshipType])
+    return _relation_check
+
+class NonValSelectField(SelectField):
+    """Select field with validation removed to allow for client side generated 
+       choices.
+       """
+    def pre_validate(self, form):
+        pass
+
 
 class AddressField(FlaskForm):
     line1 = StringField("Street Address", validators=[DataRequired()])
@@ -39,7 +106,8 @@ class RegistrationForm(FlaskForm):
     first_name = StringField("First Name", validators=[DataRequired()])
     last_name = StringField("Last Name", validators=[DataRequired()])
     address = FormField(AddressField) 
-    email = StringField("Email Address", validators=[DataRequired(), Email()])
+    email = StringField("Email Address", validators=[DataRequired(), Email(), 
+                         unique_check(User, User.email)])
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired(), 
             Length(min=7, max=15)])
@@ -54,39 +122,72 @@ class RegistrationForm(FlaskForm):
             raise ValidationError("Username already exists, please choose a "
                                   "different name.")
 
-    def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
-        if user is not None:
-            raise ValidationError("Email address already registered. Please "
-                                  "choose a different email address.")
-
 class ReviewForm(FlaskForm):
     """Form to submit review."""
-    category = SelectField("Service Category", choices=category_list(), 
-                           validators=[DataRequired()])
-    provider = SelectField("Provider Name", choices=[],
-                           validators=[DataRequired()])
+    category = SelectField("Category", choices=category_list(), 
+                           validators=[DataRequired()], coerce=int,
+                           id="provider_category")
+    name = NonValSelectField("Provider Name", choices=[], coerce=int,
+                       validators=[InputRequired()], id="provider_name")
     rating = RadioField("Rating", choices=[
                         (5, "***** (Highest quality work)"),
                         (4, "**** (Above Average)"), 
                         (3, "*** (Satisfied - should be default choice"),
                         (2, "** (Below Average)"),
                         (1, "* (Stay away from!)")],
+                        coerce=int,
                         validators=[DataRequired()] 
                         )
     description = StringField("Service Description")
-    service_date = DateField("Service Date")
+    service_date = DateField("Service Date", validators=[Optional()])
     comments = TextAreaField("Comments")
-    pictures = FileField("Picture")
+    picture = MultipleFileField("Picture", render_kw=({"accept": 'image/*'}),
+                                validators=[Picture_Upload_Check])
     submit = SubmitField("Submit")
 
-class AddProviderForm(FlaskForm):
+    def validate_name(self, name):
+        """Verify submitted name came from db."""
+        category = Category.query.filter_by(id=self.category.data).first()
+        provider_list = (Provider.query
+                        .filter(Provider.categories.contains(category))
+                        .order_by(Provider.name).all())
+        provider_list = [provider.id for provider in provider_list]
+        if name.data not in provider_list:
+            raise ValidationError("Please choose a provider from the list.")
+
+class ProviderAddForm(FlaskForm):
     """Form to add new provider."""
-    name = StringField("First Name", validators=[DataRequired()])
-    category = SelectMultipleField("Category", choices=category_list(), validators=[DataRequired()])
+    name = StringField("Provider Name", validators=[DataRequired()])
+    category = SelectMultipleField("Category", choices=category_list(), 
+                                    validators=[DataRequired()], coerce=int,
+                                    id="modal_category")
     address = FormField(AddressField)
     telephone = StringField("Telephone", validators=[DataRequired(),
-                Regexp("[(]?[0-9]{3}[)-]{0,2}[0-9]{3}[-]?[0-9]{4}")])
-    email = StringField("Email", validators=[Email()])
-    submit = SubmitField("Submit")
-   
+                Regexp("[(]?[0-9]{3}[)-]{0,2}[0-9]{3}[-]?[0-9]{4}"), 
+                unique_check(Provider, Provider.telephone)])
+    email = StringField("Email", validators=[Email(), 
+                         unique_check(Provider, Provider.email)])
+    submit = SubmitField("Submit", id="modal_submit")
+
+class GroupSearchForm(FlaskForm):
+    """Form to search for group."""
+    name = StringField("Group Name", id="group_name", validators=[DataRequired()])
+    value = HiddenField("Group Value", id="group_value", validators=
+                        [DataRequired(), relation_check("groups")])
+    submit = SubmitField("Add Group")
+
+
+class FriendSearchForm(FlaskForm):
+    """Form to search for group."""
+    name = StringField("Friend Name", id="friend_name", validators=[DataRequired()])
+    value = HiddenField("Friend Value", id="friend_value", validators=
+                        [DataRequired(), relation_check("friends")])
+    submit = SubmitField("Add Friend")
+
+
+class GroupCreateForm(FlaskForm):
+    """Form to create new group."""
+    name = StringField("Group Name", validators=[DataRequired(),
+                       unique_check(Group, Group.name)])
+    description = TextAreaField("Description", validators=[DataRequired()])
+    submit = SubmitField("Add Group", id="submit_new_group")

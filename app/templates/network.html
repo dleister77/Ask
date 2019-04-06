@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% from "macros.html" import form_render, field_render, modal_render %}
+
+{% block title %} Add Review {% endblock %}
+
+{% block main %}
+        <main class="container pt-5">
+
+            <div id = "network">
+                <div class = "row justify-content-around">
+                    <div class = "col-5">
+                        <!-- list of groups user belongs to -->
+                        <h3>Your Groups</h3>
+                        <ul>
+                            {% for group in current_user.groups %}
+                            <li>{{ group["name"] }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class = "col-5">
+                        <h3> Your Friends</h3>
+                        <ul>
+                            {% for friend in current_user.friends %}
+                            <li>{{ friend["first_name"] + " " + friend["last_name"] }}</li>
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+                </div>
+                <br>
+
+                <div class = "row justify-content-around">
+                        <div class = "col-5">
+                            {{form_render(GroupSearch)}}
+                            <a href="" data-toggle="modal" data-target="#modal_id">Create New Provider</a>
+                        </div>
+                        <div class = "col-5">
+                            {{form_render(FriendSearch)}}
+                        </div>
+                    </div>
+                {{modal_render(GroupCreate)}}
+
+
+{% endblock %}
+

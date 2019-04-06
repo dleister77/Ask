@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% from "macros.html" import renderListLine %}
+
+{% block title %} Add Review {% endblock %}
+
+{% block main %}
+    <main class="container pt-5 ">
+        <div id = "profile">
+            <div class = "row justify-content-around">
+                <div class = "col-5 mx-auto search_grid_1">
+                    <h3>Profile Information</h3>
+                        <dl>
+                            {{ renderListLine(user.first_name + " " + user.last_name, "Name:")}}
+                            {{ renderListLine(user.username, "Username:")}}
+                            {{ renderListLine(user.email, "Email:")}}
+                            {{ renderListLine(user.address.line1, "Street Address:")}}
+                            {{ renderListLine(user.address.line2, "cont'd:")}}
+                            {{ renderListLine(user.address.city, "City:")}}
+                            {{ renderListLine(user.address.state.name, "State:")}}
+                            {{ renderListLine(user.address.zip, "Zip Code:")}}
+                        </dl>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div id = "reviews">
+            <div class="row justify-content-center">
+                <h2 class="center"> Reviews </h2>
+            </div>
+            {%for review in reviews %}
+                <div class="row justify-content-center biz_rating">
+                    <div class="col-8 biz_rating_left biz_rating_right">
+                        <div class="row">
+                            <div class="col-6 p-3">
+                                <ul class="list-unstyled">
+                                    <li>Business Name: {{review.provider.name}}</li>
+                                    <li>Category: {{review.category.name}}</li>
+                                    <li>Service Description:{{review.service_description |replace(None,' Not provided')}}</li>
+                                    
+                                </ul>
+                            </div>
+                            <div class="col-6 p-3">
+                                <ul class="list-inline">
+                                    <li class="list-inline-item">Rating: </li>
+                                    <li class="list-inline-item">
+                                        {#-- convert rating to stars #}
+                                        {% set var = (review.rating*100)|int %}
+                                        {% set ns = namespace(var = (review["rating"]*100)|int) %}
+                                        {% for num in range(var,75,-100) %}
+                                        <i class="fas fa-star star-full"></i>
+                                        {% set ns.var = ns.var-100 %}
+                                        {% endfor %}
+                                        {% if ns.var >25 and ns.var <=75 %}
+                                        <i class="fas fa-star-half-alt star-half"></i>
+                                        {% endif %}
+                                    </li>
+                                </ul>
+                                <ul class="list-unstyled">
+                                    <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
+                                    <li>Service Date:{{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row biz_rating">
+                                <div class="col-8 p-3">
+                                    {% for image in review.pictures %}
+                                    <img src="{{image.path)}}" alt="" class="img-thumbnail">
+                                    <p>{{image.picture_path}}</p>
+                                    {%endfor %}
+                                </div>
+                            </div>
+                        <div class="row biz_rating">
+                            <div class="col-8 p-3">
+                                <p class = "p-3">Comments: {{review.comments|replace(None,' Not provided')}}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+            {% endfor %}
+        </div>
+    </main>
+
+{% endblock %}
+

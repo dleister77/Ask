@@ -2,8 +2,28 @@ from app import db, login
 from datetime import datetime
 from flask_login import UserMixin
 from sqlalchemy.ext.hybrid import hybrid_property
+from string import capwords
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# many to many table linking users with groups
+user_group = db.Table('user_group', db.Model.metadata,
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')), 
+    db.Column('group_id', db.Integer, db.ForeignKey('group.id')))
+
+# many to many table linking providers to multiple categories
+category_provider_table = db.Table('category_provider', db.Model.metadata,
+    db.Column('category_id', db.Integer, db.ForeignKey('category.id')), 
+    db.Column('provider_id', db.Integer, db.ForeignKey('provider.id')))
+
+# many to many table linking pictures with reviews
+review_picture = db.Table('review_picture', db.Model.metadata,
+    db.Column('review_id', db.Integer, db.ForeignKey('review.id')), 
+    db.Column('picture_id', db.Integer, db.ForeignKey('picture.id')))
+
+# many to many table linking pictures with users with friends
+user_friend = db.Table('user_friend', db.Model.metadata,
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')), 
+    db.Column('friend_id', db.Integer, db.ForeignKey('user.id')))
 
 class State(db.Model):
     """States used in db.
@@ -13,7 +33,7 @@ class State(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True)
     state_short = db.Column(db.String(24), index=True)
-    addresses = db.relationship("Address", backref="_state")
+    addresses = db.relationship("Address", backref="state")
 
     def __repr__(self):
         return f"<State {self.name}>"
@@ -44,7 +64,7 @@ class Address(db.Model):
     def line2(self):
         return self._line2
     
-    @line1.setter
+    @line2.setter
     def line2(self, line2):
         self._line2 = line2.title()
         
@@ -63,6 +83,7 @@ class User(UserMixin, db.Model):
     """Creates user class.
     Relationships:
         Parent of: Address, Reviews
+        ManytoMany: Group, User(friends)
     Methods:
         set_password: Store submitted password as hash.
         check_password: Compares hashed submitted password to store password hash.
@@ -77,7 +98,11 @@ class User(UserMixin, db.Model):
 
     address = db.relationship("Address", backref="user")
     reviews = db.relationship("Review", backref="user")
-
+    friends = db.relationship("User", secondary=user_friend,
+                              primaryjoin=(id == user_friend.c.user_id),
+                              secondaryjoin=(id == user_friend.c.friend_id),
+                              backref="friendsWith")
+    
     @hybrid_property
     def first_name(self):
         return self._first_name
@@ -100,19 +125,28 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def _addfriend(self, person):
+        """Add friend relationship bi-directionally."""
+        self.friends.append(person)
+        person.friends.append(self)
+
+    def _addgroup(self, group):
+        """Add group relationship."""
+        self.groups.append(group)
+
+    def add(self, relation):
+        """Determine whether to add group or friend and call approp method."""
+        if type(relation) == User:
+            self._addfriend(relation)
+        elif type(relation) == Group:
+            self._addgroup(relation)
+
     def __repr__(self):
         return f"<User {self.username}>"
 
 @login.user_loader
 def load_user(id):
     return User.query.get(int(id))
-
-
-# many to many table linking providers to multiple categories
-category_provider_table = db.Table('category_provider', db.Model.metadata,
-    db.Column('category_id', db.Integer, db.ForeignKey('category.id')), 
-    db.Column('provider_id', db.Integer, db.ForeignKey('provider.id')))
-
 
 class Category(db.Model):
     """List service categories.
@@ -152,17 +186,10 @@ class Provider(db.Model):
     
     @name.setter
     def name(self, name):
-        self._name = name.title()
+        self._name = capwords(name)
 
     def __repr__(self):
         return f"<Provider {self.name}>"
-
-
-# many to many table linking pictures with reviews
-review_picture = db.Table('review_picture', db.Model.metadata,
-    db.Column('review_id', db.Integer, db.ForeignKey('review.id')), 
-    db.Column('picture_id', db.Integer, db.ForeignKey('picture.id')))
-
 
 class Review(db.Model):
     """Class to create define review table in db.
@@ -189,7 +216,10 @@ class Review(db.Model):
     
     @description.setter
     def description(self, description):
-        self._description = description.capitalize()
+        if description == "" or description is None:
+            self._description = None
+        else:
+            self._description = description.capitalize()
 
     @hybrid_property
     def comments(self):
@@ -197,16 +227,53 @@ class Review(db.Model):
     
     @comments.setter
     def comments(self, comments):
-        self._comments = comments.capitalize()
+        if comments == "" or comments is None:
+            self._comments = None
+        else:
+            self._comments = comments.capitalize()
 
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"
 
 class Picture(db.Model):
     """Class to define picture table in db, to be linked with reviews.
+    picture_path - location of picture in file storage system
     Relationships:
         Child of: Review
     """
     id = db.Column(db.Integer, primary_key=True)
-    picture = db.Column(db.BLOB)
+    path = db.Column(db.String(120))
+    name = db.Column(db.String(120))
 
+class Group(db.Model):
+    """Groups that users can belong to.
+    Relationships:
+        Many to Many: User
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    _name = db.Column(db.String(64), index=True, unique=True)
+    _description = db.Column(db.String(120))
+    admin_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    members = db.relationship("User", secondary=user_group, 
+                              backref="groups")
+    @hybrid_property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, name):
+        self._name = capwords(name)
+
+    @hybrid_property
+    def description(self):
+        return self._description
+    
+    @description.setter
+    def description(self, description):
+        if description == "" or description is None:
+            self._description = None
+        else:
+            self._description = description.capitalize()
+
+    def __repr__(self):
+        return f"<Group {self._name}>"

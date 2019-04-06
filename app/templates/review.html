@@ -6,51 +6,20 @@
     <main class="container pt-5">
         <div class="row">
             <div class = "col-5 mx-auto search_grid_1">
-                <form action="/review" method="post">
+                <form action="/review" method="post", id="review_form", enctype="multipart/form-data">
                     {{form.hidden_tag()}}
                     {{ field_render(form.category) }}
-                    {{ field_render(form.provider)}}
-                    <a href="" data-toggle="modal" 
-                    data-target="#modal_new_provider">Add new provider</a>
+                    {{ field_render(form.name)}}
+                    <a href="/provideradd">Add new provider</a>
                     {{field_render(form.rating)}}
                     {{field_render(form.description)}}
                     {{field_render(form.service_date)}}
                     {{field_render(form.comments)}}
-                    {{field_render(form.pictures)}}
+                    {{field_render(form.picture)}}
                     {{field_render(form.submit)}}
                 </form>
             </div>
         </div>
-
-        <!-- modal to add new provider -->
-        <div class="modal" id="modal_new_provider" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-md" role="document">
-                    <div class="modal-content">
-                        <form id = modal_form>
-                            <div class="modal-header">
-                            <h5 class="modal-title">Add Service Provider</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body px-5">
-                            {{modalform.hidden_tag()}}
-                            {{field_render(modalform.name)}}
-                            {{field_render(modalform.category)}}
-                            {{field_render(modalform.address)}}
-                            {{field_render(modalform.telephone)}}
-                            {{field_render(modalform.email)}}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                            {{field_render(modalform.submit)}}
-                        </div>
-                        </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
     </main>
 {% endblock %}
 

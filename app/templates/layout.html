@@ -25,10 +25,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.1.0/handlebars.js"></script>
 
         <!-- My own Javascript -->
-        <script src ="/static/scripts.js"></script>
-
-        <!-- https://developers.google.com/maps/documentation/javascript/ -->
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAgatq4KgsR2NHXXIG8YxiwncrsEz_xis8&v=3.exp"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename = 'scripts.js') }}"></script>
 
         <!-- https://api.jqueryui.com/autocomplete/-->
         <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
@@ -51,13 +48,13 @@
             <div class="collapse navbar-collapse" id="navbar">
                 <ul class="navbar-nav ml-auto mt-2">
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/review">Add Review</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/network">Your Network</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('review')}}">Add Review</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('user', username=current_user.username)}}">Profile</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('network')}}">Your Network</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('logout')}}">Logout</a></li>
                     {% else %}
-                        <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/login">Log In</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('register')}}">Register</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{url_for('login')}}">Log In</a></li>
                     {% endif %}
                 </ul>
             </div>

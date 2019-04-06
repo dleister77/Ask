@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% from "macros.html" import form_render%}
+{% block title %} {{title}} {% endblock %}
+
+{% block main %}
+    <main class="container pt-5">
+        <div class="row">
+            <div class = "col-5 mx-auto search_grid_1">
+                <form action="/provideradd" method="post", id="provideraddform">
+                    {{form_render(form)}}
+                </form>
+            </div>
+        </div>
+    </main>
+{% endblock %}
+
+
+
+
+

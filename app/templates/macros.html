@@ -1,39 +1,79 @@
 
 <!--Macro to render row-->
-{% macro field_render(field, labelClass="col-form-label", fieldClass="form-control",
- buttonClass="btn btn-primary btn-block-submit", fileClass="form-control-file") %}
+{% macro field_render(field, classAdjust="",labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block-submit submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check" ) %}
+  
     <div class="form-group row">
         <div class="col">
             {% if field.type == "FormField" %}
-                {{form_render(field)}}
+                {{form_render(field, classAdjust)}}
             {% elif field.type == "SubmitField" %}
-                {{field(class=buttonClass)}}
+                {{field(class_=(buttonClass))}}
             {% elif field.type == "RadioField" %}
-                <legend class="col-form-label">{{field.name.capitalize()}}</legend>
+                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
                 {% for subfield in field %}
-                    <div class="form-check">
-                        {{subfield(class_="form-check-input")}}
-                        {{subfield.label(class_="form-check-label")}}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
                     </div>
                 {% endfor %}
-            {% elif field.type == "FileField" %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
                 {{field.label(class_=labelClass)}}
-                {{field(class_=fileClass)}}
+                {{field(class_=fileClass + " " + classAdjust)}}
             {%else%}
                 {{field.label(class_=labelClass)}}
-                {{field(class_=fieldClass)}}
+                {{field(class_=fieldClass + " " + classAdjust)}}
             {% endif %}
             {% for error in field.errors %}
-                <span style="color:red;">[{{error}}]</span>
+                <span style="color:red;">{{error}}</span>
             {% endfor %}
         </div>
     </div>
 {% endmacro %}
 
-<!--render form -->
-{% macro form_render(form) %}
+<!--render form, calls render_field
+    form: form to be render
+    classAdjust: adjustment to field class specified in form_render.
+-->
+{% macro form_render(form, classAdjust="") %}
     {{form.hidden_tag()}}
-    {% for field in form if field.widget.input_type != "hidden" %}
-        {{field_render(field)}}
+    {% for field in form if (field.widget.input_type != "hidden")%}
+        {{field_render(field, classAdjust)}}
     {% endfor %}
 {% endmacro %}
+
+{% macro modal_render(form, modalID="modal_id", classAdjust="") %}
+    {{form.hidden_tag()}}
+    <div class="modal" id={{modalID}} tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md" role="document">
+            <div class="modal-content">
+                <form id = modal_form_group>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Group</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body px-5">
+                        {% for field in form if field.widget.input_type != "hidden" and field.type != "SubmitField"%}
+                        {{field_render(field, classAdjust)}}
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        {{form.submit(class_=("btn btn-primary btn-block-submit submit"))}}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endmacro %}                   
+
+{% macro renderListLine(value, label)%}
+    <div class="row">
+        <dt>{{label}}</dt>
+        <dd>{{value}}</dd>
+    </div>
+{% endmacro%}
