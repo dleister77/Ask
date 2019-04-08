@@ -1,23 +1,23 @@
 {% extends "layout.html" %}
-{% from "macros.html" import renderListLine %}
+{% from "macros.html" import renderListLine, renderInlineListLine %}
 
 {% block title %} Add Review {% endblock %}
 
 {% block main %}
     <main class="container pt-5 ">
         <div id = "profile">
-            <div class = "row justify-content-around">
+            <div class = "row justify-content-center">
                 <div class = "col-5 mx-auto search_grid_1">
-                    <h3>Profile Information</h3>
+                    <h2>Profile Information</h3>
                         <dl>
-                            {{ renderListLine(user.first_name + " " + user.last_name, "Name:")}}
-                            {{ renderListLine(user.username, "Username:")}}
-                            {{ renderListLine(user.email, "Email:")}}
-                            {{ renderListLine(user.address.line1, "Street Address:")}}
-                            {{ renderListLine(user.address.line2, "cont'd:")}}
-                            {{ renderListLine(user.address.city, "City:")}}
-                            {{ renderListLine(user.address.state.name, "State:")}}
-                            {{ renderListLine(user.address.zip, "Zip Code:")}}
+                            {{ renderListLine(user.first_name + " " + user.last_name, "Name")}}
+                            {{ renderListLine(user.username, "Username")}}
+                            {{ renderListLine(user.email, "Email")}}
+                            {{ renderListLine(user.address.line1, "Street")}}
+                            {{ renderListLine(user.address.line2, "cont'd")}}
+                            {{ renderListLine(user.address.city, "City")}}
+                            {{ renderListLine(user.address.state.name, "State")}}
+                            {{ renderListLine(user.address.zip, "Zip Code")}}
                         </dl>
                 </div>
             </div>
@@ -25,7 +25,13 @@
         <br>
         <div id = "reviews">
             <div class="row justify-content-center">
-                <h2 class="center"> Reviews </h2>
+                <div class ="col-5 mx-auto search_grid_1">
+                    <h2 class="center"> Reviews </h2>
+                        <dl>
+                            {{ renderListLine(reviews|length, "Number of Reviews")}}
+                            {{ renderListLine((reviews|sum(attribute='rating')/reviews|length), "Average Rating")}}           
+                        </dl>
+                </div>
             </div>
             {%for review in reviews %}
                 <div class="row justify-content-center biz_rating">
@@ -57,21 +63,21 @@
                                 </ul>
                                 <ul class="list-unstyled">
                                     <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
-                                    <li>Service Date:{{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
+                                    <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
                                 </ul>
                             </div>
                         </div>
-                        <div class="row biz_rating">
-                                <div class="col-8 p-3">
-                                    {% for image in review.pictures %}
-                                    <img src="{{image.path)}}" alt="" class="img-thumbnail">
-                                    <p>{{image.picture_path}}</p>
-                                    {%endfor %}
-                                </div>
-                            </div>
+
                         <div class="row biz_rating">
                             <div class="col-8 p-3">
                                 <p class = "p-3">Comments: {{review.comments|replace(None,' Not provided')}}</p>
+                            </div>
+                        </div>
+                        <div class="row biz_rating">
+                            <div class="col-8 p-3">
+                                {% for image in review.pictures %}
+                                <img src="{{url_for('download_file', id=review.user.id, filename=image.name)}}" alt="" class="img-thumbnail">
+                                {%endfor %}
                             </div>
                         </div>
                     </div>
@@ -82,4 +88,3 @@
     </main>
 
 {% endblock %}
-

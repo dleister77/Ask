@@ -1,4 +1,4 @@
-from flask import flash, redirect, render_template, request, url_for, jsonify
+from flask import flash, redirect, render_template, request, url_for, jsonify, send_from_directory
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.forms import (LoginForm, RegistrationForm, ReviewForm, ProviderAddForm,
@@ -18,6 +18,11 @@ from werkzeug.utils import secure_filename
 def index():
     user = current_user
     return render_template("index.html", user=user, title="home")
+
+@app.route('/photos/<int:id>/<path:filename>')
+def download_file(filename, id):
+    fileloc = os.path.join(app.config['MEDIA_FOLDER'], id).replace('\\','/')
+    return send_from_directory(fileloc, filename)
 
 @app.route('/friendadd', methods=['POST'])
 @login_required
@@ -206,15 +211,16 @@ def review():
     if form.validate_on_submit():
         pictures = []
         if form.picture.data[0]:
-            path = os.path.join(app.instance_path, app.config['UPLOAD_FOLDER'],
+            path = os.path.join('instance', app.config['UPLOAD_FOLDER'],
                    str(current_user.id))
+            print(path)
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
             for picture in form.picture.data:
                 filename = secure_filename(picture.filename)
                 file_location = os.path.join(path, filename)
                 picture.save(file_location)
-                pictures.append(Picture(picture_path=file_location,
+                pictures.append(Picture(path=file_location,
                                         name=filename))
 
         review = Review(user_id=current_user.id, 
@@ -225,7 +231,8 @@ def review():
                         service_date=form.service_date.data,
                         comments=form.comments.data,
                         pictures=pictures)
-        dbAdd(Review)
+        db.session.add(review)
+        db.session.commit()
         flash("review added")
     
     return render_template("review.html", title="Review", form=form)

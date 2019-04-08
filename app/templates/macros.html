@@ -73,7 +73,17 @@
 
 {% macro renderListLine(value, label)%}
     <div class="row">
-        <dt>{{label}}</dt>
-        <dd>{{value}}</dd>
+        <dt class="col-sm-6">{{label}}</dt>
+        <dd class="col-sm-6">{{value}}</dd>
+    </div>
+{% endmacro%}
+
+{% macro renderInlineListLine(value, label)%}
+    <div class="row">
+        <ul class="list-inline">
+            <li class="list-inline-item">{{label}}:</li>
+            <li class="list-inline-item">{{value}}</li>
+        </ul>
+
     </div>
 {% endmacro%}
