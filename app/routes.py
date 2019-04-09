@@ -5,8 +5,9 @@ from app.forms import (LoginForm, RegistrationForm, ReviewForm, ProviderAddForm,
                        GroupSearchForm, FriendSearchForm, GroupCreateForm)
 from app.models import (User, Address, State, Review, Picture, Category, 
                         Provider, Group)
-from app.helpers import dbAdd
+from app.helpers import dbAdd, thumbnail_from_buffer, name_check
 import os
+from PIL import Image
 import re
 from urllib import parse
 from werkzeug.urls import url_parse
@@ -21,7 +22,10 @@ def index():
 
 @app.route('/photos/<int:id>/<path:filename>')
 def download_file(filename, id):
-    fileloc = os.path.join(app.config['MEDIA_FOLDER'], id).replace('\\','/')
+    print(filename)
+    print(id)
+    fileloc = os.path.join(app.config['MEDIA_FOLDER'], str(id)).replace('\\','/')
+    print(fileloc)
     return send_from_directory(fileloc, filename)
 
 @app.route('/friendadd', methods=['POST'])
@@ -212,16 +216,19 @@ def review():
         pictures = []
         if form.picture.data[0]:
             path = os.path.join('instance', app.config['UPLOAD_FOLDER'],
-                   str(current_user.id))
+                   str(current_user.id)).replace("\\", "/")
             print(path)
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
             for picture in form.picture.data:
                 filename = secure_filename(picture.filename)
-                file_location = os.path.join(path, filename)
-                picture.save(file_location)
+                filename = name_check(path, filename)
+                file_location = os.path.join(path, filename).replace("\\","/")
+                thumb = thumbnail_from_buffer(picture, (400, 400), filename, path)
+                picture.save(file_location)                
                 pictures.append(Picture(path=file_location,
-                                        name=filename))
+                                        name=filename, thumb=thumb))
+                
 
         review = Review(user_id=current_user.id, 
                         provider_id=form.name.data, 

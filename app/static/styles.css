@@ -90,3 +90,7 @@
     /* The width is the width of the web page */
     width: 100%;
  }
+.thumbnail{
+  height: 120px;
+  width: auto;
+}

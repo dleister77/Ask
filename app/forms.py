@@ -122,6 +122,7 @@ class RegistrationForm(FlaskForm):
             raise ValidationError("Username already exists, please choose a "
                                   "different name.")
 
+
 class ReviewForm(FlaskForm):
     """Form to submit review."""
     category = SelectField("Category", choices=category_list(), 

@@ -244,6 +244,7 @@ class Picture(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     path = db.Column(db.String(120))
     name = db.Column(db.String(120))
+    thumb = db.Column(db.String(120))
 
 class Group(db.Model):
     """Groups that users can belong to.
