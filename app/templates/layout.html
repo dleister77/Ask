@@ -1,3 +1,5 @@
+{% from "macros.html" import Navlink, NavlinkKW %}
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -11,7 +13,6 @@
         <!-- Bootstrap CSS -->
 
         <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous" rel ="stylesheet">
-        <title>Ask a Neighbor</title>
 
         <!-- My own CSS -->
         <link href="{{url_for('static', filename='styles.css')}}" rel="stylesheet"/>
@@ -31,7 +32,7 @@
         <!-- link to include icons for star ratings -->
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
-        <title>Ask a Neighbor: {% block title %}{% endblock %} </title>
+        {% block title %}<title> Ask a Neighbor: {{title}} </title>{% endblock %}
 
     </head>
 
@@ -45,14 +46,15 @@
             <div class="collapse navbar-collapse" id="navbar">
                 <ul class="navbar-nav ml-auto mt-2">
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('search')}}">Provider Search</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('review')}}">Add Review</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('user', username=current_user.username)}}">Profile</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('network')}}">Network</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('logout')}}">Logout</a></li>
+                        {{ Navlink('search', 'Provider Search') }}
+                        {{ Navlink('review', 'Add Review') }}
+                        {{ Navlink('user', 'Profile', username=current_user.username)}}
+                        {{ Navlink('network', 'Network') }}
+                        {{ Navlink('logout', 'Logout') }}
+
                     {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('register')}}">Register</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{url_for('login')}}">Log In</a></li>
+                        {{ Navlink('register', 'Register') }}
+                        {{ Navlink('login', 'Log In') }}
                     {% endif %}
                 </ul>
             </div>
@@ -66,7 +68,7 @@
             </header>
         {% endif %}
 
-        <main class="container-fluid">
+        <main class="container pt-5">
 
         {% block main %} {% endblock %}
 

@@ -48,6 +48,8 @@
 {% endmacro %}
 
 {% macro modal_render(form, modalID="modal_id", classAdjust="") %}
+<!-- Renders modal form.-->
+<!-- Inputs: form object, modal id, class adjustment - used by javascript to select modal data-->
     {{form.hidden_tag()}}
     <div class="modal" id={{modalID}} tabindex="-1" role="dialog">
         <div class="modal-dialog modal-md" role="document">
@@ -92,6 +94,7 @@
 {% endmacro%}
 
 {% macro star_rating(rating) %}
+<!-- Converts numerical star rating to html inline list of stars-->
     <li class="list-inline-item">
         {#-- convert rating to stars #}
         {% set var = (rating*100)|int %}
@@ -107,6 +110,8 @@
 {% endmacro %}
 
 {% macro render_provider(provider) %}
+<!-- Renders provider card. -->
+<!-- Input: provider object -->
     <div class="card">
         <div class="card-header">
             <h4><a href="{{url_for('provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
@@ -143,10 +148,19 @@
     
 {% endmacro %}         
 
-{% macro render_review(review, current_user) %}
+{% macro render_review(review, current_user, bizname=true) %}
+<!-- render review card.  -->
+<!-- Inputs: review and user object. bizname determines if bizname in header-->
 <div class="card">
         <div class="card-header">
-            <h4>{{review.title}}</h4>
+            {% if bizname == true %}
+                <h4>
+                    <a href='{{url_for("provider", name=review.provider.name|replace(" ","-")|replace("'", ''), id=review.provider.id)}}'>
+                        {{review.provider.name}}
+                    </a>: {{review.title}}</h4>
+            {% else %}
+                <h4>{{review.title}}</h4>
+            {% endif %}
         </div>
         <div class="card-body">
             <div class="row">
@@ -202,3 +216,12 @@
     </div>
 {% endmacro %}
 
+<!--Source: Real Python jinja tutorial -->
+{% macro Navlink(endpoint, name) %}
+<!-- Builds navlinks on navbar, highlights current page -->
+    {% if request.endpoint.endswith(endpoint) %}
+        <li class="active nav-item"><a class="nav-link" href="{{ url_for(endpoint, **kwargs) }}">{{name}}</a></li>
+    {%  else %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for(endpoint, **kwargs) }}">{{name}}</a></li>
+    {% endif %}
+{% endmacro %}

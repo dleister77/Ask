@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %} {{ super() }} {% endblock %}
+
+{%block main %}
+    <div class = "row justify-content-around">
+        <div class = "col-5">
+            {% block content_left_top %}
+
+            {% endblock %}
+
+        </div>
+        <div class = "col-5">
+            {% block content_right_top %}
+
+            {% endblock %}
+        </div>
+    </div>
+    <br>
+
+    <div class = "row justify-content-around">
+        <div class = "col-5">
+            {% block content_left_bottom %}
+
+            {% endblock %}
+        </div>
+        <div class = "col-5">
+            {% block content_right_bottom %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+    {% block modal %}
+    {% endblock%}
+    
+{% endblock %}
+

@@ -1,49 +1,42 @@
-{% extends "layout.html" %}
+{% extends "double_column.html" %}
 {% from "macros.html" import form_render, field_render, modal_render %}
 
-{% block title %} Add Review {% endblock %}
+{% block content_left_top %}
+    <!-- list of groups user belongs to -->
+    <h3>Your Groups</h3>
+    <ul>
+        {% for group in current_user.groups %}
+        <li>{{ group["name"] }}</li>
+        {% endfor %}
+    </ul>
+    <br>
+{% endblock %}
 
-{% block main %}
-        <main class="container pt-5">
+{% block content_right_top %}
+    <h3> Your Friends</h3>
+    <ul>
+        {% for friend in current_user.friends %}
+        <li> <a href="{{url_for('user', username=friend.username)}}"> {{friend["first_name"] + " " + friend["last_name"] }} </a></li>
+        {% endfor %}
+    </ul>
+    <br>
+{% endblock %}
 
-            <div id = "network">
-                <div class = "row justify-content-around">
-                    <div class = "col-5">
-                        <!-- list of groups user belongs to -->
-                        <h3>Your Groups</h3>
-                        <ul>
-                            {% for group in current_user.groups %}
-                            <li>{{ group["name"] }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class = "col-5">
-                        <h3> Your Friends</h3>
-                        <ul>
-                            {% for friend in current_user.friends %}
-                            <li> <a href="{{url_for('user', username=friend.username)}}"> {{friend["first_name"] + " " + friend["last_name"] }} </a></li>
-                            {% endfor %}
-                        </ul>
 
-                    </div>
-                </div>
-                <br>
+{% block content_left_bottom %}
+    <form action="/groupadd" method="post">
+        {{form_render(GroupSearch)}}
+        <a href="" data-toggle="modal" data-target="#modal_id">Create New Provider</a>
+    </form>
+{% endblock %}
 
-                <div class = "row justify-content-around">
-                        <div class = "col-5">
-                            <form action="/groupadd" method="post">
-                                {{form_render(GroupSearch)}}
-                                <a href="" data-toggle="modal" data-target="#modal_id">Create New Provider</a>
-                            </form>
-                        </div>
-                        <div class = "col-5">
+{% block content_right_bottom %}
                             <form action="/friendadd" method="post">
                                 {{form_render(FriendSearch)}}
                             </form>
-                        </div>
-                    </div>
-                {{modal_render(GroupCreate)}}
+{% endblock %}
 
-
+{% block modal %}
+    {{modal_render(GroupCreate)}}
 {% endblock %}
 

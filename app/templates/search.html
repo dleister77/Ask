@@ -1,37 +1,30 @@
-{% extends "layout.html" %}
+{% extends "single_column.html" %}
 {% from "macros.html" import field_render, render_provider %}
 
-{% block title %} {{title}} {% endblock %}
+{% block title %} {{ super() }} {% endblock %}
 
-{% block main %}
-    <main class="container pt-5 ">
-        <div class="row">
-            <div class="col-5 mx-auto search_grid_1">
-                <h3>Search for Provider:</h3>
-                <form action="/search" method="post">
-                    {{form.hidden_tag()}}
-                    {{field_render(form.category)}}
-                    {{field_render(form.city)}}
-                    {{field_render(form.state)}}
-                    <fieldset class="form-group">
-                        <legend class="col-form-label mx-auto">Check to filter by:</legend>
-                            {{field_render(form.friends_only)}}
-                            {{field_render(form.groups_only)}}
-                    </fieldset>
-                    {{field_render(form.submit)}}
-                </form>
-            </div>
-        </div>
-        <br>
-        <div class="row">
-            <div class="col-8 mx-auto search_grid_1">
-                {%for provider in providers %}
-                    {{render_provider(provider)}}
-                <br>
-                {% endfor %}
-            </div>
-        </div>
+{% block content_narrow %}
+    <h3>Search for Provider:</h3>
+    <form action="/search" method="post">
+        {{form.hidden_tag()}}
+        {{field_render(form.category)}}
+        {{field_render(form.city)}}
+        {{field_render(form.state)}}
+        <fieldset class="form-group">
+            <legend class="col-form-label mx-auto">Check to filter by:</legend>
+                {{field_render(form.friends_only)}}
+                {{field_render(form.groups_only)}}
+        </fieldset>
+        {{field_render(form.submit)}}
+    </form>
+    <br>
+{% endblock %}
 
-    </main>
+
+{% block content_wide %}
+    {%for provider in providers %}
+        {{render_provider(provider)}}
+    <br>
+    {% endfor %}
 
 {% endblock %}

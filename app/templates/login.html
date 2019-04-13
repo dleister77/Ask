@@ -1,10 +1,8 @@
-{% extends "layout.html" %}
+{% extends "single_column.html" %}
 
-{% block title %} {{title}} {% endblock %}
+{% block title %} {{ super() }} {% endblock %}
 
-{% block main %}
-<main class="container">
-    <div class="col-4 mx-auto search_grid_1">
+{% block content_narrow %}
         <h3>Sign In</h3>
         <form action="" method="POST" novalidate>
             {{form.hidden_tag()}}
@@ -29,10 +27,6 @@
                     {{form.submit()}}
             </div>                 
         </form>
-    </div>
-
-</main>
-
 
 {% endblock %}
 

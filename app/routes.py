@@ -134,7 +134,8 @@ def network():
     FriendSearch = FriendSearchForm()
     GroupCreate = GroupCreateForm()
     return render_template("network.html", GroupSearch=GroupSearch,
-                           FriendSearch=FriendSearch, GroupCreate=GroupCreate)
+                           FriendSearch=FriendSearch, GroupCreate=GroupCreate,
+                           title="Network")
 
 @app.route('/user/<username>')
 @login_required
@@ -142,8 +143,9 @@ def user(username):
     """Generate profile page."""
     user = User.query.filter_by(username=username).first_or_404()
     reviews = user.reviews
+    print(reviews)
 
-    return render_template("user.html", title="profile", user=user, reviews=reviews)
+    return render_template("user.html", title="User Profile", user=user, reviews=reviews)
 
 @app.route('/provider/<name>/<id>')
 @login_required
