@@ -1,7 +1,7 @@
 
 <!--Macro to render row-->
-{% macro field_render(field, classAdjust="",labelClass="col-form-label", fieldClass="form-control",
- buttonClass="btn btn-primary btn-block-submit submit", fileClass="form-control-file",
+{% macro field_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
   radioLabelClass="form-check-label", radioInputClass="form-check-input", 
   radioClass="form-check" ) %}
   
@@ -22,6 +22,9 @@
             {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
                 {{field.label(class_=labelClass)}}
                 {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
             {%else%}
                 {{field.label(class_=labelClass)}}
                 {{field(class_=fieldClass + " " + classAdjust)}}
@@ -87,3 +90,115 @@
 
     </div>
 {% endmacro%}
+
+{% macro star_rating(rating) %}
+    <li class="list-inline-item">
+        {#-- convert rating to stars #}
+        {% set var = (rating*100)|int %}
+        {% set ns = namespace(var = (rating*100)|int) %}
+        {% for num in range(var,75,-100) %}
+        <i class="fas fa-star star-full"></i>
+        {% set ns.var = ns.var-100 %}
+        {% endfor %}
+        {% if ns.var >25 and ns.var <=75 %}
+        <i class="fas fa-star-half-alt star-half"></i>
+        {% endif %}
+    </li>
+{% endmacro %}
+
+{% macro render_provider(provider) %}
+    <div class="card">
+        <div class="card-header">
+            <h4><a href="{{url_for('provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6 p-3">
+                    <ul class="list-unstyled">
+                        <li>Category: {{ provider.categories|map(attribute='name')|join(', ') }}</li>
+                        <li>
+                            <ul class="list-inline">
+                                {% set count = provider.reviews|length %}
+                                {% set avg = provider.reviews|sum(attribute='rating') / count %}
+                                <li class="list-inline-item">{{avg}}</li>
+                                <li class="list-inline-item">{{star_rating(avg)}}</li>
+                                <li class="list-inline-item">({{count}})</li>                                    
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-6 p-3">
+                    <ul class="list-unstyled">
+                        <li>{{provider.address.line1}}</li>
+                        <li>{{provider.address.line2}}</li>
+                        <li>{{"%s, %s %s"|format(provider.address.city, provider.address.state.state_short, provider.address.zip)}}</li>
+                        <li>{{'(%s) %s-%s'|format(provider.telephone[0:3],provider.telephone[3:6], provider.telephone[6:10])}}</li>
+                        <li>{{provider.email}}
+                        <li>{{provider.website}}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+{% endmacro %}         
+
+{% macro render_review(review, current_user) %}
+<div class="card">
+        <div class="card-header">
+            <h4>{{review.title}}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-5 p-3">
+                    <ul class="list-unstyled">
+                        {% set common_groups = review.user.groups|select('in', current_user.groups)|list %}  
+                        {% set related = review.user in current_user.friends or review.user_id == current_user.id or common_groups|length > 0 %}
+                        {% if related %}
+                            <li>Reviewer: <a href="{{url_for('user', username=review.user.username)}}">
+                            {{"%s %s"|format(review.user.first_name, review.user.last_name)}}</a></li>
+                        {% else %}
+                            <li>Reviewer: {{review.user.username}}</li>
+                        {% endif %}
+                        <li>Service Description: {{review.service_description|replace(None, 'Not Provided')}}</li>
+                        <li>
+                            <ul class="list-inline">
+                                <li class="list-inline-item">Rating: </li>
+                                {{star_rating(review.rating)}}
+                            </ul>
+                        </li>
+                        <li>Cost: "TBD"</li>
+                        <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
+                        <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
+                        {% if review.user_id == current_user.id %}
+                            <li>Relationship: Self</li>
+                        {% else %}
+                            <li>Relationship: </li>
+                                <ul>
+                                    <li>Common Groups: {% if common_groups|length > 0 %}
+                                    {{ common_groups|map(attribute='name')|join(', ') }}
+                                    {% else %}
+                                    None
+                                    {% endif %}
+                                    </li>
+                                    <li>Friends: {% if review.user in current_user.friends %} Yes {% else %} No {% endif %}</li>
+                                </ul>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-7 p-3">
+                    <ul class="list-unstyled">
+                        <li>Comments: {{review.comments|replace(None,' Not provided')}}</li>
+                    </ul>
+                </div>
+            <div class="row">
+                <div class="col-12 p-3">
+                    {% for image in review.pictures %}
+                    <img src="{{url_for('download_file', id=review.user.id, filename=image.thumb)}}" alt="" class="thumbnail">
+                    {%endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+

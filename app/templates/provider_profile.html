@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% from "macros.html" import star_rating, render_provider, render_review %}
+
+{% block title %} {{title}} {% endblock %}
+
+{% block main %}
+    <main class="container pt-5 ">
+        <div class="row">
+            <div class="col-8 mx-auto search_grid_1">
+                {{render_provider(provider)}}
+                <br>   
+                
+                {%for review in provider.reviews %}
+                    {{render_review(review, current_user)}}
+                    <br>
+                {% endfor %}
+            </div>
+    </div>
+    </main>
+
+{% endblock %}

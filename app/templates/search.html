@@ -1,125 +1,37 @@
 {% extends "layout.html" %}
+{% from "macros.html" import field_render, render_provider %}
 
-{% block title %} Search {% endblock %}
+{% block title %} {{title}} {% endblock %}
 
 {% block main %}
-            <div class="container">
-                {% if error %}
-                <p><strong>{{error}}</strong></p>
-                {%endif%}
-                <div class="row">
-                    <div class="col-sm-4 mx-auto search_grid_1">
-                        <h3>Search for ratings</h3>
-                        <form action="/search" method="post" id="rating_search">
-                            <div class="form-group row">
-                                <label for = "category_name" class = "col-form-label">Category</label>
-                                    <select class="form-control" autofocus id="category_name" name="category_name" required>
-                                        {% for category in categories %}
-                                            {%if category["category_name"] == request.form.category_name %}
-                                            <option selected>{{category["category_name"]}}</option>
-                                            {% else %}
-                                            <option>{{category["category_name"]}}</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
-                            </div>
-                            <div class="form-group row">
-                                <label for = "city_name" class = "col-form-label">City</label>
-                                    <input autocomplete="off" autofocus class="form-control" id="city_name" name="city_name" type="text"\
-                                    value="{{user[0]['city_name']}}"/>
-                            </div>
-                            <div class="form-group row">
-                                <label for = "state_name" class = "col-form-label">State</label>
-                                <select class="form-control" autofocus id="state_name" name="state_name" required>
-                                    {% for state in states %}
-                                        {%if state["state_name"] == user[0]["state_name"] %}
-                                            <option selected>{{state["state_name"]}}</option>
-                                        {% else %}
-                                            <option>{{state["state_name"]}}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <fieldset class = "form-group">
-                                <legend class = "col-form-label mx-auto">Check to filter by:</legend>
-                                <div class="row">
-                                    <div class="col-sm">
-                                        {% if request.form.get("groups") is none and request.method == "POST"%}
-                                        <input type="checkbox" class="form-check-input" id="groups" name="groups" value = "groups">
-                                        {%else%}
-                                        <input type="checkbox" class="form-check-input" id="groups" name="groups" value = "groups" checked>
-                                        {%endif%}
-                                        <label class="form-check-label" for="groups">Groups</label>
-                                    </div>
-                                   <div class="col-sm">
-                                        <input type="checkbox" class="form-check-input" id="friends" name="friends" value = "friends"
-                                        {% if request.form.get("friends") is none and request.method == "POST"%}
-                                        <input type="checkbox" class="form-check-input" id="friends" name="friends" value = "friends">
-                                        {%else%}
-                                        <input type="checkbox" class="form-check-input" id="friends" name="friends" value = "friends" checked>
-                                        {%endif%}
-                                        <label class="form-check-label" for="friends">Friends</label>
-                                    </div>
-                                </div>
-                            </fieldset>
-
-                                <button id = "submit_search" class="btn btn-block btn-primary" type="submit">Submit</button>
-                        </form>
-                    </div>
-                </div>
-            {% if results %}
-            <br>
-            {% for biz in summarized %}
-            <div class="row justify-content-center biz_rating">
-                <div class="col-4 p-3 biz_rating_left">
-                    <ul class="list-unstyled">
-                        <li class="biz_rating_name"><a class="bizlink" href="/bizdetail">{{biz["name"]}}</a></li>
-                        <ul class="list-inline"></ul>
-                            <li class="list-inline-item">({{biz["average"]}})</li>
-                            <li class="list-inline-item">
-                                {% set var = (biz["average"]*100)|int %}
-                                {% set ns = namespace(var = (biz["average"]*100)|int) %}
-                                {% for num in range(var,75,-100) %}
-                                    <i class="fas fa-star star-full"></i>
-                                    {% set ns.var = ns.var-100 %}
-                                {% endfor %}
-                                {% if ns.var >25 and ns.var <=75 %}
-                                    <i class="fas fa-star-half-alt star-half"></i>
-                                {% endif %}
-                            </li>
-                            <li class="list-inline-item">({{biz["count"]}})</li>
-                        </ul>
-                    </ul>
-                </div>
-
-                <div class="col-4 biz_rating_right p-3">
-                    <ul class="list-unstyled">
-                        <li>{{biz["street_address_line1"]}}</li>
-                        {% if biz["street_address_line2"] == None %}
-                            <li><span class="city">{{biz["city_name"]}}</span>, <span class="state">{{biz["state_name_short"]}}</span>,
-                            <span class="zip_code">{{biz["zip_code"]}}</span></li>
-                            <li>{{'(%s)%s-%s'|format(biz["telephone"][0:3],biz["telephone"][3:6], biz["telephone"][6:10])}}</li>
-                            <li></li>
-
-                        {%else%}
-                            <li>{{biz["street_address_line2"]}}</li>
-                            <li><span class="city">{{biz["city_name"]}}</span>, <span class="state">{{biz["state_name_short"]}}</span>,
-                            <span class="zip_code">{{biz["zip_code"]}}</span></li>
-                            <li>{{'(%s)%s-%s'|format(biz["telephone"][0:3],biz["telephone"][3:6], biz["telephone"][6:10])}}</li>
-                        {% endif%}
-
-                    </ul>
-                </div>
+    <main class="container pt-5 ">
+        <div class="row">
+            <div class="col-5 mx-auto search_grid_1">
+                <h3>Search for Provider:</h3>
+                <form action="/search" method="post">
+                    {{form.hidden_tag()}}
+                    {{field_render(form.category)}}
+                    {{field_render(form.city)}}
+                    {{field_render(form.state)}}
+                    <fieldset class="form-group">
+                        <legend class="col-form-label mx-auto">Check to filter by:</legend>
+                            {{field_render(form.friends_only)}}
+                            {{field_render(form.groups_only)}}
+                    </fieldset>
+                    {{field_render(form.submit)}}
+                </form>
             </div>
-            <br>
-            {% endfor %}
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-8 mx-auto search_grid_1">
+                {%for provider in providers %}
+                    {{render_provider(provider)}}
+                <br>
+                {% endfor %}
+            </div>
+        </div>
 
-
-            {%endif%}
-
-
-
+    </main>
 
 {% endblock %}
-

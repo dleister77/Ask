@@ -2,7 +2,8 @@ from flask import flash, redirect, render_template, request, url_for, jsonify, s
 from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.forms import (LoginForm, RegistrationForm, ReviewForm, ProviderAddForm,
-                       GroupSearchForm, FriendSearchForm, GroupCreateForm)
+                       GroupSearchForm, FriendSearchForm, GroupCreateForm, 
+                       ProviderSearchForm)
 from app.models import (User, Address, State, Review, Picture, Category, 
                         Provider, Group)
 from app.helpers import dbAdd, thumbnail_from_buffer, name_check
@@ -144,6 +145,13 @@ def user(username):
 
     return render_template("user.html", title="profile", user=user, reviews=reviews)
 
+@app.route('/provider/<name>/<id>')
+@login_required
+def provider(name, id):
+    provider = Provider.query.filter_by(id=id).first()
+    return render_template("provider_profile.html", title="Provider Profile", 
+                            provider=provider)
+
 @app.route('/provideradd', methods=['GET', 'POST'])
 @login_required
 def providerAdd():
@@ -243,3 +251,33 @@ def review():
         flash("review added")
     
     return render_template("review.html", title="Review", form=form)
+
+@app.route('/search', methods=["GET", "POST"])
+@login_required
+def search():
+    form = ProviderSearchForm()
+    if form.validate_on_submit():
+        category = Category.query.filter_by(id=form.category.data).first()
+        if form.friends_only.data is True:
+            providers = Provider.query.join(Review, User)\
+                                .filter(User.friends.contains(current_user),
+                                        Provider.categories.contains(category),
+                                        Provider.reviews != None)\
+                                .order_by(Provider.name)\
+                                .all()
+        elif form.groups_only.data is True:
+            groups = [g.id for g in current_user.groups]
+            providers = Provider.query.join(Review, User, Group)\
+                                .filter(Group.id.in_(groups), 
+                                        Provider.categories.contains(category),
+                                        Provider.reviews != None)\
+                                .order_by(Provider.name)\
+                                .all()
+        else:
+            providers = Provider.query\
+                                .filter(Provider.categories.contains(category),\
+                                        Provider.reviews != None)\
+                                .all()
+        return render_template("search.html", providers=providers, form=form,
+                            title="Provider Search")
+    return render_template("search.html", form=form, title="Provider Search")

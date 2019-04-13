@@ -37,6 +37,17 @@ def Picture_Upload_Check(form, field):
         if size > 7500000:
             raise ValidationError("Please reduce file size to less than 7.5mb.")
 
+def NotEqualTo(comparisonField):
+
+    def _notEqualTo(form, field):
+        compare_field = getattr(form, comparisonField)
+        message = f"{field.label.text} and {compare_field.label.text} are not allowed to both be selected."
+        if field.data is True and compare_field.data is True:
+            print("invalid")
+            raise ValidationError(message)
+        print("valid")
+    return _notEqualTo
+
 def unique_check(modelClass, columnName):
     """validate that no other entity in class registered for field.
     inputs:
@@ -175,7 +186,7 @@ class GroupSearchForm(FlaskForm):
     name = StringField("Group Name", id="group_name", validators=[DataRequired()])
     value = HiddenField("Group Value", id="group_value", validators=
                         [DataRequired(), relation_check("groups")])
-    submit = SubmitField("Add Group")
+    submit = SubmitField("Add Group", id="submit-group-add")
 
 
 class FriendSearchForm(FlaskForm):
@@ -183,7 +194,7 @@ class FriendSearchForm(FlaskForm):
     name = StringField("Friend Name", id="friend_name", validators=[DataRequired()])
     value = HiddenField("Friend Value", id="friend_value", validators=
                         [DataRequired(), relation_check("friends")])
-    submit = SubmitField("Add Friend")
+    submit = SubmitField("Add Friend", id="submit-friend-add")
 
 
 class GroupCreateForm(FlaskForm):
@@ -192,3 +203,23 @@ class GroupCreateForm(FlaskForm):
                        unique_check(Group, Group.name)])
     description = TextAreaField("Description", validators=[DataRequired()])
     submit = SubmitField("Add Group", id="submit_new_group")
+
+class ProviderSearchForm(FlaskForm):
+    """Form to search for providers."""
+    category = SelectField("Category", choices=category_list(), 
+                           validators=[DataRequired()], coerce=int)
+    city = StringField("City", validators=[DataRequired()])
+    state = SelectField("State", choices=state_list(), validators=[DataRequired()])
+    friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
+    groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
+    submit = SubmitField("Submit")
+
+    # def validate_friends_only(self, friends_only, groups_only):
+    #     if self.friends_only.data is True and self.groups_only.data is True:
+    #         raise ValidationError("Select only one of friends only or groups only")
+    
+    # def validate_groups_only(self, groups_only, friends_only):
+    #     if self.friends_only.data is True and self.groups_only.data is True:
+    #         raise ValidationError("Select only one of friends only or groups only")
+
+    
