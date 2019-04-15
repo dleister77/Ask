@@ -216,12 +216,23 @@
     </div>
 {% endmacro %}
 
-<!--Source: Real Python jinja tutorial -->
-{% macro Navlink(endpoint, name) %}
-<!-- Builds navlinks on navbar, highlights current page -->
-    {% if request.endpoint.endswith(endpoint) %}
-        <li class="active nav-item"><a class="nav-link" href="{{ url_for(endpoint, **kwargs) }}">{{name}}</a></li>
+
+{% macro Navlink2(link_endpoint, name, active) %}
+    {% if link_endpoint == active %}
+        <li class="active nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
     {%  else %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for(endpoint, **kwargs) }}">{{name}}</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
     {% endif %}
-{% endmacro %}
+{% endmacro %}   
+
+{% macro Navlink(link_endpoint, name) %}
+    {% if request.endpoint is none %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
+    {% elif request.endpoint == link_endpoint %}
+        <li class="active nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
+    {%  else %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
+    {% endif %}
+{% endmacro %}   
+
+
