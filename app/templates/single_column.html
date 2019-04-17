@@ -6,11 +6,16 @@
 {% block main %}
     <div class="row">
         <div class="col-5 mx-auto search_grid_1">
-            {% block content_narrow %}
-
-            {% endblock %}
+            {% block content_narrow %} {% endblock %}
         </div>
     </div>
+    <div class="row">
+            <div class="col-6 mx-auto search_grid_1">
+                {% block content_medium %}
+    
+                {% endblock %}
+            </div>
+        </div>
     <div class="row">
         <div class="col-8 mx-auto search_grid_1">
             {% block content_wide %}
@@ -18,5 +23,8 @@
             {% endblock %}
         </div>
     </div>
+
+    {%block modal %}
+    {% endblock %}
 
 {% endblock %}

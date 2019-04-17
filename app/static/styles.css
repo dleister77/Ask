@@ -58,9 +58,15 @@
 .card{
   background-color: #f2f2f2;
 }
+.card-body{
+  
+}
 .card-header{
   background-color: navy;
   color: white;
+}
+.card-item{
+  background-color: #f2f2f2
 }
 .h-15{
  height: 15%!important;
@@ -71,6 +77,7 @@
  .inline{
   display:inline;
  }
+
 .search_grid_1{
  display: block;
  width: 300px;
@@ -80,6 +87,9 @@
 }
 .star-half{
  color:maroon;
+}
+.subList{
+  padding: 0%;
 }
 .ui-autocomplete {
  position: absolute;

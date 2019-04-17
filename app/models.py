@@ -1,6 +1,7 @@
 from app import db, login
 from datetime import datetime
 from flask_login import UserMixin
+from flask_sqlalchemy import Model
 from sqlalchemy.ext.hybrid import hybrid_property
 from string import capwords
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -24,6 +25,7 @@ review_picture = db.Table('review_picture', db.Model.metadata,
 user_friend = db.Table('user_friend', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')), 
     db.Column('friend_id', db.Integer, db.ForeignKey('user.id')))
+
 
 class State(db.Model):
     """States used in db.
@@ -78,6 +80,7 @@ class Address(db.Model):
 
     def __repr__(self):
         return f"<Address {self.line1}, {self.city}, {self.state}>"
+
 
 class User(UserMixin, db.Model):
     """Creates user class.

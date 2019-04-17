@@ -19,8 +19,19 @@ def dbAdd(item):
         print("caught an integrity error")
         raise
 
-    finally:
-        db.session.close()
+
+def dbUpdate():
+    """Update db and handle errors
+    item: SQLALCHEMY model class from models.py.
+    """
+    try:
+        db.session.commit()
+
+    except IntegrityError:
+        db.session.rollback()
+        print("caught an integrity error")
+        raise
+
 
 def thumbnail_from_buffer(buffer, size, name, path):
     """save thumbnail from submitted picture.

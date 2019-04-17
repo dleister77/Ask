@@ -133,6 +133,41 @@ class RegistrationForm(FlaskForm):
             raise ValidationError("Username already exists, please choose a "
                                   "different name.")
 
+class UserUpdateForm(FlaskForm):
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
+    address = FormField(AddressField) 
+    email = StringField("Email Address", validators=[DataRequired(), Email()])
+    username = StringField("Username", validators=[DataRequired()])
+    submit = SubmitField("Submit")
+    
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user is not None and user != current_user:
+            raise ValidationError("Username already exists, please choose a "
+                                  "different name.")
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is not None and user != current_user:
+            raise ValidationError("Email address already registered, please choose a "
+                                  "different email address.")
+
+class PasswordChangeForm(FlaskForm):
+    """Form to change password."""
+    old = PasswordField("Old Password", validators=[DataRequired()])
+    new = PasswordField("New Password", validators=[DataRequired(), 
+            Length(min=7, max=15)])
+    confirmation = PasswordField("Confirm New Password",
+                                 validators=[DataRequired(), 
+                                 EqualTo('new', 
+                                 message="passwords must match")])
+    submit = SubmitField("Submit")
+
+    def validate_old(self, old):
+        if not current_user.check_password(old.data):
+            raise ValidationError("invalid password, try again.")
+
 
 class ReviewForm(FlaskForm):
     """Form to submit review."""
@@ -213,13 +248,3 @@ class ProviderSearchForm(FlaskForm):
     friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
     groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
     submit = SubmitField("Submit")
-
-    # def validate_friends_only(self, friends_only, groups_only):
-    #     if self.friends_only.data is True and self.groups_only.data is True:
-    #         raise ValidationError("Select only one of friends only or groups only")
-    
-    # def validate_groups_only(self, groups_only, friends_only):
-    #     if self.friends_only.data is True and self.groups_only.data is True:
-    #         raise ValidationError("Select only one of friends only or groups only")
-
-    

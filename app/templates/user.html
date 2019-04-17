@@ -1,28 +1,60 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import renderListLine, renderInlineListLine, render_review %}
+{% from "macros.html" import renderListLine, renderInlineList, render_review,
+ form_render, field_render, field_row_render, renderList, modal_render %}
 
 {% block title %} {{ super() }} {% endblock %}
 
-{% block content_narrow %}
-    <h2>Profile Information</h3>
-        <dl>
-            {{ renderListLine(user.first_name + " " + user.last_name, "Name")}}
-            {{ renderListLine(user.username, "Username")}}
-            {{ renderListLine(user.email, "Email")}}
-            {{ renderListLine(user.address.line1, "Street")}}
-            {{ renderListLine(user.address.line2, "cont'd")}}
-            {{ renderListLine(user.address.city, "City")}}
-            {{ renderListLine(user.address.state.name, "State")}}
-            {{ renderListLine(user.address.zip, "Zip Code")}}
+{% block content_medium %}
+<div class="card pb-0" id="user_profile">
+    <div class="card-header p-2">
+        <h4 class="text-center">Profile Information
+        {% if user == current_user %}    
+        <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)
+        </a></small>
+        {% endif %}
+        </h4>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+                {{ renderInlineList("Name", (user.first_name + " " + user.last_name))}}
+                {{ renderInlineList("Username", user.username)}}
+                {{ renderInlineList("Email", user.email)}}
+                {{ renderInlineList("Address", renderList(["card-item", "card-item py-1 px-0"], user.address.line1,
+                                                        user.address.line2,
+                                                        ([user.address.city,
+                                                        user.address.state.state_short,
+                                                        user.address.zip]
+                                                        |join(', '))
+                                                        ))}}                            
         </dl>
+
+        {% if user == current_user %}
+            <br>
+            <h4 class="text-center">Password</h4>
+            <dl class="row">
+                {{ renderInlineList("Last Updated", "ToDo")}}
+            </dl>
+            <p class="card-item text-center">
+            <a href="" data-toggle="modal" data-target="#modal_password">
+            Click to update password</a></p>
+        {% endif %}
+    </div>
+</div>
+
         <br>
-        <h2 class="center"> Reviews </h2>
-        <dl>
-            {{ renderListLine(reviews|length, "# of Reviews")}}
+<div class="card">
+    <div class="card-header p-2">
+        <h4 class="text-center"> Review Summary </h4>
+    </div>
+    <div class="card-body pb-0">
+        <dl class="row">
+            {{ renderInlineList( "# Reviews", reviews|length)}}
             {% if reviews|length > 0 %}
-            {{ renderListLine((reviews|sum(attribute='rating')/reviews|length), "Average Rating")}}
+                {{ renderInlineList("Avg Rating", (reviews|sum(attribute='rating')/reviews|length))}}
             {% endif %}     
         </dl>
+    </div>
+</div>
         <br>
 {% endblock %}
 
@@ -34,3 +66,28 @@
                 {% endfor %}
         </div>
 {% endblock %}
+
+{% block modal %}
+
+    {% if modal_open %}
+        <script>$(window).on('load', function(){
+            $("#modal_id").modal('show');
+        });
+        </script>
+    {% endif %}
+
+    {% if form %}
+        {{modal_render(form, modal_title, action="/userupdate")}}
+    {% endif %}
+
+    {% if pword_open %}
+        <script>$(window).on('load', function(){
+            $("#modal_password").modal('show');
+        });
+        </script>
+    {% endif %}    
+
+    {% if pform %}
+        {{modal_render(pform, modal_title_2, action="/passwordupdate", modalID="modal_password")}}
+    {% endif %}
+{% endblock%}

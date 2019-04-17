@@ -3,10 +3,10 @@ from flask_login import current_user, login_required, login_user, logout_user
 from app import app, db
 from app.forms import (LoginForm, RegistrationForm, ReviewForm, ProviderAddForm,
                        GroupSearchForm, FriendSearchForm, GroupCreateForm, 
-                       ProviderSearchForm)
+                       PasswordChangeForm, ProviderSearchForm, UserUpdateForm)
 from app.models import (User, Address, State, Review, Picture, Category, 
                         Provider, Group)
-from app.helpers import dbAdd, thumbnail_from_buffer, name_check
+from app.helpers import dbAdd, dbUpdate, thumbnail_from_buffer, name_check
 import os
 from PIL import Image
 import re
@@ -23,10 +23,7 @@ def index():
 
 @app.route('/photos/<int:id>/<path:filename>')
 def download_file(filename, id):
-    print(filename)
-    print(id)
     fileloc = os.path.join(app.config['MEDIA_FOLDER'], str(id)).replace('\\','/')
-    print(fileloc)
     return send_from_directory(fileloc, filename)
 
 @app.route('/friendadd', methods=['POST'])
@@ -133,19 +130,30 @@ def network():
     GroupSearch = GroupSearchForm()
     FriendSearch = FriendSearchForm()
     GroupCreate = GroupCreateForm()
+    modal_title="Create New Group"
     return render_template("network.html", GroupSearch=GroupSearch,
                            FriendSearch=FriendSearch, GroupCreate=GroupCreate,
-                           title="Network")
+                           title="Network", modal_title=modal_title)
 
-@app.route('/user/<username>')
+@app.route('/passwordupdate', methods=['POST'])
 @login_required
-def user(username):
-    """Generate profile page."""
-    user = User.query.filter_by(username=username).first_or_404()
-    reviews = user.reviews
-    print(reviews)
-
-    return render_template("user.html", title="User Profile", user=user, reviews=reviews)
+def passwordupdate():
+    pform = PasswordChangeForm()
+    if pform.validate_on_submit():
+        current_user.set_password(pform.new.data)
+        dbUpdate()
+        flash("Password updated")
+        return redirect(url_for('user', username=current_user.username))
+    form = UserUpdateForm()
+    modal_title = "Edit User Information"
+    modal_title_2 = "Change Password"
+    pword_open = True
+    reviews = current_user.reviews
+    flash("Password update failed, please correct errors")
+    return render_template("user.html", title="User Profile", user=user,
+                            reviews=reviews, form=form,
+                            modal_title=modal_title, pform=pform, 
+                            modal_title_2=modal_title_2, pword_open=pword_open)
 
 @app.route('/provider/<name>/<id>')
 @login_required
@@ -167,8 +175,6 @@ def providerAdd():
                           city=form.address.city.data, 
                           state_id=state_id, 
                           zip=form.address.zip.data)
-        print(form.category.data)
-        print(type(form.category.data))
         categories = [Category.query.filter_by(id=cat).first() for cat in 
                      form.category.data]
         provider = Provider(name=form.name.data, email=form.email.data,
@@ -227,7 +233,6 @@ def review():
         if form.picture.data[0]:
             path = os.path.join('instance', app.config['UPLOAD_FOLDER'],
                    str(current_user.id)).replace("\\", "/")
-            print(path)
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
             for picture in form.picture.data:
@@ -248,9 +253,9 @@ def review():
                         service_date=form.service_date.data,
                         comments=form.comments.data,
                         pictures=pictures)
-        db.session.add(review)
-        db.session.commit()
+        dbAdd(review)
         flash("review added")
+        return redirect(url_for('review'))
     
     return render_template("review.html", title="Review", form=form)
 
@@ -282,4 +287,55 @@ def search():
                                 .all()
         return render_template("search.html", providers=providers, form=form,
                             title="Provider Search")
+                            
     return render_template("search.html", form=form, title="Provider Search")
+
+@app.route('/user/<username>')
+@login_required
+def user(username):
+    """Generate profile page."""
+    user = User.query.filter_by(username=username).first_or_404()
+    if user == current_user:
+        form = UserUpdateForm(obj=user)
+        form.address.state.data = user.address.state.name
+        pform = PasswordChangeForm()
+        reviews = user.reviews
+        user = current_user
+        modal_title ="Edit User Information"
+        modal_title_2="Change Password"
+        return render_template("user.html", title="User Profile", user=user,
+                                reviews=reviews, form=form,
+                                modal_title=modal_title, pform=pform, 
+                                modal_title_2=modal_title_2)
+    
+    reviews = user.reviews
+    return render_template("user.html", title="User Profile", user=user, reviews=reviews)
+
+@app.route('/userupdate', methods=["POST"])
+@login_required
+def userupdate():
+    """Update user information minus password which is updated seperately."""
+    form = UserUpdateForm()
+    if form.validate_on_submit():
+        current_user.address.update(line1=form.address.line1.data,
+                                    line2=form.address.line2.data,
+                                    city=form.address.city.data,
+                                    zip=form.address.zip.data,
+                                    state_id=State.query.filter_by(name=
+                                    form.address.state.data).first().id)
+        address = current_user.address
+        current_user.update(first_name=form.first_name.data,
+                            last_name=form.last_name.data,
+                            email=form.email.data,
+                            username=form.username.data,
+                            address=address)
+        dbUpdate()
+        flash("User information updated")
+        return redirect(url_for('user', username=current_user.username))
+   
+    modal_title = "Edit User Information"
+    modal_open = True
+    flash("User information update failed.  Please correct errors.")
+    return render_template("user.html", form=form, reviews=current_user.reviews,
+                            title="User Profile", modal_title=modal_title, 
+                            user=current_user, modal_open=modal_open)

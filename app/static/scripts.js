@@ -20,6 +20,7 @@ function addcsrf(){
 function ajaxModalPost(urltarget){
     addcsrf();
     data=$(".modalinput").serialize();
+    console.log("logged data: ", data)
     var parameters = {
         url: urltarget,
         type: "POST",
@@ -28,9 +29,11 @@ function ajaxModalPost(urltarget){
     };
     $.ajax(parameters)
     .done(function(data){
+        console.log("success")
         $("#modal_id").modal("hide");
     })
     .fail(function(data){
+        console.log("failed")
         alert(data.responseJSON.msg);
     });
 }
@@ -293,7 +296,7 @@ $(document).ready(function(){
 
     } else if ($("#network").length){
         $(document).ready(initNetwork);
-        console.log("initiate network")
+        console.log("network initiated")
     } else if ($("#rating_search").length){
         $(document).ready(initSearch);
     }

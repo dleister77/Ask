@@ -1,9 +1,8 @@
 {% extends "double_column.html" %}
 {% from "macros.html" import form_render, field_render, modal_render %}
 
-{% set active = 'network' %}
-
 {% block content_left_top %}
+    <div id="network"></div>
     <!-- list of groups user belongs to -->
     <h3>Your Groups</h3>
     <ul>
@@ -39,6 +38,6 @@
 {% endblock %}
 
 {% block modal %}
-    {{modal_render(GroupCreate)}}
+    {{modal_render(GroupCreate, modal_title)}}
 {% endblock %}
 

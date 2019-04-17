@@ -1,6 +1,6 @@
 from config import Config
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, Model
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -9,10 +9,19 @@ from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from sqlalchemy import MetaData
 
+
+class AskModel(Model):
+    """Added functionality to standard flask-sa db.model."""
+    def update(self, **kwargs):
+        for k, v in kwargs.items():
+            if getattr(self, k) != v:
+                setattr(self, k, v)
+
+
 app = Flask(__name__)
 app.config.from_object(Config)
 metadata = MetaData(naming_convention=Config.SQLALCHEMY_NAMING_CONVENTION)
-db = SQLAlchemy(app, metadata=metadata)
+db = SQLAlchemy(app, metadata=metadata, model_class=AskModel)
 migrate = Migrate(app, db)
 login = LoginManager(app)
 login.login_view = "login"

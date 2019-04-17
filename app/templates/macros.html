@@ -36,6 +36,43 @@
     </div>
 {% endmacro %}
 
+{% macro field_row_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check" ) %}
+  
+    <div class="form-group row">
+            {% if field.type == "FormField" %}
+                {{form_render(field, classAdjust)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class_=(buttonClass))}}
+            {% elif field.type == "RadioField" %}
+                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                {% for subfield in field %}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
+            {%else%}
+                <div class="col">
+                    {{field.label(class_=labelClass)}}
+                </div>
+                <div class="col">
+                    {{field(class_=fieldClass + " " + classAdjust)}}
+                </div>
+            {% endif %}
+            {% for error in field.errors %}
+                <span style="color:red;">{{error}}</span>
+            {% endfor %}
+    </div>
+{% endmacro %}
 <!--render form, calls render_field
     form: form to be render
     classAdjust: adjustment to field class specified in form_render.
@@ -47,16 +84,16 @@
     {% endfor %}
 {% endmacro %}
 
-{% macro modal_render(form, modalID="modal_id", classAdjust="") %}
+{% macro modal_render(form, modal_title, action="", modalID="modal_id", classAdjust=" modalinput", submitAdjust="") %}
 <!-- Renders modal form.-->
 <!-- Inputs: form object, modal id, class adjustment - used by javascript to select modal data-->
-    {{form.hidden_tag()}}
     <div class="modal" id={{modalID}} tabindex="-1" role="dialog">
         <div class="modal-dialog modal-md" role="document">
             <div class="modal-content">
-                <form id = modal_form_group>
+                <form id = "modal_form_group" action="{{action}}" method="POST">
+                    {{form.hidden_tag()}}
                     <div class="modal-header">
-                        <h5 class="modal-title">Create New Group</h5>
+                        <h5 class="modal-title">{{modal_title}}</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -68,7 +105,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        {{form.submit(class_=("btn btn-primary btn-block-submit submit"))}}
+                        {{form.submit(class_=("btn btn-primary btn-block-submit submit " + submitAdjust))}}
                     </div>
                 </form>
             </div>
@@ -78,19 +115,22 @@
 
 {% macro renderListLine(value, label)%}
     <div class="row">
-        <dt class="col-sm-6">{{label}}</dt>
-        <dd class="col-sm-6">{{value}}</dd>
+        <li class="col-sm-6">{{label}}</dt>
+        <li class="col-sm-6">{{value}}</dd>
     </div>
 {% endmacro%}
 
-{% macro renderInlineListLine(value, label)%}
-    <div class="row">
-        <ul class="list-inline">
-            <li class="list-inline-item">{{label}}:</li>
-            <li class="list-inline-item">{{value}}</li>
-        </ul>
+{% macro renderInlineList(label, value)%}
+        <dt class="col-4 text-left">{{label}}:</dt>
+        <dd class="col-8 text-right">{{value}}</dd>                
+{% endmacro%}
 
-    </div>
+{% macro renderList(classAdjust) %}
+        <ul class="list-group {{classAdjust[0]}}">
+            {% for item in varargs if item != "" %}
+            <li class="list-group-item border-0 {{classAdjust[1]}}">{{item}}</li>
+            {% endfor %}
+        </ul>
 {% endmacro%}
 
 {% macro star_rating(rating) %}
@@ -215,15 +255,6 @@
         </div>
     </div>
 {% endmacro %}
-
-
-{% macro Navlink2(link_endpoint, name, active) %}
-    {% if link_endpoint == active %}
-        <li class="active nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
-    {%  else %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
-    {% endif %}
-{% endmacro %}   
 
 {% macro Navlink(link_endpoint, name) %}
     {% if request.endpoint is none %}
