@@ -1,10 +1,8 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import renderListLine, renderInlineList, render_review,
- form_render, field_render, field_row_render, renderList, modal_render %}
-
-{% block title %} {{ super() }} {% endblock %}
+{% from "macros.html" import renderInlineList, render_review, renderList, pagination, modal_render %}
 
 {% block content_medium %}
+{% set user, average, count = user %}
 <div class="card pb-0" id="user_profile">
     <div class="card-header p-2">
         <h4 class="text-center">Profile Information
@@ -48,9 +46,9 @@
     </div>
     <div class="card-body pb-0">
         <dl class="row">
-            {{ renderInlineList( "# Reviews", reviews|length)}}
+            {{ renderInlineList( "# Reviews", count)}}
             {% if reviews|length > 0 %}
-                {{ renderInlineList("Avg Rating", (reviews|sum(attribute='rating')/reviews|length))}}
+                {{ renderInlineList("Avg Rating", average|round(1))}}
             {% endif %}     
         </dl>
     </div>
@@ -65,6 +63,9 @@
                     <br>
                 {% endfor %}
         </div>
+
+        {{pagination(pag_urls)}}
+        
 {% endblock %}
 
 {% block modal %}

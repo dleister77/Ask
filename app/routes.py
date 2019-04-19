@@ -1,25 +1,38 @@
-from flask import flash, redirect, render_template, request, url_for, jsonify, send_from_directory
+from flask import flash, redirect, render_template, request, url_for, jsonify,\
+                  send_from_directory
 from flask_login import current_user, login_required, login_user, logout_user
-from app import app, db
+from app import app, db, csrf
 from app.forms import (LoginForm, RegistrationForm, ReviewForm, ProviderAddForm,
                        GroupSearchForm, FriendSearchForm, GroupCreateForm, 
                        PasswordChangeForm, ProviderSearchForm, UserUpdateForm)
 from app.models import (User, Address, State, Review, Picture, Category, 
                         Provider, Group)
-from app.helpers import dbAdd, dbUpdate, thumbnail_from_buffer, name_check
+from app.helpers import dbAdd, dbUpdate, thumbnail_from_buffer, name_check,\
+                        pagination_urls
 import os
 from PIL import Image
 import re
+from sqlalchemy.sql import func
 from urllib import parse
 from werkzeug.urls import url_parse
 from werkzeug.utils import secure_filename
 
 @app.route('/')
 @app.route('/index')
-@login_required
 def index():
-    user = current_user
-    return render_template("index.html", user=user, title="home")
+    logged_in = current_user.is_authenticated
+    if current_user.is_authenticated:
+        print("authenticated")
+        user = current_user
+        form = ProviderSearchForm(obj=current_user.address)
+        form.state.data = current_user.address.state.id
+        return render_template("index.html", user=user, form=form,
+        title="Search", logged_in=logged_in)
+    else:
+        print("not authenticated, calling login form")
+        form = LoginForm()
+        return render_template("index.html", form=form, logged_in=logged_in,
+                title="Welcome")
 
 @app.route('/photos/<int:id>/<path:filename>')
 def download_file(filename, id):
@@ -158,9 +171,24 @@ def passwordupdate():
 @app.route('/provider/<name>/<id>')
 @login_required
 def provider(name, id):
-    provider = Provider.query.filter_by(id=id).first()
+    page = request.args.get('page', 1, int)
+    filter_args = [Provider.id==id]
+    join_args = [Provider.reviews]
+    pag_args = {"id": id, "name": name}    
+    provider = (db.session.query(Provider,
+                                 func.avg(Review.rating).label("average"),
+                                 func.count(Review.id).label("count"))
+                          .join(*join_args)
+                          .filter(*filter_args)
+                          .first())
+    join_args = [Review.provider]
+    reviews = (db.session.query(Review).join(*join_args).filter(*filter_args))
+    reviews = reviews.paginate(page, app.config["REVIEWS_PER_PAGE"],
+                                       False)
+    pag_urls = pagination_urls(reviews, 'provider', pag_args)
     return render_template("provider_profile.html", title="Provider Profile", 
-                            provider=provider)
+                            provider=provider, pag_urls=pag_urls,
+                            reviews=reviews.items)
 
 @app.route('/provideradd', methods=['GET', 'POST'])
 @login_required
@@ -168,12 +196,12 @@ def providerAdd():
     """Adds provider to db."""
     form = ProviderAddForm()
     if form.validate_on_submit():
-        state_id = (State.query.filter(State.name == form.address.state.data)
-                    .first().id)
+        # state_id = (State.query.filter(State.name == form.address.state.data)
+        #             .first().id)
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
-                          state_id=state_id, 
+                          state_id=form.state.data, 
                           zip=form.address.zip.data)
         categories = [Category.query.filter_by(id=cat).first() for cat in 
                      form.category.data]
@@ -208,12 +236,12 @@ def register():
         return redirect(url_for("index"))
     form = RegistrationForm()
     if form.validate_on_submit():
-        state_id = (State.query.filter(State.name == form.address.state.data)
-                    .first().id)
+        # state_id = (State.query.filter(State.name == form.address.state.data)
+        #             .first().id)
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
-                          state_id=state_id, 
+                          state_id=form.state.data,
                           zip=form.address.zip.data)
         user = User(first_name=form.first_name.data, 
                     last_name=form.last_name.data, email=form.email.data, 
@@ -259,57 +287,83 @@ def review():
     
     return render_template("review.html", title="Review", form=form)
 
-@app.route('/search', methods=["GET", "POST"])
+@app.route('/search')
 @login_required
 def search():
-    form = ProviderSearchForm()
-    if form.validate_on_submit():
+
+    form = ProviderSearchForm(request.args)
+    page = request.args.get('page', 1, int)
+    
+    if form.validate() or request.args.get('page') is not None:
         category = Category.query.filter_by(id=form.category.data).first()
+        #common joins and filters used by all queries
+        filter_args = [Provider.categories.contains(category),
+                       Address.city == form.city.data,
+                       Address.state_id == form.state.data]
+        join_args = [Provider.address, Provider.reviews]
+        pag_args = {"state": form.state.data, "city": form.city.data,
+                    "category": form.category.data}
         if form.friends_only.data is True:
-            providers = Provider.query.join(Review, User)\
-                                .filter(User.friends.contains(current_user),
-                                        Provider.categories.contains(category),
-                                        Provider.reviews != None)\
-                                .order_by(Provider.name)\
-                                .all()
+            filter_args.append(User.friends.contains(current_user))
+            join_args.extend([User])
+            pag_args['friends_only'] = True
         elif form.groups_only.data is True:
             groups = [g.id for g in current_user.groups]
-            providers = Provider.query.join(Review, User, Group)\
-                                .filter(Group.id.in_(groups), 
-                                        Provider.categories.contains(category),
-                                        Provider.reviews != None)\
-                                .order_by(Provider.name)\
-                                .all()
-        else:
-            providers = Provider.query\
-                                .filter(Provider.categories.contains(category),\
-                                        Provider.reviews != None)\
-                                .all()
-        return render_template("search.html", providers=providers, form=form,
-                            title="Provider Search")
-                            
-    return render_template("search.html", form=form, title="Provider Search")
+            filter_args.append(Group.id.in_(groups))
+            join_args.extend([User, User.groups])
+            pag_args['groups_only'] = True
+        #common query, customized by join_args and filter_args
+        providers = (db.session.query(Provider,
+                                      func.avg(Review.rating).label("average"),
+                                      func.count(Review.id).label("count"))
+                               .join(*join_args)
+                               .filter(*filter_args)
+                               .group_by(Provider.name)
+                               .order_by(Provider.name))
+
+        providers = providers.paginate(page, app.config["REVIEWS_PER_PAGE"],
+                                       False)       
+        pag_urls = pagination_urls(providers, 'search', pag_args)
+        return render_template("index.html", form=form, title="Search", 
+                                providers=providers.items, pag_urls=pag_urls)      
+
+    return render_template("index.html", form=form, title="Search")
 
 @app.route('/user/<username>')
 @login_required
 def user(username):
     """Generate profile page."""
-    user = User.query.filter_by(username=username).first_or_404()
-    if user == current_user:
-        form = UserUpdateForm(obj=user)
-        form.address.state.data = user.address.state.name
-        pform = PasswordChangeForm()
-        reviews = user.reviews
-        user = current_user
-        modal_title ="Edit User Information"
-        modal_title_2="Change Password"
-        return render_template("user.html", title="User Profile", user=user,
-                                reviews=reviews, form=form,
-                                modal_title=modal_title, pform=pform, 
-                                modal_title_2=modal_title_2)
+    page = request.args.get('page', 1, int)
+    filter_args = [User.username == username]
+    join_args = [Review.user]
+    pag_args = {"username": username}
+    reviews = (db.session.query(Review).join(*join_args).filter(*filter_args))
+    reviews = reviews.paginate(page, app.config["REVIEWS_PER_PAGE"], False)
+    join_args = [User.reviews]
+    user = (db.session.query(User,
+                             func.avg(Review.rating).label("average"),
+                             func.count(Review.id).label("count"))
+                      .join(*join_args)
+                      .filter(*filter_args)
+                      .first())
+    print(user)
+    print(user[0])
+    pag_urls = pagination_urls(reviews, 'user', pag_args)
     
-    reviews = user.reviews
-    return render_template("user.html", title="User Profile", user=user, reviews=reviews)
+    if user[0] == current_user:
+        form = UserUpdateForm(obj=user[0])
+        form.address.state.data = user[0].address.state.id
+        pform = PasswordChangeForm()
+        modal_title = "Edit User Information"
+        modal_title_2= "Change Password"
+        return render_template("user.html", title="User Profile", user=user,
+                                reviews=reviews.items, form=form,
+                                modal_title=modal_title, pform=pform, 
+                                modal_title_2=modal_title_2, pag_urls=pag_urls)
+    
+
+    return render_template("user.html", title="User Profile", user=user,
+                            reviews=reviews.items, pag_urls=pag_urls)
 
 @app.route('/userupdate', methods=["POST"])
 @login_required
@@ -321,8 +375,7 @@ def userupdate():
                                     line2=form.address.line2.data,
                                     city=form.address.city.data,
                                     zip=form.address.zip.data,
-                                    state_id=State.query.filter_by(name=
-                                    form.address.state.data).first().id)
+                                    state_id=form.address.state.data)
         address = current_user.address
         current_user.update(first_name=form.first_name.data,
                             last_name=form.last_name.data,

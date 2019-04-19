@@ -1,11 +1,10 @@
 {% extends "single_column.html" %}
 {% from "macros.html" import field_render, render_provider %}
 
-{% block title %} {{ super() }} {% endblock %}
 
 {% block content_narrow %}
     <h3>Search for Provider:</h3>
-    <form action="/search" method="post">
+    <form action="/search" method="get">
         {{form.hidden_tag()}}
         {{field_render(form.category)}}
         {{field_render(form.city)}}

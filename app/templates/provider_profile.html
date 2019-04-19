@@ -1,13 +1,15 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import star_rating, render_provider, render_review %}
+{% from "macros.html" import render_provider, render_review, pagination %}
 
 {% block content_wide %}
     {{render_provider(provider)}}
     <br>   
     
-    {%for review in provider.reviews %}
+    {%for review in reviews %}
         {{render_review(review, current_user, false)}}
         <br>
     {% endfor %}
+
+    {{pagination(pag_urls)}}
 
 {% endblock %}

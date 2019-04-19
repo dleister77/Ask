@@ -16,7 +16,7 @@ from werkzeug import FileStorage
 
 def state_list():
     """Query db to populate state list on forms."""
-    return [(s.name, s.name) for s in State.query.order_by("name")]
+    return [(s.id, s.name) for s in State.query.order_by("name")]
 
 def category_list():
     """Query db to populate state list on forms."""
@@ -43,9 +43,7 @@ def NotEqualTo(comparisonField):
         compare_field = getattr(form, comparisonField)
         message = f"{field.label.text} and {compare_field.label.text} are not allowed to both be selected."
         if field.data is True and compare_field.data is True:
-            print("invalid")
             raise ValidationError(message)
-        print("valid")
     return _notEqualTo
 
 def unique_check(modelClass, columnName):
@@ -97,7 +95,8 @@ class AddressField(FlaskForm):
     line1 = StringField("Street Address", validators=[DataRequired()])
     line2 = StringField("Address Line 2")
     city = StringField("City", validators=[DataRequired()])
-    state = SelectField("State", choices=state_list(), validators=[DataRequired()])
+    state = SelectField("State", choices=state_list(), coerce=int,
+                         validators=[DataRequired()])
     zip = StringField("Zip", validators=[DataRequired()])
 
     def validate_zip(form, field):
@@ -241,10 +240,15 @@ class GroupCreateForm(FlaskForm):
 
 class ProviderSearchForm(FlaskForm):
     """Form to search for providers."""
+    class Meta:
+        csrf = False
+        
+
     category = SelectField("Category", choices=category_list(), 
                            validators=[DataRequired()], coerce=int)
     city = StringField("City", validators=[DataRequired()])
-    state = SelectField("State", choices=state_list(), validators=[DataRequired()])
+    state = SelectField("State", choices=state_list(),
+                         validators=[DataRequired()], coerce=int)
     friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
     groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
     submit = SubmitField("Submit")

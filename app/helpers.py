@@ -1,4 +1,5 @@
 from app import db
+from flask import url_for
 from flask_login import current_user
 from io import StringIO, BytesIO
 import os
@@ -72,5 +73,17 @@ def name_check(path, filename, counter=0):
         print("not exists")
         return filename
     return filename
+ 
+def pagination_urls(pag_object, endpoint, pag_args):
+    pag_dict = {}
+    pag_dict['next'] = url_for(endpoint, page=pag_object.next_num, **pag_args)\
+                       if pag_object.has_next else None
+    pag_dict['prev'] = url_for(endpoint, page=pag_object.prev_num, **pag_args)\
+                       if pag_object.has_prev else None
+    pag_dict['pages'] = []
+    for i in range(pag_object.pages):
+        pag_dict['pages'].append((i + 1, url_for(endpoint, page = i + 1, **pag_args)))
+    return pag_dict
+
 
 

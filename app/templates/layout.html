@@ -46,7 +46,7 @@
             <div class="collapse navbar-collapse" id="navbar">
                 <ul class="navbar-nav ml-auto mt-2">
                     {% if current_user.is_authenticated %}
-                        {{ Navlink('search', 'Provider Search') }}
+                        {{ Navlink('index', 'Search') }}
                         {{ Navlink('review', 'Add Review') }}
                         {{ Navlink('user', 'Profile', username=current_user.username)}}
                         {{ Navlink('network', 'Network') }}
@@ -54,7 +54,6 @@
 
                     {% else %}
                         {{ Navlink('register', 'Register') }}
-                        {{ Navlink('login', 'Log In') }}
                     {% endif %}
                 </ul>
             </div>

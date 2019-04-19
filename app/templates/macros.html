@@ -149,10 +149,11 @@
     </li>
 {% endmacro %}
 
-{% macro render_provider(provider) %}
+{% macro render_provider(provider_tuple) %}
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
     <div class="card">
+        {% set provider, average, count = provider_tuple %}
         <div class="card-header">
             <h4><a href="{{url_for('provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
         </div>
@@ -163,10 +164,8 @@
                         <li>Category: {{ provider.categories|map(attribute='name')|join(', ') }}</li>
                         <li>
                             <ul class="list-inline">
-                                {% set count = provider.reviews|length %}
-                                {% set avg = provider.reviews|sum(attribute='rating') / count %}
-                                <li class="list-inline-item">{{avg}}</li>
-                                <li class="list-inline-item">{{star_rating(avg)}}</li>
+                                <li class="list-inline-item">{{average}}</li>
+                                <li class="list-inline-item">{{star_rating(average)}}</li>
                                 <li class="list-inline-item">({{count}})</li>                                    
                             </ul>
                         </li>
@@ -214,16 +213,6 @@
                         {% else %}
                             <li>Reviewer: {{review.user.username}}</li>
                         {% endif %}
-                        <li>Service Description: {{review.service_description|replace(None, 'Not Provided')}}</li>
-                        <li>
-                            <ul class="list-inline">
-                                <li class="list-inline-item">Rating: </li>
-                                {{star_rating(review.rating)}}
-                            </ul>
-                        </li>
-                        <li>Cost: "TBD"</li>
-                        <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
-                        <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
                         {% if review.user_id == current_user.id %}
                             <li>Relationship: Self</li>
                         {% else %}
@@ -238,6 +227,16 @@
                                     <li>Friends: {% if review.user in current_user.friends %} Yes {% else %} No {% endif %}</li>
                                 </ul>
                         {% endif %}
+                        <li>
+                            <ul class="list-inline">
+                                <li class="list-inline-item">Rating: </li>
+                                {{star_rating(review.rating)}}
+                            </ul>
+                        </li>
+                        <li>Cost: "TBD"</li>
+                        <li>Service Description: {{review.service_description|replace(None, 'Not Provided')}}</li>
+                        <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
+                        <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
                     </ul>
                 </div>
                 <div class="col-7 p-3">
@@ -254,6 +253,7 @@
             </div>
         </div>
     </div>
+</div>
 {% endmacro %}
 
 {% macro Navlink(link_endpoint, name) %}
@@ -265,5 +265,23 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
     {% endif %}
 {% endmacro %}   
+
+{% macro pagination(pag_urls) %}
+
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            {% if pag_urls['prev'] %}
+                <li class="page-item"><a class="page-link" href="{{pag_urls['prev']}}">Previous</a></li>
+            {% endif %}
+            {% for url in pag_urls['pages'] %}
+                <li class="page-item"><a class="page-link" href="{{url[1]}}">{{url[0]}}</a></li>
+            {% endfor %}
+            {% if pag_urls['next'] %}
+                <li class="page-item"><a class="page-link" href="{{pag_urls['next']}}">Next</a></li>
+            {% endif %}
+            </ul>
+    </nav>
+
+{% endmacro %}
 
 
