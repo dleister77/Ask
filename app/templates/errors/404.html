@@ -1,0 +1,9 @@
+{% extends "errors/error.html" %}
+
+{% block error %}
+
+    <h1> File Not Found</h1>
+    <p><a href="{{ url_for('auth.index') }}">Home</a></p>
+
+{% endblock %}
+

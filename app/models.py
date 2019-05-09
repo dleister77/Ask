@@ -2,7 +2,10 @@ from app import db, login
 from datetime import datetime
 from flask_login import UserMixin
 from flask_sqlalchemy import Model
+from app.helpers import pagination_urls
+from sqlalchemy import or_
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.sql import func
 from string import capwords
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -105,7 +108,7 @@ class User(UserMixin, db.Model):
                               primaryjoin=(id == user_friend.c.user_id),
                               secondaryjoin=(id == user_friend.c.friend_id),
                               backref="friendsWith")
-    
+
     @hybrid_property
     def first_name(self):
         return self._first_name
@@ -144,6 +147,47 @@ class User(UserMixin, db.Model):
         elif type(relation) == Group:
             self._addgroup(relation)
 
+    def summary(self):
+        """Return user object with review summary information(avg/count)"""
+        #need to accomodate zero reviews...joins makes it unable to calc
+        summary = (db.session.query(func.avg(Review.rating).label("average"),
+                                 func.count(Review.id).label("count"))
+                          .filter(User.id == self.id)
+                          .join(User)
+                          .first())
+        return summary
+    
+    def profile_reviews(self):
+        """Returns review object query."""
+        reviews = (db.session.query(Review).join(User)
+                                           .filter(User.id == self.id))
+        return reviews
+
+    def search_providers(self, form):
+        """Returns filtered provider query object."""
+        category = Category.query.filter_by(id=form.category.data).first()
+        # common joins and filters used by all queries
+        filter_args = [Provider.categories.contains(category),
+                       Address.city.ilike(form.city.data),
+                       Address.state_id == form.state.data]
+        join_args = [Provider.address, Provider.reviews, Review.user]
+        #update filter for relationship filters
+        if form.friends_only.data is True:
+            filter_args.append(User.friends.contains(self))
+        elif form.groups_only.data is True:
+            groups = [g.id for g in self.groups]
+            filter_args.extend([Group.id.in_(groups), User.id != self.id])
+            join_args.extend([User.groups])
+
+        providers = (db.session.query(Provider,
+                                      func.avg(Review.rating).label("average"),
+                                      func.count(Review.id).label("count"))
+                               .join(*join_args)
+                               .filter(*filter_args)
+                               .group_by(Provider.name)
+                               .order_by(Provider.name))
+        return providers
+       
     def __repr__(self):
         return f"<User {self.username}>"
 
@@ -191,6 +235,21 @@ class Provider(db.Model):
     def name(self, name):
         self._name = capwords(name)
 
+    def profile(self):
+        """Return tuple of provider object with review summary information(avg/count)"""
+        summary = (db.session.query(func.avg(Review.rating).label("average"),
+                                    func.count(Review.id).label("count"))
+                        .join(Provider)
+                        .filter(Provider.id == self.id)
+                        .first())
+        return (self, summary.average, summary.count)
+
+    def profile_reviews(self):
+        """Returns review object query."""
+        reviews = (db.session.query(Review).join(Provider)
+                                           .filter(Provider.id == self.id))
+        return reviews    
+
     def __repr__(self):
         return f"<Provider {self.name}>"
 
@@ -234,6 +293,7 @@ class Review(db.Model):
             self._comments = None
         else:
             self._comments = comments.capitalize()
+
 
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"

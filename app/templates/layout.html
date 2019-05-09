@@ -46,14 +46,14 @@
             <div class="collapse navbar-collapse" id="navbar">
                 <ul class="navbar-nav ml-auto mt-2">
                     {% if current_user.is_authenticated %}
-                        {{ Navlink('index', 'Search') }}
-                        {{ Navlink('review', 'Add Review') }}
-                        {{ Navlink('user', 'Profile', username=current_user.username)}}
-                        {{ Navlink('network', 'Network') }}
-                        {{ Navlink('logout', 'Logout') }}
+                        {{ Navlink('auth.index', 'Search') }}
+                        {{ Navlink('main.review', 'Add Review') }}
+                        {{ Navlink('main.user', 'Profile', username=current_user.username)}}
+                        {{ Navlink('relationship.network', 'Network') }}
+                        {{ Navlink('auth.logout', 'Logout') }}
 
                     {% else %}
-                        {{ Navlink('register', 'Register') }}
+                        {{ Navlink('auth.register', 'Register') }}
                     {% endif %}
                 </ul>
             </div>

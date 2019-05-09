@@ -140,11 +140,11 @@
         {% set var = (rating*100)|int %}
         {% set ns = namespace(var = (rating*100)|int) %}
         {% for num in range(var,75,-100) %}
-        <i class="fas fa-star star-full"></i>
-        {% set ns.var = ns.var-100 %}
+            <i class="fas fa-star star-full"></i>
+            {% set ns.var = ns.var-100 %}
         {% endfor %}
         {% if ns.var >25 and ns.var <=75 %}
-        <i class="fas fa-star-half-alt star-half"></i>
+            <i class="fas fa-star-half-alt star-half"></i>
         {% endif %}
     </li>
 {% endmacro %}
@@ -152,10 +152,10 @@
 {% macro render_provider(provider_tuple) %}
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
+    {% set provider, average, count = provider_tuple %}   
     <div class="card">
-        {% set provider, average, count = provider_tuple %}
         <div class="card-header">
-            <h4><a href="{{url_for('provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
+            <h4><a href="{{url_for('main.provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
         </div>
         <div class="card-body">
             <div class="row">
@@ -163,11 +163,15 @@
                     <ul class="list-unstyled">
                         <li>Category: {{ provider.categories|map(attribute='name')|join(', ') }}</li>
                         <li>
+                            {% if count > 0 %}
                             <ul class="list-inline">
                                 <li class="list-inline-item">{{average}}</li>
                                 <li class="list-inline-item">{{star_rating(average)}}</li>
                                 <li class="list-inline-item">({{count}})</li>                                    
                             </ul>
+                            {% else %}
+                            No ratings
+                            {% endif %}
                         </li>
                     </ul>
                 </div>
@@ -194,7 +198,7 @@
         <div class="card-header">
             {% if bizname == true %}
                 <h4>
-                    <a href='{{url_for("provider", name=review.provider.name|replace(" ","-")|replace("'", ''), id=review.provider.id)}}'>
+                    <a href='{{url_for("main.provider", name=review.provider.name|replace(" ","-")|replace("'", ''), id=review.provider.id)}}'>
                         {{review.provider.name}}
                     </a>: {{review.title}}</h4>
             {% else %}
@@ -208,7 +212,7 @@
                         {% set common_groups = review.user.groups|select('in', current_user.groups)|list %}  
                         {% set related = review.user in current_user.friends or review.user_id == current_user.id or common_groups|length > 0 %}
                         {% if related %}
-                            <li>Reviewer: <a href="{{url_for('user', username=review.user.username)}}">
+                            <li>Reviewer: <a href="{{url_for('main.user', username=review.user.username)}}">
                             {{"%s %s"|format(review.user.first_name, review.user.last_name)}}</a></li>
                         {% else %}
                             <li>Reviewer: {{review.user.username}}</li>
@@ -247,7 +251,7 @@
             <div class="row">
                 <div class="col-12 p-3">
                     {% for image in review.pictures %}
-                    <img src="{{url_for('download_file', id=review.user.id, filename=image.thumb)}}" alt="" class="thumbnail">
+                    <img src="{{url_for('main.download_file', id=review.user.id, filename=image.thumb)}}" alt="" class="thumbnail">
                     {%endfor %}
                 </div>
             </div>

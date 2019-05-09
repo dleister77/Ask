@@ -64,17 +64,26 @@ def name_check(path, filename, counter=0):
     p = Path(os.path.join(path, filename))
     exists = p.is_file()
     if exists:
-        print(f"Exists number {counter}")
         f = filename.rsplit(".",2)
         counter += 1
         filename = f"{f[0]}_{counter}.{f[1]}"
         name_check(path, filename, counter)
     elif not exists:
-        print("not exists")
         return filename
     return filename
  
 def pagination_urls(pag_object, endpoint, pag_args):
+    """Generates pagination urls for paginated information.
+    Inputs:
+    pag_object: paginated query object.
+    endpoint: endpoint to include in url
+    pag_args: args to include in pag_url query string.
+    """
+
+    pag_args = dict(pag_args)
+    for k in ['submit', 'page']:
+        if k in pag_args:
+            del pag_args[k]
     pag_dict = {}
     pag_dict['next'] = url_for(endpoint, page=pag_object.next_num, **pag_args)\
                        if pag_object.has_next else None
