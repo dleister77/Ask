@@ -17,7 +17,7 @@ function addcsrf(){
     });
 }
 
-function ajaxModalPost(urltarget){
+function ajaxModalPost(urltarget, success_message, failure_message){
     addcsrf();
     data=$(".modalinput").serialize();
     console.log("logged data: ", data)
@@ -29,20 +29,53 @@ function ajaxModalPost(urltarget){
     };
     $.ajax(parameters)
     .done(function(data){
-        console.log("success")
-        $("#modal_id").modal("hide");
+        if (data['message'] == "success"){
+            $("#modal_id").modal("hide");
+            alert(success_message)
+        } else if (data['message'] == "failure"){
+            errorList = []
+            Object.keys(data['errors']).forEach(function(key) {
+                errorList.push(data['errors'][key])
+            });
+            errors = errorList.join('\n')
+            alert(failure_message + "\n" + errors)
+        }
+
     })
     .fail(function(data){
         console.log("failed")
-        alert(data.responseJSON.msg);
+        alert(failure_message);
     });
+}
+
+function valcheckListener(formID){
+    errors = []
+    var form = document.getElementById(formID);
+    var inputs = form.querySelectorAll("input, select, textarea");
+    var submit = form.querySelector(".submit");
+    inputs.forEach(function(input){
+        check_validity(input);
+        if (input.classList.contains("error") == true){
+            errors.push("error")
+        }
+        input.addEventListener("blur", function(event){
+            check_validity(input);
+            if (input.classList.contains("error") == false){
+                errors.pop()
+            }
+        });
+    });
+    console.log("Errors: " + errors)
+    return errors;
 }
 
 function check_validity(input){
     if (input.checkValidity() == false){
     input.classList.add("error");
+    console.log("classList: " + input.classList)
     } else if (input.checkValidity() == true){
     input.classList.remove("error");
+    console.log("removed classList: " + input.classList)
     }
 }
 
@@ -267,7 +300,12 @@ function initNetwork(jquery){
     });
     $("#submit_new_group").on("click", function(event){
         event.preventDefault();
-        ajaxModalPost('/groupcreate')
+        //first validate.  need to return errors
+        errors = valcheckListener("modal_form_group")
+        //if no errors do ajax modal post
+        if (errors.length == 0){
+            ajaxModalPost('/groupcreate', "Successfully added group", "Failed to add group.  Please correct the following errors: ");
+        }
    });
 }
 function initSearch(jquery){

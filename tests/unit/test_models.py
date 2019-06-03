@@ -21,7 +21,7 @@ def test_user(test_db):
     assert u.address.city != "charlotte"
     assert u.address.state.name == "North Carolina"
     assert u.summary()[0] == 3
-    assert u.summary()[1] == 1
+    assert u.summary()[1] == 2
 
 def test_relationships(test_db):
     """

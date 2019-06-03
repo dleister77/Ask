@@ -3,6 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 from flask_sqlalchemy import Model
 from app.helpers import pagination_urls
+import re
 from sqlalchemy import or_
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
@@ -221,7 +222,7 @@ class Provider(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
-    telephone = db.Column(db.String(24), unique=True)
+    _telephone = db.Column(db.String(24), unique=True)
     address_id = db.Column(db.Integer, db.ForeignKey("address.id"))
 
     address = db.relationship("Address", backref="provider")
@@ -234,6 +235,14 @@ class Provider(db.Model):
     @name.setter
     def name(self, name):
         self._name = capwords(name)
+    
+    @hybrid_property
+    def telephone(self):
+        return self._telephone
+    
+    @telephone.setter
+    def telephone(self, telephone):
+        self._telephone = re.sub('\D+', '', telephone)
 
     def profile(self):
         """Return tuple of provider object with review summary information(avg/count)"""

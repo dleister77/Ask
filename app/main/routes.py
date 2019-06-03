@@ -20,7 +20,11 @@ def download_file(filename, id):
 @login_required
 def provider(name, id):
     page = request.args.get('page', 1, int)
-    p = Provider.query.filter_by(id=id).first()
+    print(name)
+    p = Provider.query.filter(Provider.id == id, Provider.name == name).first()
+    if p == None:
+        flash("Provider not found.  Please try a different search.")
+        return render_template('errors/404.html'), 404
     provider = p.profile()
     reviews = p.profile_reviews().paginate(page, current_app.config["REVIEWS_PER_PAGE"], False)
     pag_args = {"name": name, "id": id}
@@ -35,12 +39,10 @@ def providerAdd():
     """Adds provider to db."""
     form = ProviderAddForm()
     if form.validate_on_submit():
-        # state_id = (State.query.filter(State.name == form.address.state.data)
-        #             .first().id)
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
-                          state_id=form.state.data, 
+                          state_id=form.address.state.data, 
                           zip=form.address.zip.data)
         categories = [Category.query.filter_by(id=cat).first() for cat in 
                      form.category.data]
@@ -48,10 +50,12 @@ def providerAdd():
                             telephone=form.telephone.data, address=address,
                             categories=categories)
         dbAdd(provider)
-        flash(form.name.data + " added.")
+        flash(provider.name + " added.")
         return redirect(url_for("main.review"))
-    if not form.validate_on_submit:
-        flash("failed to add provider")
+    elif request.method == "POST":
+        flash("Failed to add provider")
+        return render_template("provideradd.html", title="Add Provider",
+                               form=form), 422
 
     return render_template("provideradd.html", title="Add Provider", form=form)
 
@@ -64,7 +68,8 @@ def providerList():
                 .first())
     provider_list = (Provider.query.filter(Provider.categories.contains(category))
                                    .order_by(Provider.name)).all()
-    provider_list = [{"id": provider.id, "name": provider.name} for provider in provider_list]
+    provider_list = [{"id": provider.id, "name": provider.name} for provider
+                     in provider_list]
     provider_list = jsonify(provider_list)
     return provider_list
 
@@ -88,7 +93,6 @@ def review():
                 pictures.append(Picture(path=file_location,
                                         name=filename, thumb=thumb))
                 
-
         review = Review(user_id=current_user.id, 
                         provider_id=form.name.data, 
                         category_id=form.category.data,
@@ -100,8 +104,8 @@ def review():
         dbAdd(review)
         flash("review added")
         return redirect(url_for('main.review'))
-    for field in form:
-        print(f"{field.name}: {field.errors}")
+    elif not form.validate() and request.method == "POST":
+        return render_template("review.html", title="Review", form=form), 422
     return render_template("review.html", title="Review", form=form)
 
 @bp.route('/search')
@@ -112,13 +116,12 @@ def search():
     if form.validate() or request.args.get('page') is not None:
         providers = current_user.search_providers(form)
         providers = providers.paginate(page, current_app.config["REVIEWS_PER_PAGE"],
-                                       False)       
+                                       False)
         pag_urls = pagination_urls(providers, 'main.search', request.args)
-        print("results:" , providers.items)
         return render_template("index.html", form=form, title="Search", 
-                                providers=providers.items, pag_urls=pag_urls)      
+                               providers=providers.items, pag_urls=pag_urls)      
 
-    return render_template("index.html", form=form, title="Search")
+    return render_template("index.html", form=form, title="Search"), 422
 
 @bp.route('/user/<username>')
 @login_required

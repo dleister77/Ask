@@ -41,10 +41,10 @@ def test_login(test_client, test_db):
     assert b'Invalid username or password' in response.data
     response = logout(test_client)
     response = login(test_client, 'jjones', None)
-    assert b'This field is required.' in response.data
+    assert b'Password is required.' in response.data
     response = logout(test_client)
     response = login(test_client, None, 'password')
-    assert b'This field is required.' in response.data
+    assert b'Username is required.' in response.data
 
 def test_register(test_client, test_db):
     id = State.query.filter_by(name="North Carolina").first().id
@@ -75,7 +75,7 @@ def test_register(test_client, test_db):
     # test for password mismatch
     test_case.update({'email': "test1@test.com", 'password': 'password1234'})
     response = register(test_client, test_case)
-    assert b'passwords must match' in response.data
+    assert b'Passwords must match' in response.data
     # test for password less than required length
     test_case.update({'password':'1234', 'confirmation': '1234'})
     response = register(test_client, test_case)
@@ -84,7 +84,7 @@ def test_register(test_client, test_db):
     test_case.update({'password':'password', 'confirmation':'password',
                      'first_name': None})
     response = register(test_client, test_case)
-    assert b'This field is required' in response.data
+    assert b'First name is required' in response.data
 
 
 def test_userupdate(test_client, test_db):
@@ -111,7 +111,7 @@ def test_userupdate(test_client, test_db):
     # remove required field
     test_case.update({"username": "jjones", "first_name": None})
     response = update(test_client, test_case)
-    assert b'This field is required' in response.data
+    assert b'First name is required' in response.data
 
 def test_passwordupdate(test_client, test_db):
     login(test_client, "jjones", "password")
@@ -122,12 +122,12 @@ def test_passwordupdate(test_client, test_db):
     # incorrect old password
     test_case = {"old": "password", "new": "password2", "confirmation": "password2"}
     response = passwordUpdate(test_client, test_case)
-    assert b'invalid password' in response.data
+    assert b'Invalid password' in response.data
     assert b'Password update failed' in response.data
     # mismatch old and new passwords
     test_case = {"old": "password1", "new": "password2", "confirmation": "password3"}
     response = passwordUpdate(test_client, test_case)
-    assert b'passwords must match' in response.data
+    assert b'Passwords must match' in response.data
     assert b'Password update failed' in response.data
     # new password too short
     test_case = {"old": "password1", "new": "pass", "confirmation": "pass"}

@@ -53,38 +53,38 @@ def NotEqualTo(comparisonField):
     return _notEqualTo
 
 class AddressField(FlaskForm):
-    line1 = StringField("Street Address", validators=[DataRequired()])
+    line1 = StringField("Street Address", validators=[DataRequired(message="Street address is required.")])
     line2 = StringField("Address Line 2")
-    city = StringField("City", validators=[DataRequired()])
+    city = StringField("City", validators=[DataRequired(message="City is required.")])
     state = SelectField("State", choices=state_list(), coerce=int,
-                         validators=[DataRequired()])
-    zip = StringField("Zip", validators=[DataRequired()])
+                         validators=[DataRequired(message="State is required.")])
+    zip = StringField("Zip", validators=[DataRequired(message="Zip code is required.")])
 
     def validate_zip(form, field):
         if len(field.data) != 5:
-            raise ValidationError('Please enter 5 digit zip code.')
+            raise ValidationError('Please enter a 5 digit zip code.')
         elif not field.data.isdigit():
             raise ValidationError('Only include numbers in zip code.')
 
 class LoginForm(FlaskForm):
     """Defines user login form."""
-    username = StringField("Username", validators=[DataRequired()])
-    password = PasswordField("Password", validators=[DataRequired()])
+    username = StringField("Username", validators=[DataRequired(message="Username is required.")])
+    password = PasswordField("Password", validators=[DataRequired(message="Password is required.")])
     remember_me = BooleanField("Remember Me")
     submit = SubmitField("Sign In")
 
 class RegistrationForm(FlaskForm):
-    first_name = StringField("First Name", validators=[DataRequired()])
-    last_name = StringField("Last Name", validators=[DataRequired()])
+    first_name = StringField("First Name", validators=[DataRequired(message="First name is required.")])
+    last_name = StringField("Last Name", validators=[DataRequired(message = "Last name is required.")])
     address = FormField(AddressField) 
-    email = StringField("Email Address", validators=[DataRequired(), Email(), 
+    email = StringField("Email Address", validators=[DataRequired(message="Email address is required."), Email(), 
                          unique_check(User, User.email)])
-    username = StringField("Username", validators=[DataRequired()])
-    password = PasswordField("Password", validators=[DataRequired(), 
+    username = StringField("Username", validators=[DataRequired(message="Username is required.")])
+    password = PasswordField("Password", validators=[DataRequired(message="Password is required."), 
             Length(min=7, max=15)])
     confirmation = PasswordField("Confirm Password",
-                validators=[DataRequired(),  
-                EqualTo('password', message="passwords must match")])
+                validators=[DataRequired(message="Password confirmation is required."),  
+                EqualTo('password', message="Passwords must match.")])
     submit = SubmitField("Submit")
     
     def validate_username(self, username):
@@ -94,11 +94,11 @@ class RegistrationForm(FlaskForm):
                                   "different name.")
 
 class UserUpdateForm(FlaskForm):
-    first_name = StringField("First Name", validators=[DataRequired()])
-    last_name = StringField("Last Name", validators=[DataRequired()])
+    first_name = StringField("First Name", validators=[DataRequired(message="First name is required.")])
+    last_name = StringField("Last Name", validators=[DataRequired(message = "Last name is required.")])
     address = FormField(AddressField) 
-    email = StringField("Email Address", validators=[DataRequired(), Email()])
-    username = StringField("Username", validators=[DataRequired()])
+    email = StringField("Email Address", validators=[DataRequired(message="Email address is required."), Email()])
+    username = StringField("Username", validators=[DataRequired(message="Username is required.")])
     submit = SubmitField("Submit")
     
     def validate_username(self, username):
@@ -115,15 +115,19 @@ class UserUpdateForm(FlaskForm):
 
 class PasswordChangeForm(FlaskForm):
     """Form to change password."""
-    old = PasswordField("Old Password", validators=[DataRequired()])
-    new = PasswordField("New Password", validators=[DataRequired(), 
+    old = PasswordField("Old Password", validators=[DataRequired(message="Please enter old password.")])
+    new = PasswordField("New Password", validators=[DataRequired(message="Please choose a new password."), 
             Length(min=7, max=15)])
     confirmation = PasswordField("Confirm New Password",
-                                 validators=[DataRequired(), 
+                                 validators=[DataRequired(message="Please confirm new password."), 
                                  EqualTo('new', 
-                                 message="passwords must match")])
+                                 message="Passwords must match.")])
     submit = SubmitField("Submit")
 
     def validate_old(self, old):
         if not current_user.check_password(old.data):
-            raise ValidationError("invalid password, try again.")
+            raise ValidationError("Invalid password, please try again.")
+    
+    def validate_new(self, new):
+        if current_user.check_password(new.data):
+            raise ValidationError("New password is same as old password.  Please choose a different password.")

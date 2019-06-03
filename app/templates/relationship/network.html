@@ -17,7 +17,7 @@
     <h3> Your Friends</h3>
     <ul>
         {% for friend in current_user.friends %}
-        <li> <a href="{{url_for('user', username=friend.username)}}"> {{friend["first_name"] + " " + friend["last_name"] }} </a></li>
+        <li> <a href="{{url_for('main.user', username=friend.username)}}"> {{friend["first_name"] + " " + friend["last_name"] }} </a></li>
         {% endfor %}
     </ul>
     <br>
@@ -27,7 +27,7 @@
 {% block content_left_bottom %}
     <form action="/groupadd" method="post">
         {{form_render(GroupSearch)}}
-        <a href="" data-toggle="modal" data-target="#modal_id">Create New Provider</a>
+        <a href="" data-toggle="modal" data-target="#modal_id">Create New Group</a>
     </form>
 {% endblock %}
 

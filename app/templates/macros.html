@@ -29,9 +29,17 @@
                 {{field.label(class_=labelClass)}}
                 {{field(class_=fieldClass + " " + classAdjust)}}
             {% endif %}
-            {% for error in field.errors %}
-                <span style="color:red;">{{error}}</span>
-            {% endfor %}
+            {% if field.errors|length > 0 %}
+                <span style="color:red;">{{field.errors}}</span>
+            {% endif %}
+
+            {# {% if field.errors|length == 1 %}
+                <span style="color:red;">{{field.errors}}</span>
+                {% else %}
+                {% for error in field.errors %}
+                    <span style="color:red;">{{error}}</span>
+                {% endfor %}
+            {% endif %} #}
         </div>
     </div>
 {% endmacro %}
@@ -155,7 +163,7 @@
     {% set provider, average, count = provider_tuple %}   
     <div class="card">
         <div class="card-header">
-            <h4><a href="{{url_for('main.provider', name=provider.name|replace(' ','-')|replace("'", ''), id=provider.id)}}">{{provider.name}}</a></h4>
+            <h4><a href="{{url_for('main.provider', name=provider.name, id=provider.id)}}">{{provider.name}}</a></h4>
         </div>
         <div class="card-body">
             <div class="row">
