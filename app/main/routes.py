@@ -2,10 +2,12 @@ from flask import flash, redirect, render_template, request, url_for, jsonify,\
                   send_from_directory, current_app
 from flask_login import current_user, login_required
 from app import db
-from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm
+from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
+                           ProviderFilterForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import User, Address, Review, Picture, Category, Provider
-from app.helpers import dbAdd, thumbnail_from_buffer, name_check, pagination_urls
+from app.helpers import dbAdd, thumbnail_from_buffer, name_check,\
+                        pagination_urls
 from app.main import bp
 import os
 from sqlalchemy.sql import func
@@ -16,22 +18,27 @@ def download_file(filename, id):
     fileloc = os.path.join(current_app.config['MEDIA_FOLDER'], str(id)).replace('\\','/')
     return send_from_directory(fileloc, filename)
 
-@bp.route('/provider/<name>/<id>')
+@bp.route('/provider/<name>/<id>', methods=['GET', 'POST'])
 @login_required
 def provider(name, id):
+    form = ProviderFilterForm(request.args)
+    #tells me where it came from with exception of refresh
+    filter = {"friends_only": form.friends_only.data,
+            "groups_only": form.groups_only.data}
+    # form = ProviderFilterForm(friends_only=filter['friends_only'], groups_only=filter['groups_only'])
     page = request.args.get('page', 1, int)
-    print(name)
     p = Provider.query.filter(Provider.id == id, Provider.name == name).first()
     if p == None:
         flash("Provider not found.  Please try a different search.")
         return render_template('errors/404.html'), 404
-    provider = p.profile()
-    reviews = p.profile_reviews().paginate(page, current_app.config["REVIEWS_PER_PAGE"], False)
+    provider = p.profile(filter)
+    reviews = p.profile_reviews(filter).paginate(page, current_app.config["REVIEWS_PER_PAGE"], False)
     pag_args = {"name": name, "id": id}
     pag_urls = pagination_urls(reviews, 'main.provider', pag_args)
+
     return render_template("provider_profile.html", title="Provider Profile", 
                             provider=provider, pag_urls=pag_urls,
-                            reviews=reviews.items)
+                            reviews=reviews.items, form=form, filter=filter)
 
 @bp.route('/provideradd', methods=['GET', 'POST'])
 @login_required
@@ -111,6 +118,8 @@ def review():
 @bp.route('/search')
 @login_required
 def search():
+    print(f"request {request.args}")
+    print(f"view args: {request.view_args}")
     form = ProviderSearchForm(request.args)
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
@@ -118,8 +127,14 @@ def search():
         providers = providers.paginate(page, current_app.config["REVIEWS_PER_PAGE"],
                                        False)
         pag_urls = pagination_urls(providers, 'main.search', request.args)
+        filter_fields = [form.friends_only, form.groups_only]
+        filter={}
+        for field in filter_fields:
+            if field.data == True:
+                filter[field.name] = 'y'
         return render_template("index.html", form=form, title="Search", 
-                               providers=providers.items, pag_urls=pag_urls)      
+                               providers=providers.items, pag_urls=pag_urls,
+                               filter=filter)      
 
     return render_template("index.html", form=form, title="Search"), 422
 
@@ -129,7 +144,6 @@ def user(username):
     """Generate profile page."""
     page = request.args.get('page', 1, int)
     user = User.query.filter_by(username=username).first()
-    print(user)
     reviews = user.profile_reviews().paginate(page, current_app.config["REVIEWS_PER_PAGE"], False)
     summary = user.summary()
     pag_args = {"username": username}

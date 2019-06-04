@@ -75,7 +75,7 @@ def test_friendadd(test_client, test_db, id, name, assertion):
 @pytest.mark.parametrize('id, name, assertion',
                           [(2, "Shannon's Bees", "You are now a member of Shannon's Bees"),
                           (1, "Qhiv Hoa", "You are already a member of this group"),
-                          (4, "Liverpool FC", "Group does not exist, please a different group")])
+                          (4, "Liverpool FC", "Group does not exist, please choose a different group")])
 def test_groupadd(test_client, test_db, id, name, assertion):
         login(test_client, "jjones", "password")
         test_case = {"value": id, "name": name}

@@ -93,6 +93,10 @@ def test_user(test_client, test_db):
     assert '<dd class="col-8 text-right">sarahsmith@yahoo.com</dd>' in response.data.decode()
     address = '<li class="list-group-item border-0 card-item py-1 px-0">Lakewood, NY, 14750</li>'
     assert address in response.data.decode()
+    # test user not related to via group or friendship
+    response = user_profile(test_client, 'nukepower4ever')
+    assert '<dd class="col-8 text-right">hyman@navy.mil</dd>' not in response.data.decode()
+
     
 
 def test_review(active_client, test_db, test_app):
@@ -105,9 +109,10 @@ def test_review(active_client, test_db, test_app):
     assert response.status_code == 200
     assert b'review added' in response.data
     # confirm correct information in db
+    filter = {"friends_only": False, "groups_only": False}
     p = Provider.query.filter_by(name="Evers Electric").first()
-    assert p.profile()[1] == 3
-    assert p.profile()[2] == 1
+    assert p.profile(filter)[1] == 3
+    assert p.profile(filter)[2] == 1
     # test case without required information
     test_case = {"category": "", "name": "", "rating": "",
                  "description": "outlet install", "service_date": "4/15/2019",
@@ -173,9 +178,11 @@ def test_search(active_client, test_db):
     assert b"Douthit Electrical" in response.data
     assert '<li class="list-inline-item">(1)</li>' in response.data.decode()
     assert '<li class="list-inline-item">1.0</li>' in response.data.decode()
+    assert '<h4><a href="/provider/Douthit%20Electrical/1?friends_only=y">Douthit Electrical</a></h4>' in response.data.decode()
     # test groups only
     test_case = {"category": 1, "city": "Charlotte", "state": id, "groups_only":True}
     response = search(active_client, test_case)
+    assert '<h4><a href="/provider/Douthit%20Electrical/1?groups_only=y">Douthit Electrical</a></h4>' in response.data.decode()
     assert b"Douthit Electrical" in response.data
     assert '<li class="list-inline-item">(1)</li>' in response.data.decode()
     assert '<li class="list-inline-item">5.0</li>' in response.data.decode()

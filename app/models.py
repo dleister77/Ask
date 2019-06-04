@@ -1,6 +1,6 @@
 from app import db, login
 from datetime import datetime
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from flask_sqlalchemy import Model
 from app.helpers import pagination_urls
 import re
@@ -244,19 +244,42 @@ class Provider(db.Model):
     def telephone(self, telephone):
         self._telephone = re.sub('\D+', '', telephone)
 
-    def profile(self):
-        """Return tuple of provider object with review summary information(avg/count)"""
+    def profile(self, filter):
+        """Return tuple of provider object with review summary information(avg/count)
+        form: boolean form with friend/group filters
+        """
+        #base filter and join args
+        filter_args = [Provider.id == self.id]
+        join_args = [Review.provider, Review.user]
+        #update filter and joins for relationship filters
+        if filter['friends_only'] is True:
+            filter_args.append(User.friends.contains(current_user))
+        elif filter['groups_only'] is True:
+            groups = [g.id for g in current_user.groups]
+            join_args.extend([User.groups])
+            filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
         summary = (db.session.query(func.avg(Review.rating).label("average"),
                                     func.count(Review.id).label("count"))
-                        .join(Provider)
-                        .filter(Provider.id == self.id)
-                        .first())
+                             .join(*join_args)
+                             .filter(*filter_args)
+                             .first())
         return (self, summary.average, summary.count)
 
-    def profile_reviews(self):
+    def profile_reviews(self, filter):
         """Returns review object query."""
-        reviews = (db.session.query(Review).join(Provider)
-                                           .filter(Provider.id == self.id))
+        #base filter and join args
+        filter_args = [Provider.id == self.id]
+        join_args = [Review.provider, Review.user]
+
+        #update filter and joins for relationship filters
+        if filter['friends_only'] is True:
+            filter_args.append(User.friends.contains(current_user))
+        elif filter['groups_only'] is True:
+            groups = [g.id for g in current_user.groups]
+            join_args.extend([User.groups])
+            filter_args.extend([Group.id.in_(groups), User.id != current_user.id])       
+        reviews = (db.session.query(Review).join(*join_args)
+                                           .filter(*filter_args))
         return reviews    
 
     def __repr__(self):

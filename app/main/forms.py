@@ -189,3 +189,16 @@ class ProviderSearchForm(FlaskForm):
     friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
     groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
     submit = SubmitField("Submit")
+
+class ProviderFilterForm(FlaskForm):
+    """Form to apply social filters to provider profile page."""
+    class Meta:
+        csrf = True
+
+    friends_only = BooleanField("Friends Only",
+                                validators=[NotEqualTo('groups_only')],
+                                false_values = (False, 'false','False', ''))
+    groups_only = BooleanField("Groups Only",
+                               validators=[NotEqualTo('friends_only')],
+                               false_values = (False, 'false', 'False', ''))
+    submit = SubmitField("Update")

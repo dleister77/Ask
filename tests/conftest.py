@@ -77,6 +77,8 @@ def test_db(test_app):
     u2.set_password("password")
     u3 = User(id=3, username="yardsmith", first_name="Mark", last_name="Johnson",
               email="yardsmith@gmail.com", address=a3)
+    u4 = User(id=4, username="nukepower4ever", first_name="Hyman", last_name="Rickover",
+              email="hyman@navy.mil", address=a4)
     
     #add test groups
     g1 = Group(id=1, name="QHIV HOA", description="Hoa for the neighborhood", admin_id=1)
@@ -88,7 +90,7 @@ def test_db(test_app):
     u3.add(g1)
 
     # add test providers
-    p1 = Provider(id=1, name="douthit electrical", telephone="7047263329",
+    p1 = Provider(id=1, name="douthit electrical", telephone="704-726-3329",
                   email="douthit@gmail.com", address=a4, categories=[c1])
     p2 = Provider(id=2, name="Evers Electric", telephone="7048431910",
                   address=a5, categories=[c1])
@@ -100,7 +102,7 @@ def test_db(test_app):
     r2 = Review(user=u3, provider=p1, category=c1, rating=5, description="installed breaker Box", comments="very clean")
     r3 = Review(user=u1, provider=p1, category=c1, rating=1, description="test", comments="Test")
     r4 = Review(user=u2, provider=p3, category=c1, rating=3, description="test", comments="Test123", service_date=date(2019, 5, 1))
-    db.session.add_all([c1, c2, a1, a2, a3, a4, a5, u1, u2, u3, g1, g2, g3, p1, p2, p3, r1, r2, r3, r4])
+    db.session.add_all([c1, c2, a1, a2, a3, a4, a5, u1, u2, u3, u4, g1, g2, g3, p1, p2, p3, r1, r2, r3, r4])
     db.session.commit()
     yield db
     db.session.remove()

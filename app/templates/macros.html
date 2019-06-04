@@ -44,6 +44,53 @@
     </div>
 {% endmacro %}
 
+<!-- Macro to render form field in line, without creating new row. -->
+{% macro field_render_inline(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check" ) %}
+  
+        <div class="col">
+            {% if field.type == "FormField" %}
+                {{form_render(field, classAdjust)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class_=(buttonClass))}}
+            {% elif field.type == "RadioField" %}
+                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                {% for subfield in field %}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+            <div class="row">
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
+            </div>
+            {%else%}
+
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fieldClass + " " + classAdjust)}}
+
+            {% endif %}
+            {% if field.errors|length > 0 %}
+                <span style="color:red;">{{field.errors}}</span>
+            {% endif %}
+
+            {# {% if field.errors|length == 1 %}
+                <span style="color:red;">{{field.errors}}</span>
+                {% else %}
+                {% for error in field.errors %}
+                    <span style="color:red;">{{error}}</span>
+                {% endfor %}
+            {% endif %} #}
+        </div>
+{% endmacro %}
+
 {% macro field_row_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
  buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
   radioLabelClass="form-check-label", radioInputClass="form-check-input", 
@@ -157,13 +204,17 @@
     </li>
 {% endmacro %}
 
-{% macro render_provider(provider_tuple) %}
+{% macro render_provider(provider_tuple, filter) %}
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
     {% set provider, average, count = provider_tuple %}   
     <div class="card">
         <div class="card-header">
-            <h4><a href="{{url_for('main.provider', name=provider.name, id=provider.id)}}">{{provider.name}}</a></h4>
+            {% if provider.name not in request.view_args.values() %}
+            <h4><a href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
+            {% else %}
+            <h4>{{provider.name}}</h4>
+            {% endif %}
         </div>
         <div class="card-body">
             <div class="row">
@@ -206,7 +257,8 @@
         <div class="card-header">
             {% if bizname == true %}
                 <h4>
-                    <a href='{{url_for("main.provider", name=review.provider.name|replace(" ","-")|replace("'", ''), id=review.provider.id)}}'>
+                    <a href='{{url_for("main.provider", name=review.provider.name|replace(" ","-")|replace("'", ''),
+                                       id=review.provider.id)}}'>
                         {{review.provider.name}}
                     </a>: {{review.title}}</h4>
             {% else %}

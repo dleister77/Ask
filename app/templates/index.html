@@ -24,7 +24,7 @@
 
 {% block content_wide %}
         {%for provider in providers %}
-            {{render_provider(provider)}}
+            {{render_provider(provider, filter)}}
             <br>
         {% endfor %}
         {% if pag_urls %}

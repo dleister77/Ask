@@ -13,18 +13,28 @@
         </h4>
     </div>
     <div class="card-body">
-        <dl class="row">
-                {{ renderInlineList("Name", (user.first_name + " " + user.last_name))}}
-                {{ renderInlineList("Username", user.username)}}
-                {{ renderInlineList("Email", user.email)}}
-                {{ renderInlineList("Address", renderList(["card-item", "card-item py-1 px-0"], user.address.line1,
-                                                        user.address.line2,
-                                                        ([user.address.city,
-                                                        user.address.state.state_short,
-                                                        user.address.zip]
-                                                        |join(', '))
-                                                        ))}}                            
-        </dl>
+        {# Only show user info if user is current user or friend/groups #}
+        {% set common_groups = user.groups|select('in', current_user.groups)|list %}  
+        {% set related = user in current_user.friends or user == current_user or common_groups|length > 0 %}
+
+        {% if related %}
+            <dl class="row">
+                    {{ renderInlineList("Name", (user.first_name + " " + user.last_name))}}
+                    {{ renderInlineList("Username", user.username)}}
+                    {{ renderInlineList("Email", user.email)}}
+                    {{ renderInlineList("Address", renderList(["card-item", "card-item py-1 px-0"], user.address.line1,
+                                                            user.address.line2,
+                                                            ([user.address.city,
+                                                            user.address.state.state_short,
+                                                            user.address.zip]
+                                                            |join(', '))
+                                                            ))}}                            
+            </dl>
+        {% else %}
+            <dl class="row">
+                    {{ renderInlineList("Username", user.username)}}                          
+            </dl>
+        {% endif %}
 
         {% if user == current_user %}
             <br>

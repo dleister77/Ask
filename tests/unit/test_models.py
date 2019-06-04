@@ -39,7 +39,7 @@ def test_relationships(test_db):
     assert u in f.friends
     assert u in g.members
 
-def test_provider(test_db):
+def test_provider(test_db, active_client):
     """
     GIVEN a Provider model
     WHEN Provider added to db
@@ -51,13 +51,23 @@ def test_provider(test_db):
     assert p.name != "douthit electrical"
     assert p.name == "Douthit Electrical"
     assert p.telephone == "7047263329"
+    assert p.telephone != "704-726-3329"
     assert p.email == "douthit@gmail.com"
     assert c in p.categories
     assert c2 not in p.categories
-    assert p.profile()[2] == 3
-    assert p.profile()[1] == 3
-    assert p.profile()[0] == p
-    assert p.profile_reviews().first().rating == 3
+    filter = {"friends_only": False, "groups_only": False}
+    assert p.profile_reviews(filter).first().rating == 3
+    assert p.profile(filter)[2] == 3
+    assert p.profile(filter)[1] == 3
+    assert p.profile(filter)[0] == p
+    filter['friends_only'] = True
+    assert p.profile_reviews(filter).first().rating == 1
+    assert p.profile(filter)[2] == 1
+    assert p.profile(filter)[1] == 1
+    filter = {"friends_only": False, "groups_only": True}
+    assert p.profile_reviews(filter).first().comments == "Very clean"
+    assert p.profile(filter)[2] == 1
+    assert p.profile(filter)[1] == 5
 
 def test_user_update(test_db):
     """
