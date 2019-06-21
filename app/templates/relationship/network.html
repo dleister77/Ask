@@ -7,7 +7,7 @@
     <h3>Your Groups</h3>
     <ul>
         {% for group in current_user.groups %}
-        <li>{{ group["name"] }}</li>
+        <li> <a href="{{url_for('relationship.group', name=group.name, id=group.id)}}"> {{ group["name"] }} </a></li>
         {% endfor %}
     </ul>
     <br>

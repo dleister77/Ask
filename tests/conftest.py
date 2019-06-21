@@ -6,12 +6,34 @@ from datetime import date
 import os
 import pytest
 
+
 def login(client, username, password):
     return client.post('/login', data=dict(username=username, 
                        password=password), follow_redirects=True)
 
+
 def logout(client):
     return client.get('/logout', follow_redirects=True)
+
+
+def scenarioUpdate(test_case, parameters, values, assertions):
+    """"Update test_case for update scenario
+    test_case: base test case
+    parameters: parameter(dict key) to be updated.  single value or list.
+    values: updated values parameter values.  single value or list of values if
+            multiple parameters being updated.
+    assertions: list of assertions to be updated. single list or list of lists.
+    """
+    for key, base_value in test_case.items():
+        test_case[key] = (base_value, None)
+    if parameters is None:
+        pass
+    elif type(parameters) == list:
+        for param, val, assertion in zip(parameters, values, assertions):
+            test_case[param] = (val, assertion)
+    else:
+        test_case[parameters] = (values, assertions)
+
 
 class TestConfig(Config):
     TESTING = True
@@ -33,17 +55,21 @@ def test_app():
     yield app
     ctx.pop()
 
-@pytest.fixture(scope='module')
+
+@pytest.fixture(scope='function')
 def test_client(test_app):
     client = test_app.test_client()
     yield client
 
+
 @pytest.fixture(scope='function')
 def active_client(test_client, test_db):
     with test_client:
-        login(test_client, "jjones", "password")
-        # login(test_client, TestConfig['TEST_USER']['username'], TestConfig['TEST_USER']['password'])
+        login(test_client, TestConfig.TEST_USER['username'],
+              TestConfig.TEST_USER['password']
+              )
         yield test_client
+
 
 @pytest.fixture()
 def test_db(test_app):
@@ -77,13 +103,14 @@ def test_db(test_app):
     u2.set_password("password")
     u3 = User(id=3, username="yardsmith", first_name="Mark", last_name="Johnson",
               email="yardsmith@gmail.com", address=a3)
+    u3.set_password("password5678")
     u4 = User(id=4, username="nukepower4ever", first_name="Hyman", last_name="Rickover",
               email="hyman@navy.mil", address=a4)
     
     #add test groups
-    g1 = Group(id=1, name="QHIV HOA", description="Hoa for the neighborhood", admin_id=1)
-    g2 = Group(id=2, name="Shannon's Bees", description="Insects that like to make honey", admin_id=1)
-    g3 = Group(id=3, name="Shawshank Redemption Fans", description="test", admin_id=1)
+    g1 = Group(id=1, name="QHIV HOA", description="Hoa for the neighborhood", admin_id=2)
+    g2 = Group(id=2, name="Shannon's Bees", description="Insects that like to make honey", admin_id=2)
+    g3 = Group(id=3, name="Shawshank Redemption Fans", description="test", admin_id=2)
     # add test relationships
     u2.add(u1)
     u2.add(g1)
@@ -124,8 +151,10 @@ def search_form(test_app, test_db):
 
 @pytest.fixture()
 def base_address():
-    test_case = {"line1": "13 Brook St", "city": "Lakewood", "state": "2", "zip": "14750"}
+    test_case = {"line1": "13 Brook St", "city": "Lakewood", "state": "2",
+                 "zip": "14750"}
     return test_case
+
 
 @pytest.fixture()
 def base_login():
@@ -138,9 +167,19 @@ def base_user_new():
     test_case = {"first_name": "Roberto", "last_name": "Firmino",
                  "email": "rfirmino@lfc.com", "username": "rfirmino",
                  "password": "password", "confirmation": "password",
-                  "address": {"line1": "13 Brook St", 
-						 "city": "Lakewood", "state": "2", "zip": "14750"}
+                 "address": {"line1": "13 Brook St", "city": "Lakewood",
+                             "state": "2", "zip": "14750"}
                  }
+    return test_case
+
+
+@pytest.fixture()
+def base_user_new_form():
+    test_case = {"first_name": "Roberto", "last_name": "Firmino",
+                 "email": "rfirmino@lfc.com", "username": "rfirmino",
+                 "password": "password", "confirmation": "password",
+                 "address-line1": "13 Brook St", "address-city": "Lakewood",
+                 "address-state": "2", "address-zip": "14750"}
     return test_case
 
 @pytest.fixture()
@@ -148,16 +187,18 @@ def base_user():
     test_case = {"first_name": "John", "last_name": "Jones",
                  "email": "jjones@yahoo.com", "username": "jjones",
                  "password": "password", "confirmation": "password",
-                  "address": {"line1": "7708 Covey Chase Dr", 
-                  "city": "Charlotte", "state": "1", "zip": "28210"}
+                 "address": {"line1": "7708 Covey Chase Dr", 
+                 "city": "Charlotte", "state": "1", "zip": "28210"}
                  }
     return test_case
+
 
 @pytest.fixture()
 def base_pw_update():
     test_case = {"old": "password", "new": "passwordnew", "confirmation": 
-				"passwordnew"}
+				 "passwordnew"}
     return test_case
+
 
 @pytest.fixture()
 def base_review():
@@ -166,13 +207,38 @@ def base_review():
                  "service_date": "4/15/2019", "comments": "testcomments"}
     return test_case
 
+
 @pytest.fixture()
 def base_provider_new():
     """Return new provider that generates no validation errors."""
     test_case = {"category": ["1", "2"], "name": "Smith Electric",
-                "telephone": "704-410-3873", "email": "smith@smith.com",
-                "address": {"line1": "7708 Covey Chase Dr", 
-						   "city": "Charlotte", "state": 1, "zip": "28210"}
-				}
+                 "telephone": "704-410-3873", "email": "smith@smith.com",
+                 "address": {"line1": "7708 Covey Chase Dr", 
+						     "city": "Charlotte", "state": 1, "zip": "28210"}}
     return test_case
 
+ 
+@pytest.fixture()
+def base_group():
+    """Return existing group to be used for testing."""
+    test_case = {"id": "2", "name": "Shannon's Bees",
+                 "description": "Insects that like to make honey",
+                 "admin_id": 2}
+    return test_case
+
+
+@pytest.fixture()
+def base_mail():
+    test_case = {"subject": "Test", 
+                 "sender": TestConfig.ADMINS[0],
+                 "recipients": "test@test.com",
+                 "text_body":"hello world!",
+                 "html_body": "<p>hello world!<p>"}
+    return test_case
+
+
+@pytest.fixture()
+def base_password_reset():
+    test_case = {"password_new": "password2",
+                 "password_confirmation": "password2"}
+    return test_case

@@ -3,7 +3,7 @@
 {% macro field_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
  buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
   radioLabelClass="form-check-label", radioInputClass="form-check-input", 
-  radioClass="form-check" ) %}
+  radioClass="form-check") %}
   
     <div class="form-group row">
         <div class="col">
@@ -11,23 +11,28 @@
                 {{form_render(field, classAdjust)}}
             {% elif field.type == "SubmitField" %}
                 {{field(class_=(buttonClass))}}
+                <!-- {{field.render_kw}} -->
             {% elif field.type == "RadioField" %}
                 <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
                 {% for subfield in field %}
                     <div class={{radioClass}}>
                         {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        <!-- {{subfield.render_kw}} -->
                         {{subfield.label(class_=radioLabelClass)}}
                     </div>
                 {% endfor %}
             {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
                 {{field.label(class_=labelClass)}}
                 {{field(class_=fileClass + " " + classAdjust)}}
+                <!-- {{field.render_kw}} -->
             {% elif field.type == "BooleanField" %}
                     {{field(class_=boolClass + " " + classAdjust)}}
+                    <!-- {{field.render_kw}} -->
                     {{field.label(class_=boolLabel)}}
             {%else%}
                 {{field.label(class_=labelClass)}}
                 {{field(class_=fieldClass + " " + classAdjust)}}
+                <!-- {{field.render_kw}} -->
             {% endif %}
             {% if field.errors|length > 0 %}
                 <span style="color:red;">{{field.errors}}</span>
@@ -96,7 +101,6 @@
   radioLabelClass="form-check-label", radioInputClass="form-check-input", 
   radioClass="form-check" ) %}
   
-    <div class="form-group row">
             {% if field.type == "FormField" %}
                 {{form_render(field, classAdjust)}}
             {% elif field.type == "SubmitField" %}
@@ -126,7 +130,6 @@
             {% for error in field.errors %}
                 <span style="color:red;">{{error}}</span>
             {% endfor %}
-    </div>
 {% endmacro %}
 <!--render form, calls render_field
     form: form to be render

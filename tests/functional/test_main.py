@@ -1,12 +1,8 @@
 from app.models import Category, Provider, Review, User, State
 from datetime import date
-from tests.conftest import TestConfig
-from flask import url_for, escape, json
-from flask_login import current_user
-import io
+from flask import url_for, json
 import os
 from pathlib import Path
-import pytest
 from shutil import rmtree
 from .test_auth import login, logout
 
@@ -139,10 +135,11 @@ def test_review(active_client, test_db, test_app):
     rmtree(path)
     #test get request
     response = active_client.get(url_for('main.review', _external=False),
-                      follow_redirects=True)
+                                 follow_redirects=True)
     assert response.status_code == 200
-    
-
+    assert b"Form disabled. Please verify email to unlock." in response.data
+    var = 'disabled="disabled"'
+    assert response.data.decode().count(var) == 7
 
 
 def test_search(active_client, test_db):
@@ -225,7 +222,9 @@ def test_providerAdd(active_client, test_db):
                       follow_redirects=True)
     assert response.status_code == 200
     assert b'id="provideraddform"' in response.data
-
+    assert b"Form disabled. Please verify email to unlock." in response.data
+    var = 'disabled="disabled"'
+    assert response.data.decode().count(var) == 10
 
 
 def test_provider_profile(active_client, test_db):

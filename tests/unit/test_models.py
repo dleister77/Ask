@@ -1,4 +1,5 @@
-from app import db
+from app import db, mail
+from app.helpers import dbUpdate
 from app.models import User, Address, Group, Category, Review, Provider
 from sqlalchemy.exc import IntegrityError
 import pytest
@@ -14,14 +15,16 @@ def test_user(test_db):
     assert u.username == "jjones"
     assert u.email == "jjones@yahoo.com"
     assert u.password_hash != "shithead"
-    assert u.check_password("password") == True
-    assert u.check_password("liverpoolfc") == False
+    assert u.check_password("password") is True
+    assert u.check_password("liverpoolfc") is False
     assert u.address.line1 == "7708 Covey Chase Dr"
     assert u.address.city == "Charlotte"
     assert u.address.city != "charlotte"
     assert u.address.state.name == "North Carolina"
     assert u.summary()[0] == 3
     assert u.summary()[1] == 2
+    assert u.email_verified is False
+
 
 def test_relationships(test_db):
     """
@@ -79,19 +82,18 @@ def test_user_update(test_db):
     u = User.query.filter_by(username="jjones").first()
     u.update(username="jjones1", email="jjones1@gmail.com")
     u.address.update(line1="7000 covey Chase dr")
-    db.session.commit()
+    dbUpdate()
     assert u.username == "jjones1"
     assert u.username != "jjones"
     assert u.email == "jjones1@gmail.com"
     assert u.address.line1 == "7000 Covey Chase Dr"
     with pytest.raises(IntegrityError):
         u.update(username="yardsmith")
-        db.session.commit()
-    db.session.rollback()
+        dbUpdate()
     with pytest.raises(IntegrityError):
         u.update(email="sarahsmith@yahoo.com")
-        db.session.commit()
-    db.session.rollback()
+        dbUpdate()
+ 
 
 def test_user_search_reviews(test_db, search_form):
     """
@@ -122,8 +124,62 @@ def test_user_search_reviews(test_db, search_form):
     assert providers[0][2] == 1
 
 
+def test_user_pwd_tokens(test_app, test_db, base_user):
+    """Test pwd reset token generation and verification."""
+    test_user = User.query.filter_by(username=base_user['username']).first()
+    alt_user = User.query.get(1)
+    with mail.record_messages() as outbox:
+        # test matched tokens
+        t = test_user.get_reset_password_token()
+        u = User.verify_password_reset_token(t)
+        assert u == test_user
+        # test mismatched tokens
+        t2 = alt_user.get_reset_password_token()
+        u = User.verify_password_reset_token(t2)
+        assert u == alt_user
+        assert u != test_user
 
-    
+def test_send_pswd_reset(test_app, test_db, base_user):
+    """Test sending of password reset emails."""
+    test_user = User.query.filter_by(username=base_user['username']).first()
+    with mail.record_messages() as outbox:
+        test_user.send_password_reset_email()
+        t = test_user.get_reset_password_token()
+        assert len(outbox) == 1
+        msg = outbox[0]
+        assert "jjones@yahoo.com" in msg.recipients
+        assert msg.subject == 'Ask a Neighbor: Password Reset'
+        assert 'To reset your password, please paste the below link into your browser' in msg.body
+
+def test_send_email_verification(test_app, test_db, base_user):     
+    """Test sending of email verification emails."""
+    test_user = User.query.filter_by(username=base_user['username']).first()
+    with mail.record_messages() as outbox:
+        test_user.send_email_verification()
+        assert len(outbox) == 1
+        msg = outbox[0]
+        assert "jjones@yahoo.com" in msg.recipients
+        assert msg.subject == 'Ask a Neighbor: Email Verification'
+        assert 'To verify your email' in msg.body
+        assert 'Dear John' in msg.body
+
+def test_verify_email_token(test_app, test_db, base_user):
+    """Test verification of email tokens along with error codes."""
+    test_user = User.query.filter_by(username=base_user['username']).first()
+    test_token = test_user.get_email_verification_token()
+    resulting_user, error = User.verify_email_verification_token(test_token)
+    assert resulting_user == test_user
+    assert error == None
+    # check expired token
+    test_token = test_user.get_email_verification_token(expires_in=-200)
+    resulting_user, error = User.verify_email_verification_token(test_token)
+    assert resulting_user == None
+    assert error == "Expired"
+    test_token = "xjdkldfj1893.xdkld.jfkdl"
+    resulting_user, error = User.verify_email_verification_token(test_token)
+    assert resulting_user == None
+    assert error == "Invalid"   
+
     
 
 

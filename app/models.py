@@ -1,13 +1,14 @@
 from app import db, login
-from datetime import datetime
+from app.email import send_email
+from datetime import datetime, date
+from flask import current_app, render_template
 from flask_login import UserMixin, current_user
-from flask_sqlalchemy import Model
-from app.helpers import pagination_urls
+import jwt
 import re
-from sqlalchemy import or_
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 from string import capwords
+from time import time
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # many to many table linking users with groups
@@ -97,13 +98,15 @@ class User(UserMixin, db.Model):
     """
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
-    email = db.Column(db.String(120), index=True, unique=True)
+    _email = db.Column(db.String(120), index=True, unique=True)
+    email_verified = db.Column(db.Boolean, nullable=False, default=False)
     password_hash = db.Column(db.String(128))
+    password_set_date = db.Column(db.Date, index=True)
     _first_name = db.Column(db.String(64), index=True)
     _last_name = db.Column(db.String(64), index=True)
     address_id = db.Column(db.Integer, db.ForeignKey("address.id"))
 
-    address = db.relationship("Address", backref="user")
+    address = db.relationship("Address", backref="user", lazy=False)
     reviews = db.relationship("Review", backref="user")
     friends = db.relationship("User", secondary=user_friend,
                               primaryjoin=(id == user_friend.c.user_id),
@@ -126,11 +129,80 @@ class User(UserMixin, db.Model):
     def last_name(self, last_name):
         self._last_name = last_name.title()
 
+    @hybrid_property
+    def email(self):
+        return self._email
+
+    @email.setter
+    def email(self, email):
+        if email != self._email:
+            self._email = email
+        else:
+            pass
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.password_set_date = date.today()
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_reset_password_token(self, expires_in=600):
+        return jwt.encode(
+            {'reset_password': self.id, 'exp': time() + expires_in},
+            current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+
+    def send_password_reset_email(self):
+        token = self.get_reset_password_token()
+        send_email('Ask a Neighbor: Password Reset',
+                sender=current_app.config['ADMINS'][0],
+                recipients=[self.email],
+                text_body=render_template('auth/email/reset_password_msg.txt',
+                                            user=self, token=token),
+                html_body=render_template('auth/email/reset_password_msg.html',
+                                            user=self, token=token))
+
+    @staticmethod
+    def verify_password_reset_token(token):
+        try:
+            id = jwt.decode(token, current_app.config['SECRET_KEY'],
+                            algorithms=['HS256'])['reset_password']
+        except:
+            return
+        return User.query.get(id)
+
+    def get_email_verification_token(self, expires_in=60*60*24*10):
+        """Get jwt token for email address verification."""
+        return jwt.encode(
+            {'verify_email': self.id, 'exp': time() + expires_in},
+            current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+    
+    def send_email_verification(self):
+        token = self.get_email_verification_token()
+        send_email('Ask a Neighbor: Email Verification',
+                   sender=current_app.config['ADMINS'][0],
+                   recipients=[self.email],
+                   text_body=render_template('auth/email/verify_email_msg.txt',
+                                             user=self, token=token),
+                   html_body=render_template('auth/email/verify_email_msg.html',
+                                             user=self, token=token))
+
+    @staticmethod
+    def verify_email_verification_token(token):
+        """Check email verification token and returns user if valid and error
+           if invalid."""
+        try:
+            id = jwt.decode(token, current_app.config['SECRET_KEY'],
+                            algorithms=['HS256'])['verify_email']
+            user = User.query.get(id)
+            error = None
+        except jwt.ExpiredSignatureError:
+            error = "Expired"
+            user = None
+        except:
+            error = "Invalid"
+            user = None
+        return (user, error)
 
     def _addfriend(self, person):
         """Add friend relationship bi-directionally."""
@@ -150,12 +222,12 @@ class User(UserMixin, db.Model):
 
     def summary(self):
         """Return user object with review summary information(avg/count)"""
-        #need to accomodate zero reviews...joins makes it unable to calc
+        # need to accomodate zero reviews...joins makes it unable to calc
         summary = (db.session.query(func.avg(Review.rating).label("average"),
-                                 func.count(Review.id).label("count"))
-                          .filter(User.id == self.id)
-                          .join(User)
-                          .first())
+                                    func.count(Review.id).label("count"))
+                             .filter(User.id == self.id)
+                             .join(User)
+                             .first())
         return summary
     
     def profile_reviews(self):
@@ -172,7 +244,7 @@ class User(UserMixin, db.Model):
                        Address.city.ilike(form.city.data),
                        Address.state_id == form.state.data]
         join_args = [Provider.address, Provider.reviews, Review.user]
-        #update filter for relationship filters
+        # update filter for relationship filters
         if form.friends_only.data is True:
             filter_args.append(User.friends.contains(self))
         elif form.groups_only.data is True:
@@ -196,6 +268,7 @@ class User(UserMixin, db.Model):
 def load_user(id):
     return User.query.get(int(id))
 
+
 class Category(db.Model):
     """List service categories.
     Relationships:
@@ -206,7 +279,7 @@ class Category(db.Model):
     name = db.Column(db.String(64), index=True, unique=True)
 
     providers = db.relationship("Provider", secondary=category_provider_table, 
-                              backref="categories")
+                                backref="categories")
     reviews = db.relationship("Review", backref="category")
 
     def __repr__(self):
@@ -248,10 +321,10 @@ class Provider(db.Model):
         """Return tuple of provider object with review summary information(avg/count)
         form: boolean form with friend/group filters
         """
-        #base filter and join args
+        # base filter and join args
         filter_args = [Provider.id == self.id]
         join_args = [Review.provider, Review.user]
-        #update filter and joins for relationship filters
+        # update filter and joins for relationship filters
         if filter['friends_only'] is True:
             filter_args.append(User.friends.contains(current_user))
         elif filter['groups_only'] is True:
@@ -267,11 +340,11 @@ class Provider(db.Model):
 
     def profile_reviews(self, filter):
         """Returns review object query."""
-        #base filter and join args
+        # base filter and join args
         filter_args = [Provider.id == self.id]
         join_args = [Review.provider, Review.user]
 
-        #update filter and joins for relationship filters
+        # update filter and joins for relationship filters
         if filter['friends_only'] is True:
             filter_args.append(User.friends.contains(current_user))
         elif filter['groups_only'] is True:
@@ -284,6 +357,7 @@ class Provider(db.Model):
 
     def __repr__(self):
         return f"<Provider {self.name}>"
+
 
 class Review(db.Model):
     """Class to create define review table in db.
@@ -326,9 +400,9 @@ class Review(db.Model):
         else:
             self._comments = comments.capitalize()
 
-
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"
+
 
 class Picture(db.Model):
     """Class to define picture table in db, to be linked with reviews.
@@ -341,10 +415,12 @@ class Picture(db.Model):
     name = db.Column(db.String(120))
     thumb = db.Column(db.String(120))
 
+
 class Group(db.Model):
     """Groups that users can belong to.
     Relationships:
         Many to Many: User
+        One to one: User/admin
     """
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(64), index=True, unique=True)
@@ -352,6 +428,8 @@ class Group(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     members = db.relationship("User", secondary=user_group, 
                               backref="groups")
+    admin = db.relationship("User", backref="group_admin")
+
     @hybrid_property
     def name(self):
         return self._name

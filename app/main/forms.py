@@ -93,21 +93,6 @@ class NonValSelectField(SelectField):
         pass
 
 
-# class AddressField(FlaskForm):
-#     line1 = StringField("Street Address", validators=[DataRequired()])
-#     line2 = StringField("Address Line 2")
-#     city = StringField("City", validators=[DataRequired()])
-#     state = SelectField("State", choices=state_list(), coerce=int,
-#                          validators=[DataRequired()])
-#     zip = StringField("Zip", validators=[DataRequired()])
-
-#     def validate_zip(form, field):
-#         if len(field.data) != 5:
-#             raise ValidationError('Please enter 5 digit zip code.')
-#         elif not field.data.isdigit():
-#             raise ValidationError('Only include numbers in zip code.')
-
-
 class ReviewForm(FlaskForm):
     """Form to submit review."""
     category = SelectField("Category", choices=category_list(), 
@@ -192,9 +177,10 @@ class ProviderSearchForm(FlaskForm):
 
 class ProviderFilterForm(FlaskForm):
     """Form to apply social filters to provider profile page."""
-    class Meta:
-        csrf = True
 
+    class Meta:
+        csrf = False
+    
     friends_only = BooleanField("Friends Only",
                                 validators=[NotEqualTo('groups_only')],
                                 false_values = (False, 'false','False', ''))

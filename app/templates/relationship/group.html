@@ -1,0 +1,72 @@
+{% extends "single_column.html" %}
+{% from "macros.html" import renderInlineList, render_review, renderList, pagination, modal_render %}
+
+{% block content_medium %}
+
+<div class="card pb-0" id="user_profile">
+    <div class="card-header p-2">
+        <h4 class="text-center">Profile Information
+        {% if current_user.id == group.admin_id %}    
+        <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
+        {% endif %}
+        </h4>
+    </div>
+    <div class="card-body">
+        {# Only show group members if user is group member #} 
+        {% set member = group in current_user.groups %}
+
+        
+            <dl class="row">
+                    {{ renderInlineList("Name", (group.name))}}
+                    {{ renderInlineList("Description", group.description)}}
+                    {% if member %}
+                        {{ renderInlineList("Admin - name", 
+                        group.admin.first_name + " " + group.admin.last_name)}}
+                    {% else %}    
+                        {{ renderInlineList("Admin - username",
+                                             group.admin.username) }}
+                    {% endif %}
+                    {{ renderInlineList("Admin - email", group.admin.email) }}                      
+            </dl>
+
+    </div>
+</div>
+
+    <br>
+
+{% if member %}    
+    <div class="card">
+        <div class="card-header p-2">
+            <h4 class="text-center"> Group Members </h4>
+        </div>
+        <div class="card-body pb-0">
+            <ul>
+                {% for member in group.members %}
+                <li> <a href="{{url_for('main.user', username=member.username)}}">
+                    {{ member.first_name + " " + member.last_name}} </a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+     <br>
+{% endif %}     
+{% endblock %}
+
+{% block content_wide %}
+
+{% endblock %}
+
+{% block modal %}
+
+    {% if modal_open %}
+        <script>$(window).on('load', function(){
+            $("#modal_id").modal('show');
+        });
+        </script>
+    {% endif %}
+
+    {% if modal_form %}
+        {{modal_render(modal_form, modal_title, action="/groupupdate")}}
+    {% endif %}
+
+{% endblock%}

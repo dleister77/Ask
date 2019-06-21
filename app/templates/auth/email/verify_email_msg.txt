@@ -1,0 +1,11 @@
+Dear {{user.first_name}}:
+
+To verify your email, please paste the below link into your browser:
+
+{{ url_for('auth.email_verify', token=token, _external=True) }}
+
+If you have not registered for an account with Ask a Neighbor, please disregard.
+
+Sincerely,
+
+The Ask a Neighbor Team

@@ -1,11 +1,13 @@
 from app import db
-from flask import url_for
+from flask import flash, Markup, session, url_for
 from flask_login import current_user
-from io import StringIO, BytesIO
+import functools
+from io import BytesIO
 import os
 from pathlib import Path
 from PIL import Image
 from sqlalchemy.exc import IntegrityError
+
 
 def dbAdd(item):
     """Add item to db and handle errors
@@ -51,7 +53,8 @@ def thumbnail_from_buffer(buffer, size, name, path):
     thumb_name = f"{f[0]}_thumbnail.{f[1]}"
     thumb.save(os.path.join(path, thumb_name))
     return (thumb_name)
-    
+
+
 def name_check(path, filename, counter=0):
     """Checks if file already exists, increments by number to be unique.
     Inputs:
@@ -71,7 +74,8 @@ def name_check(path, filename, counter=0):
     elif not exists:
         return filename
     return filename
- 
+
+
 def pagination_urls(pag_object, endpoint, pag_args):
     """Generates pagination urls for paginated information.
     Inputs:
@@ -91,8 +95,53 @@ def pagination_urls(pag_object, endpoint, pag_args):
                        if pag_object.has_prev else None
     pag_dict['pages'] = []
     for i in range(pag_object.pages):
-        pag_dict['pages'].append((i + 1, url_for(endpoint, page = i + 1, **pag_args)))
+        pag_dict['pages'].append((i + 1, url_for(endpoint, page=i + 1, 
+                                                 **pag_args)
+                                 ))
     return pag_dict
+
+
+def email_verified(func):
+    """Flash message reminding user to verify email address."""
+    @functools.wraps(func)
+    def wrapped_function(*args, **kwargs):
+        
+        if current_user.is_anonymous:
+            pass
+        else:
+            if not current_user.email_verified and not session.get('email_verification_sent'):
+                flash(Markup("Email address not yet verified. Please check email and "
+                "confirm email address."
+                "  <a href=" + url_for('auth.email_verify_request') + ">Click "
+                "to request new link.</a>"))
+            # update email_ver_sent to true to allow reminder to flash on next page
+            session['email_verification_sent'] = False    
+        return func(*args, **kwargs)
+    return wrapped_function
+
+
+def kw_update(field, new_kw):
+    """Update render_kw in form."""
+    if field.render_kw is not None:
+        field.render_kw.update(new_kw)
+    else:
+        field.render_kw = new_kw
+
+
+def disable_form(form):
+    """Disable all fields in form."""
+    disabled = {"disabled": "disabled"}
+    for field in form:
+        if field.type == "FormField":
+            disable_form(field)
+        elif field.type == "RadioField":
+            for subfield in field:
+                kw_update(subfield, disabled)
+        else:
+            kw_update(field, disabled)
+
+
+
 
 
 

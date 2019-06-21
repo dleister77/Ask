@@ -1,8 +1,10 @@
+from app.helpers import dbUpdate
 from app.models import User, Group
 from flask import escape, url_for
 from flask_login import current_user
 import pytest
-from .test_auth import login
+
+from tests.conftest import scenarioUpdate, login, logout
 
 def network(client):
     return client.get(url_for('relationship.network', _external=False),
@@ -13,7 +15,7 @@ def groupsearch(client, args):
                       follow_redirects=True, query_string=args)
 
 def friendadd(client, form):
-        return client.post(url_for('relationship.friendadd', _external=False),
+    return client.post(url_for('relationship.friendadd', _external=False),
                       follow_redirects=True, data=form)
 
 def friendsearch(client, args):
@@ -21,22 +23,98 @@ def friendsearch(client, args):
                       follow_redirects=True, query_string=args)
 
 def groupadd(client, form):
-        return client.post(url_for('relationship.groupadd', _external=False),
+    return client.post(url_for('relationship.groupadd', _external=False),
                       follow_redirects=True, data=form)
 
 def groupcreate(client, form):
-        return client.post(url_for('relationship.groupcreate', _external=False),
+    return client.post(url_for('relationship.groupcreate', _external=False),
                       follow_redirects=True, data=form)
 
-def test_network(test_client, test_db):
-    login(test_client, "jjones", "password")
-    response = network(test_client)
-    print(response.data.decode())
+def groupcreate_get(client):
+    return client.get(url_for('relationship.groupcreate', _external=False),
+                      follow_redirects=True)
+
+def groupUpdate(client, form):
+    return client.post(url_for('relationship.groupUpdate', _external=False),
+                      follow_redirects=True, data=form)
+
+def groupProfile(client, test_case):
+    return client.get(url_for('relationship.group', name=test_case['name'],
+                      id=test_case['id'], _external=False),
+                      follow_redirects=True)
+
+def test_network(active_client, test_db):
+    response = network(active_client)
     assert '<li> <a href="/user/sarahsmith"> Sarah Smith </a></li>' in response.data.decode()
-    assert '<li>Qhiv Hoa</li>' in response.data.decode()
+    assert '<li> <a href="/group/Qhiv%20Hoa/1"> Qhiv Hoa </a></li>' in response.data.decode()
     assert b'Mark Johnson' not in response.data
     assert '<form id = "modal_form_group" action="" method="POST">' in response.data.decode()
     assert response.data.decode().count("Qhiv Hoa") == 1
+    assert b"Create new group disabled. Please verify email to unlock" in response.data
+    var = 'disabled="disabled"'
+    assert response.data.decode().count(var) == 3
+    User.query.get(2).update(email_verified=True)
+    dbUpdate()
+    response = network(active_client)
+    assert b"Create new group disabled. Please verify email to unlock" not in response.data  
+
+def test_group(test_client, test_db):
+    login(test_client, "jjones", "password")
+    #base request.  User not group admin
+    test_case = {"name": "Qhiv Hoa", "id": "1"}
+    response = groupProfile(test_client, test_case)
+    print(response.data.decode())
+    assert response.status_code == 200
+    assert '<a href="" data-toggle="modal" data-target="#modal_id">(edit)</a>' in response.data.decode()
+    assert '<a href="/user/yardsmith">' in response.data.decode()
+    assert response.data.decode().count('John Jones') == 2
+
+    #test user who is not admin
+    logout(test_client)
+    login(test_client, "yardsmith", "password5678")
+    response = groupProfile(test_client, test_case)
+    assert response.status_code == 200
+    assert '<a href="" data-toggle="modal" data-target="#modal_id">(edit)</a>' not in response.data.decode()
+    assert response.data.decode().count('Mark Johnson') == 1
+
+    #test user who is not group member
+    logout(test_client)
+    login(test_client, "sarahsmith", "password1234")
+    response = groupProfile(test_client, test_case)
+    assert '<a href="" data-toggle="modal" data-target="#modal_id">(edit)</a>' not in response.data.decode()
+    assert response.data.decode().count('Mark Johnson') == 0    
+  
+
+
+def test_group_update(test_client, test_db, base_group):
+    
+    login(test_client, "jjones", "password")
+    test_case = base_group.copy()
+    #invalid input
+    test_case['name'] = ""
+    response = groupUpdate(test_client, test_case)
+    assert response.status_code == 422
+    assert b'Group name is required.' in response.data
+    
+    #test name change
+    test_case['name'] = 'Jens Bees'
+    test_case['description'] = 'Another description'
+    print(test_case)
+    response = groupUpdate(test_client, test_case)
+    print(response.data.decode())
+    g = Group.query.filter_by(id=2).first()
+    assert response.status_code == 200
+    assert b'Group information updated' in response.data
+    assert g.name == 'Jens Bees'
+
+    #test non admin attempting changes
+    logout(test_client)
+    login(test_client, "sarahsmith", "password1234")
+    test_case['name'] = "Dougs bees" 
+    response = groupUpdate(test_client, test_case)
+    assert response.status_code == 422
+    assert b'User not authorized to make changes' in response.data
+
 
 
 @pytest.mark.parametrize('name, assertion',

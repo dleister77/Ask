@@ -1,5 +1,5 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import render_provider, render_review, pagination, field_render_inline %}
+{% from "macros.html" import render_provider, render_review, pagination, field_render_inline, field_row_render %}
 
 {% block content_wide %}
     <form class="form-inline" action='{{url_for("main.provider", 
@@ -7,13 +7,11 @@
         {{form.hidden_tag()}}
             <legend class="col-form-label">Applied Social Filter:</legend>
             <div class="form-check mb-2 mr-sm-2">
-                {{form.friends_only(class_="form-check-input")}}
-                {{form.friends_only.label(class_="form-check-label")}}
+                {{field_row_render(form.friends_only)}}
             </div>
             <div class="form-check mb-2 mr-sm-2">
-                {{form.groups_only(class_="form-check-input")}}
-                {{form.groups_only.label(class_="form-check-label")}}
-            </div>           
+                {{field_row_render(form.groups_only)}}
+            </div>       
             {{form.submit(class_="btn btn-primary submit mb-2")}}
     </form>
     <br>

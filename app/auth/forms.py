@@ -1,5 +1,4 @@
-# from app import create_app
-from app import db
+
 from flask import current_app
 from flask_login import current_user
 from flask_wtf import FlaskForm
@@ -131,3 +130,18 @@ class PasswordChangeForm(FlaskForm):
     def validate_new(self, new):
         if current_user.check_password(new.data):
             raise ValidationError("New password is same as old password.  Please choose a different password.")
+
+class PasswordResetRequestForm(FlaskForm):
+    """Form to request password reset via email."""
+    email = StringField("Email", validators=[DataRequired(message="Email address is required."), Email()])
+    submit = SubmitField('Request Password Reset')
+
+class PasswordResetForm(FlaskForm):
+    """Form to reset password via email link."""
+    password_new = PasswordField("New Password", validators=[DataRequired(message="Please choose a new password."), 
+            Length(min=7, max=15)])
+    password_confirmation = PasswordField("Confirm New Password",
+                            validators=[DataRequired(message="Please confirm new password."), 
+                            EqualTo('password_new', 
+                            message="Passwords must match.")])
+    submit = SubmitField("Submit")

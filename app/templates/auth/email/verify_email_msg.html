@@ -1,0 +1,12 @@
+{% extends "email_layout.html" %}
+
+{% block body %}
+<p>To verify your email, please click on the below link:</p>
+<p><a href="{{ url_for('auth.email_verify', token=token, _external=True) }}">Click here to verify</a></p>
+<br>
+<p>Alternatively, you can paste the below link into your web browser.</p>
+<p>{{ url_for('auth.passwordreset', token=token, _external=True) }}</p>
+<br>
+<p>If you have not registered for an account with Ask a Neighbor, please disregard.</p>
+
+{% endblock %}

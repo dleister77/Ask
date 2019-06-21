@@ -3,6 +3,7 @@
 {% block title %} {{ super() }} {% endblock %}
 
 {% block content_narrow %}
+    
     <form action="/review" method="post", id="review_form", enctype="multipart/form-data">
         {{form.hidden_tag()}}
         {{ field_render(form.category) }}

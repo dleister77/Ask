@@ -1,14 +1,16 @@
 import pytest
 from app import create_app
-from app.relationship.forms import (GroupCreateForm, FriendSearchForm, GroupSearchForm)
-import os
-from tests.conftest import login, logout, TestConfig
-from werkzeug.datastructures import FileStorage
+from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
+								    GroupSearchForm, GroupEditForm)
+from tests.conftest import login, scenarioUpdate, TestConfig
 
 app = create_app(TestConfig)
 with app.app_context():
-	from app.main.forms import ProviderAddForm, ProviderSearchForm, ReviewForm
-	from app.auth.forms import UserUpdateForm, PasswordChangeForm, RegistrationForm, LoginForm, AddressField
+	from app.main.forms import ProviderAddForm, ProviderSearchForm, ReviewForm, ProviderFilterForm
+	from app.auth.forms import UserUpdateForm, PasswordChangeForm,\
+							   RegistrationForm, LoginForm, AddressField,\
+							   PasswordResetForm
+
 
 def form_test(test_app, test_form, test_case):
 	"""Test form validation.
@@ -34,22 +36,6 @@ def form_test(test_app, test_form, test_case):
 			for key in test_errors:
 				assert key in form.errors
 				assert test_errors[key] in form.errors.values()
-
-def scenarioUpdate(test_case, parameters, values, assertions):
-	""""Update test_case for update scenario
-	test_case: base test case
-	parameters: parameter(dict key) to be updated.  single value or list.
-	values: updated values parameter values.  single value or list of values if
-	 		multiple parameters being updated.
-	assertions: list of assertions to be updated. single list or list of lists.
-	"""
-	if parameters == None:
-		pass
-	elif type(parameters) == list:
-		for param, val, assertion in zip(parameters, values, assertions):
-			test_case[param] = (val, assertion)
-	else:
-		test_case[parameters] = (values, assertions)
 
 
 @pytest.mark.parametrize("description", [("soccer team", None),
@@ -81,6 +67,20 @@ def test_group_search(test_app, active_client, test_db, name, value):
 	test_case = {"name": name, "value": value}
 	form_test(test_app, GroupSearchForm, test_case)
 
+@pytest.mark.parametrize("parameters, values, assertions", [
+						(None, None, None),
+						("name", "", ["Group name is required."]),
+						("name", "Qhiv Hoa", ["Group name is already registered."]),
+						("description", "", ["Description is required."]),
+						("id", "", ["Group name is required."]),
+						("id", "7", ["Invalid update. Group does not exist. Refresh and try again."])
+						])
+def test_group_edit(test_app, active_client, test_db, base_group, 
+					parameters, values, assertions):
+	test_case = base_group
+	scenarioUpdate(test_case, parameters, values, assertions)
+	form_test(test_app, GroupEditForm, test_case)
+
 
 @pytest.mark.parametrize("parameters, values, assertions", [
 						(None, None, None),
@@ -95,8 +95,6 @@ def test_group_search(test_app, active_client, test_db, name, value):
 def test_address_field(test_app, active_client, test_db, base_address,
 						parameters, values,	assertions):
 	test_case = base_address
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, AddressField, test_case)
 	
@@ -108,8 +106,6 @@ def test_address_field(test_app, active_client, test_db, base_address,
 def test_login_form_2(test_app, test_client, test_db, base_login, parameters,
 					  values, assertions):
 	test_case = base_login
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, LoginForm, test_case)
 
@@ -131,8 +127,6 @@ def test_login_form_2(test_app, test_client, test_db, base_login, parameters,
 def test_registration_form(test_app, active_client, test_db, base_user_new, 
 						  parameters, values, assertions):
 	test_case = base_user_new
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, RegistrationForm, test_case)
 
@@ -149,8 +143,6 @@ def test_registration_form(test_app, active_client, test_db, base_user_new,
 def test_password_update(test_app, active_client, test_db, base_pw_update, 
 						  parameters, values, assertions):
 	test_case = base_pw_update
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, PasswordChangeForm, test_case)
 
@@ -170,13 +162,12 @@ def test_password_update(test_app, active_client, test_db, base_pw_update,
 						])					
 def test_user_update(test_app, active_client, test_db, base_user, parameters, values, assertions):
 	test_case = base_user
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, UserUpdateForm, test_case)
 
 
 @pytest.mark.parametrize("parameters, values, assertions", [
+						 (None, None, None),
 						 ("category", "", ["Category is required."]),
 						 ("category", "5", ["Not a valid choice"]),
 						 ("name", "", ["Provider name is required."]),
@@ -192,10 +183,7 @@ def test_user_update(test_app, active_client, test_db, base_user, parameters, va
 						 None])
 						 ])
 def test_review(test_app, test_db, base_review, parameters, values, assertions):
-	for key, base_value in base_review.items():
-		base_review[key] = (base_value, None)
 	test_case = base_review
-	form_test(test_app, ReviewForm, test_case)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, ReviewForm, test_case)
 
@@ -217,8 +205,6 @@ def test_review(test_app, test_db, base_review, parameters, values, assertions):
 ])
 def test_provider_add(test_app, test_db, base_provider_new, parameters, values, assertions):
 	test_case = base_provider_new
-	for key, base_value in test_case.items():
-		test_case[key] = (base_value, None)
 	scenarioUpdate(test_case, parameters, values, assertions)
 	form_test(test_app, ProviderAddForm, test_case)
 
@@ -241,6 +227,28 @@ def test_provider_search(test_app, test_db, category, city, state,
 	form_test(test_app, ProviderSearchForm, test_case)
 
 
+@pytest.mark.parametrize("parameters, values, assertions", [
+						(None, None, None),
+						("friends_only", 'y', None),
+						(["friends_only", "groups_only"], ['y','y'],
+						[['Friends Only and Groups Only are not allowed to both be selected.'],
+						['Groups Only and Friends Only are not allowed to both be selected.']])
+						])
+def test_provider_filter(test_app, test_db, parameters, values, assertions):
+	test_case = {"friends_only": False, "groups_only": False}
+	scenarioUpdate(test_case, parameters, values, assertions)
+	form_test(test_app, ProviderFilterForm, test_case)
 
 
-
+@pytest.mark.parametrize("parameters, values, assertions", [
+						(None, None, None),
+						("password_confirmation", "password3", ["Passwords must match."]),
+						("password_confirmation", "", ["Please confirm new password."]),
+						("password_new", "p", ["Field must be between 7 and 15 characters long."]),
+						("password_new", "passwordpassword50", ["Field must be between 7 and 15 characters long."])
+						])
+def test_password_reset_form(test_app, test_db, base_password_reset,
+							 parameters, values, assertions):
+	test_case = base_password_reset
+	scenarioUpdate(test_case, parameters, values, assertions)
+	form_test(test_app, PasswordResetForm, test_case)

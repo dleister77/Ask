@@ -200,7 +200,6 @@ function initReview (jquery) {
 }
 
 function initNetwork(jquery){
-    console.log("initiate network called")
     //create function scope variables to be used for converting chosen name to user_id
     var friend_array = [];
     var friend_array_full = [];
@@ -334,7 +333,6 @@ $(document).ready(function(){
 
     } else if ($("#network").length){
         $(document).ready(initNetwork);
-        console.log("network initiated")
     } else if ($("#rating_search").length){
         $(document).ready(initSearch);
     }
