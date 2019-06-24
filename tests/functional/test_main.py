@@ -95,12 +95,10 @@ def test_user(test_client, test_db):
 
     
 
-def test_review(active_client, test_db, test_app):
+def test_review(active_client, test_db, test_app, base_review):
     #add review with required information
     user = User.query.filter_by(username="jjones").first()
-    test_case = {"category": "1", "name": "2", "rating": "3",
-                 "description": "", "service_date": "", "comments": "", 
-                 "picture": ""}
+    test_case = base_review
     response = add_review(active_client, test_case, test_app)
     assert response.status_code == 200
     assert b'review added' in response.data
@@ -108,18 +106,16 @@ def test_review(active_client, test_db, test_app):
     filter = {"friends_only": False, "groups_only": False}
     p = Provider.query.filter_by(name="Evers Electric").first()
     assert p.profile(filter)[1] == 3
-    assert p.profile(filter)[2] == 1
+    assert p.profile(filter)[2] == 3
+    assert p.profile(filter)[3] == 1
     # test case without required information
-    test_case = {"category": "", "name": "", "rating": "",
-                 "description": "outlet install", "service_date": "4/15/2019",
-                 "comments": "excellent work", "picture": ""}
+    test_case.update({"rating": ""})
     response = add_review(active_client, test_case, test_app)
     assert b"Rating is required" in response.data
     assert response.status_code == 422
     # test case with all fields
-    test_case = {"category": "1", "name": "2", "rating": "5",
-                 "description": "outlet install", "service_date": "4/15/2019",
-                 "comments": "excellent work","picture": ["test.jpg", "eggs.jpg"]}
+    test_case.update({"category": "1", "name": "2", "rating": "5",
+                 "picture": ["test.jpg", "eggs.jpg"]})
     response = add_review(active_client, test_case, test_app)
     assert b'review added' in response.data
     assert response.status_code == 200
@@ -129,8 +125,8 @@ def test_review(active_client, test_db, test_app):
     assert path2.is_file()
     review = Review.query.filter_by(provider_id=2).all()[1]
     assert review.service_date == date(2019, 4, 15)
-    assert review.description == 'Outlet install'
-    assert review.comments == 'Excellent work'
+    assert review.description == 'Test'
+    assert review.comments == 'Testcomments'
     path = os.path.join(test_app.config['MEDIA_FOLDER'], str(user.id))
     rmtree(path)
     #test get request

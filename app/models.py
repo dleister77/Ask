@@ -1,30 +1,40 @@
 from app import db, login
 from app.email import send_email
 from datetime import datetime, date
-from flask import current_app, render_template
+from flask import current_app, render_template, session
 from flask_login import UserMixin, current_user
 import jwt
 import re
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
+from sqlite3 import Connection as SQLite3Connection
 from string import capwords
 from time import time
 from werkzeug.security import check_password_hash, generate_password_hash
+
+# sets foreign keys to on for db connection
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    print("setting fk to on!")
+    if isinstance(dbapi_connection, SQLite3Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.close()
 
 # many to many table linking users with groups
 user_group = db.Table('user_group', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')), 
     db.Column('group_id', db.Integer, db.ForeignKey('group.id')))
 
+
 # many to many table linking providers to multiple categories
 category_provider_table = db.Table('category_provider', db.Model.metadata,
     db.Column('category_id', db.Integer, db.ForeignKey('category.id')), 
     db.Column('provider_id', db.Integer, db.ForeignKey('provider.id')))
 
-# many to many table linking pictures with reviews
-review_picture = db.Table('review_picture', db.Model.metadata,
-    db.Column('review_id', db.Integer, db.ForeignKey('review.id')), 
-    db.Column('picture_id', db.Integer, db.ForeignKey('picture.id')))
 
 # many to many table linking pictures with users with friends
 user_friend = db.Table('user_friend', db.Model.metadata,
@@ -42,6 +52,18 @@ class State(db.Model):
     state_short = db.Column(db.String(24), index=True)
     addresses = db.relationship("Address", backref="state")
 
+    @staticmethod
+    def state_list():
+        """Query db to populate state list on forms."""
+        if current_app.config['TESTING'] == True:
+            list = current_app.config['TEST_STATES']
+        else:
+            try:
+                list = [(s.id, s.name) for s in State.query.order_by("name")]
+            except OperationalError:
+                list = [(1,"Test")]
+        return list
+
     def __repr__(self):
         return f"<State {self.name}>"
 
@@ -53,32 +75,36 @@ class Address(db.Model):
         Child of: State, User, Provider
     """
     id = db.Column(db.Integer, primary_key=True)
-    _line1 = db.Column(db.String(128))
+    _line1 = db.Column(db.String(128), nullable=False)
     _line2 = db.Column(db.String(128))
-    zip = db.Column(db.String(20), index=True)
-    _city = db.Column(db.String(64), index=True)
-    state_id = db.Column(db.Integer, db.ForeignKey("state.id"))
+    zip = db.Column(db.String(20), index=True, nullable=False)
+    _city = db.Column(db.String(64), index=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id",
+                                                  ondelete="CASCADE"))
+    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id",
+                                                      ondelete="CASCADE"))
+    state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
 
     @hybrid_property
     def line1(self):
         return self._line1
-    
+
     @line1.setter
     def line1(self, line1):
         self._line1 = line1.title()
-    
+
     @hybrid_property
     def line2(self):
         return self._line2
-    
+
     @line2.setter
     def line2(self, line2):
         self._line2 = line2.title()
-        
+ 
     @hybrid_property
     def city(self):
         return self._city
-    
+
     @city.setter
     def city(self, city):
         self._city = city.title()    
@@ -90,33 +116,34 @@ class Address(db.Model):
 class User(UserMixin, db.Model):
     """Creates user class.
     Relationships:
-        Parent of: Address, Reviews
+        Parent of: Reviews, Address
+        Child of:
         ManytoMany: Group, User(friends)
     Methods:
         set_password: Store submitted password as hash.
         check_password: Compares hashed submitted password to store password hash.
     """
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True)
-    _email = db.Column(db.String(120), index=True, unique=True)
+    username = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    _email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     email_verified = db.Column(db.Boolean, nullable=False, default=False)
     password_hash = db.Column(db.String(128))
     password_set_date = db.Column(db.Date, index=True)
-    _first_name = db.Column(db.String(64), index=True)
-    _last_name = db.Column(db.String(64), index=True)
-    address_id = db.Column(db.Integer, db.ForeignKey("address.id"))
+    _first_name = db.Column(db.String(64), index=True, nullable=False)
+    _last_name = db.Column(db.String(64), index=True, nullable=False)
 
-    address = db.relationship("Address", backref="user", lazy=False)
-    reviews = db.relationship("Review", backref="user")
+    address = db.relationship("Address", backref="user", lazy=False,
+                              uselist=False, passive_deletes=True)
+    reviews = db.relationship("Review", backref="user", passive_deletes=True)
     friends = db.relationship("User", secondary=user_friend,
                               primaryjoin=(id == user_friend.c.user_id),
                               secondaryjoin=(id == user_friend.c.friend_id),
-                              backref="friendsWith")
+                              backref="friends_reverse")
 
     @hybrid_property
     def first_name(self):
         return self._first_name
-    
+
     @first_name.setter
     def first_name(self, first_name):
         self._first_name = first_name.title()
@@ -124,7 +151,7 @@ class User(UserMixin, db.Model):
     @hybrid_property
     def last_name(self):
         return self._last_name
-    
+
     @last_name.setter
     def last_name(self, last_name):
         self._last_name = last_name.title()
@@ -224,6 +251,7 @@ class User(UserMixin, db.Model):
         """Return user object with review summary information(avg/count)"""
         # need to accomodate zero reviews...joins makes it unable to calc
         summary = (db.session.query(func.avg(Review.rating).label("average"),
+                                    func.avg(Review.cost).label("cost"),
                                     func.count(Review.id).label("count"))
                              .filter(User.id == self.id)
                              .join(User)
@@ -254,6 +282,7 @@ class User(UserMixin, db.Model):
 
         providers = (db.session.query(Provider,
                                       func.avg(Review.rating).label("average"),
+                                      func.avg(Review.cost).label("cost"),
                                       func.count(Review.id).label("count"))
                                .join(*join_args)
                                .filter(*filter_args)
@@ -263,6 +292,7 @@ class User(UserMixin, db.Model):
        
     def __repr__(self):
         return f"<User {self.username}>"
+
 
 @login.user_loader
 def load_user(id):
@@ -282,6 +312,18 @@ class Category(db.Model):
                                 backref="categories")
     reviews = db.relationship("Review", backref="category")
 
+    @staticmethod
+    def category_list():
+        """Query db to populate state list on forms."""
+        if current_app.config['TESTING'] == True:
+            list = current_app.config['TEST_CATEGORIES']
+        else:
+            try:
+                list = [(c.id, c.name) for c in Category.query.order_by("name")]
+            except OperationalError:
+                list = [(1, "Test")]
+        return list
+
     def __repr__(self):
         return f"<Category {self.name}>"
 
@@ -289,16 +331,17 @@ class Category(db.Model):
 class Provider(db.Model):
     """Create service provider record.
     Relationship:
-        Parent of: address, review
+        Parent of: review
+        Child of: address
         Many to Many: category
     """
     id = db.Column(db.Integer, primary_key=True)
-    _name = db.Column(db.String(64), index=True, unique=True)
+    _name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True)
-    _telephone = db.Column(db.String(24), unique=True)
-    address_id = db.Column(db.Integer, db.ForeignKey("address.id"))
+    _telephone = db.Column(db.String(24), unique=True, nullable=False)
 
-    address = db.relationship("Address", backref="provider")
+    address = db.relationship("Address", backref="provider", uselist=False,
+                              passive_deletes=True)
     reviews = db.relationship("Review", backref="provider")
 
     @hybrid_property
@@ -332,11 +375,12 @@ class Provider(db.Model):
             join_args.extend([User.groups])
             filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
         summary = (db.session.query(func.avg(Review.rating).label("average"),
+                                    func.avg(Review.cost).label("cost"),
                                     func.count(Review.id).label("count"))
                              .join(*join_args)
                              .filter(*filter_args)
                              .first())
-        return (self, summary.average, summary.count)
+        return (self, summary.average, summary.cost, summary.count)
 
     def profile_reviews(self, filter):
         """Returns review object query."""
@@ -367,16 +411,19 @@ class Review(db.Model):
     """
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id"))
-    category_id = db.Column(db.Integer, db.ForeignKey("category.id"))
-    rating = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
+    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id"),
+                            nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("category.id"),
+                            nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    cost = db.Column(db.Integer, nullable=False)
     _description = db.Column(db.String(120))
     service_date = db.Column(db.Date)
     _comments = db.Column(db.Text)
     
-    pictures = db.relationship("Picture", secondary=review_picture, 
-                               backref="review")
+    pictures = db.relationship("Picture", backref="review",
+                               passive_deletes=True)
 
     @hybrid_property
     def description(self):
@@ -411,10 +458,14 @@ class Picture(db.Model):
         Child of: Review
     """
     id = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String(120))
-    name = db.Column(db.String(120))
-    thumb = db.Column(db.String(120))
-
+    path = db.Column(db.String(120), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    thumb = db.Column(db.String(120), nullable=False)
+    review_id = db.Column(db.Integer, db.ForeignKey("review.id", 
+                                                    ondelete="CASCADE"),
+                          nullable=False)
+    def __repr__(self):
+        return f"<Picture {self.name}>"
 
 class Group(db.Model):
     """Groups that users can belong to.
@@ -423,8 +474,8 @@ class Group(db.Model):
         One to one: User/admin
     """
     id = db.Column(db.Integer, primary_key=True)
-    _name = db.Column(db.String(64), index=True, unique=True)
-    _description = db.Column(db.String(120))
+    _name = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    _description = db.Column(db.String(120), nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     members = db.relationship("User", secondary=user_group, 
                               backref="groups")

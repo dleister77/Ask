@@ -14,6 +14,9 @@
                 <!-- {{field.render_kw}} -->
             {% elif field.type == "RadioField" %}
                 <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                {% if field.flags.optional %}
+                    <span class = "small italic"> optional</span>
+                {%endif %}
                 {% for subfield in field %}
                     <div class={{radioClass}}>
                         {{subfield(class_=radioInputClass + " " + classAdjust)}}
@@ -23,14 +26,23 @@
                 {% endfor %}
             {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
                 {{field.label(class_=labelClass)}}
+                {% if field.flags.optional %}
+                    <span class = "small italic"> optional</span>
+                {%endif %}
                 {{field(class_=fileClass + " " + classAdjust)}}
                 <!-- {{field.render_kw}} -->
             {% elif field.type == "BooleanField" %}
                     {{field(class_=boolClass + " " + classAdjust)}}
                     <!-- {{field.render_kw}} -->
                     {{field.label(class_=boolLabel)}}
+                    {% if field.flags.optional %}
+                        <span class = "small italic"> optional</span>
+                    {%endif %}
             {%else%}
                 {{field.label(class_=labelClass)}}
+                {% if field.flags.optional %}
+                    <span class = "small italic"> optional</span>
+                {%endif %}
                 {{field(class_=fieldClass + " " + classAdjust)}}
                 <!-- {{field.render_kw}} -->
             {% endif %}
@@ -207,10 +219,24 @@
     </li>
 {% endmacro %}
 
+{% macro cost_rating(rating) %}
+<!-- Converts numerical cost rating to html inline list of dollar signs-->
+    <li class="list-inline-item">
+        {#-- convert rating to stars #}
+        {% set var = (rating*100)|int %}
+        {% set ns = namespace(var = (rating*100)|int) %}
+        {% for num in range(var,50,-100) %}
+            <i class="fas fa-dollar-sign"></i>
+            {% set ns.var = ns.var-100 %}
+        {% endfor %}
+    </li>
+{% endmacro %}
+
 {% macro render_provider(provider_tuple, filter) %}
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
-    {% set provider, average, count = provider_tuple %}   
+    {% set provider, average, cost, count = provider_tuple %}
+    {% set cost = 3 %}
     <div class="card">
         <div class="card-header">
             {% if provider.name not in request.view_args.values() %}
@@ -234,6 +260,14 @@
                             {% else %}
                             No ratings
                             {% endif %}
+                        </li>
+                        <li>
+                            {% if count > 0 %}
+                            <ul class="list-inline">
+                                <li class="list-inline-item">{{cost}}</li>
+                                <li class="list-inline-item">{{cost_rating(cost)}}</li>                                    
+                            </ul>                           
+                            {% endif %}                            
                         </li>
                     </ul>
                 </div>
@@ -300,7 +334,12 @@
                                 {{star_rating(review.rating)}}
                             </ul>
                         </li>
-                        <li>Cost: "TBD"</li>
+                        <li>
+                            <ul class="list-inline">
+                                <li class="list-inline-item">Cost: </li>
+                                {{cost_rating(review.cost)}}
+                            </ul>
+                        </li>
                         <li>Service Description: {{review.service_description|replace(None, 'Not Provided')}}</li>
                         <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
                         <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>

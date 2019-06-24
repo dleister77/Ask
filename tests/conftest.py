@@ -125,10 +125,10 @@ def test_db(test_app):
                   address=a6, categories=[c1])
 
     # add test reviews
-    r1 = Review(user=u2, provider=p1, category=c1, rating=3, description="fIxed A light BULB", comments="satisfactory work.")
-    r2 = Review(user=u3, provider=p1, category=c1, rating=5, description="installed breaker Box", comments="very clean")
-    r3 = Review(user=u1, provider=p1, category=c1, rating=1, description="test", comments="Test")
-    r4 = Review(user=u2, provider=p3, category=c1, rating=3, description="test", comments="Test123", service_date=date(2019, 5, 1))
+    r1 = Review(user=u2, provider=p1, category=c1, rating=3, cost=3, description="fIxed A light BULB", comments="satisfactory work.")
+    r2 = Review(user=u3, provider=p1, category=c1, rating=5, cost=5, description="installed breaker Box", comments="very clean")
+    r3 = Review(user=u1, provider=p1, category=c1, rating=1, cost=5, description="test", comments="Test")
+    r4 = Review(user=u2, provider=p3, category=c1, rating=3, cost=2, description="test", comments="Test123", service_date=date(2019, 5, 1))
     db.session.add_all([c1, c2, a1, a2, a3, a4, a5, u1, u2, u3, u4, g1, g2, g3, p1, p2, p3, r1, r2, r3, r4])
     db.session.commit()
     yield db
@@ -203,8 +203,9 @@ def base_pw_update():
 @pytest.fixture()
 def base_review():
     test_case = {"category": "1", "name": "2",
-                 "rating": "3", "service_description": "test",
-                 "service_date": "4/15/2019", "comments": "testcomments"}
+                 "rating": "3", "cost": "3", "description": "test",
+                 "service_date": "4/15/2019", "comments": "testcomments",
+                 "picture": ""}
     return test_case
 
 

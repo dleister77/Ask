@@ -5,24 +5,9 @@ from flask_wtf import FlaskForm
 from wtforms import (StringField, PasswordField, BooleanField, SelectField,
                      SubmitField, FormField)
 from wtforms.validators import (DataRequired, Email, EqualTo, Length,
-                                ValidationError)
-from app.models import State, User, Category
+                                Optional, ValidationError)
+from app.models import State, User
 
-def state_list():
-    """Query db to populate state list on forms."""
-    if current_app.config['TESTING'] == True:
-        list = current_app.config['TEST_STATES']
-    else:
-        list = [(s.id, s.name) for s in State.query.order_by("name")]
-    return list
-
-def category_list():
-    """Query db to populate state list on forms."""
-    if current_app.config['TESTING'] == True:
-        list = current_app.config['TEST_CATEGORIES']
-    else:
-        list = [(c.id, c.name) for c in Category.query.order_by("name")]
-    return list
 
 def unique_check(modelClass, columnName):
     """validate that no other entity in class registered for field.
@@ -42,6 +27,7 @@ def unique_check(modelClass, columnName):
             raise ValidationError(message)
     return _unique_check
 
+
 def NotEqualTo(comparisonField):
 
     def _notEqualTo(form, field):
@@ -51,11 +37,12 @@ def NotEqualTo(comparisonField):
             raise ValidationError(message)
     return _notEqualTo
 
+
 class AddressField(FlaskForm):
     line1 = StringField("Street Address", validators=[DataRequired(message="Street address is required.")])
-    line2 = StringField("Address Line 2")
+    line2 = StringField("Address Line 2", validators=[Optional()])
     city = StringField("City", validators=[DataRequired(message="City is required.")])
-    state = SelectField("State", choices=state_list(), coerce=int,
+    state = SelectField("State", choices=State.state_list(), coerce=int,
                          validators=[DataRequired(message="State is required.")])
     zip = StringField("Zip", validators=[DataRequired(message="Zip code is required.")])
 

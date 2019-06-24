@@ -157,6 +157,9 @@ def register():
                     username=form.username.data, address=address)
         user.set_password(form.password.data)
         dbAdd(user)
+        user.send_email_verification()
+        session['email_verification_sent'] = True
+        flash("Please check your email for an email verification message.")
         flash("Congratulations! You've successfully registered.")
         return redirect(url_for('auth.index'))
     return render_template("auth/register.html", title='Register', form=form)

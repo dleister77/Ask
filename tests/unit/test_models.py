@@ -21,8 +21,9 @@ def test_user(test_db):
     assert u.address.city == "Charlotte"
     assert u.address.city != "charlotte"
     assert u.address.state.name == "North Carolina"
-    assert u.summary()[0] == 3
-    assert u.summary()[1] == 2
+    assert u.summary().average == 3
+    assert u.summary().count == 2
+    assert u.summary().cost == 2.5
     assert u.email_verified is False
 
 
@@ -42,6 +43,7 @@ def test_relationships(test_db):
     assert u in f.friends
     assert u in g.members
 
+
 def test_provider(test_db, active_client):
     """
     GIVEN a Provider model
@@ -60,17 +62,21 @@ def test_provider(test_db, active_client):
     assert c2 not in p.categories
     filter = {"friends_only": False, "groups_only": False}
     assert p.profile_reviews(filter).first().rating == 3
-    assert p.profile(filter)[2] == 3
+    assert p.profile(filter)[3] == 3
+    assert p.profile(filter)[2] == (13/3)
     assert p.profile(filter)[1] == 3
     assert p.profile(filter)[0] == p
     filter['friends_only'] = True
     assert p.profile_reviews(filter).first().rating == 1
-    assert p.profile(filter)[2] == 1
+    assert p.profile(filter)[3] == 1
+    assert p.profile(filter)[2] == 5
     assert p.profile(filter)[1] == 1
     filter = {"friends_only": False, "groups_only": True}
     assert p.profile_reviews(filter).first().comments == "Very clean"
-    assert p.profile(filter)[2] == 1
+    assert p.profile(filter)[3] == 1
+    assert p.profile(filter)[2] == 5
     assert p.profile(filter)[1] == 5
+
 
 def test_user_update(test_db):
     """
@@ -104,8 +110,9 @@ def test_user_search_reviews(test_db, search_form):
     u = User.query.filter_by(username="jjones").first()
     #test average and count and return provider
     providers = u.search_providers(search_form).all()
-    assert providers[0][1] == 3
-    assert providers[0][2] == 3
+    assert providers[0].average == 3
+    assert providers[0].count == 3
+    assert providers[0].cost == (13/3)
     assert providers[0][0].name == "Douthit Electrical"
     #test casing on cities
     search_form.city.data = 'charlotte'
@@ -114,14 +121,16 @@ def test_user_search_reviews(test_db, search_form):
     # test for filtering of groups_only
     search_form.groups_only.data = True
     providers = u.search_providers(search_form).all()
-    assert providers[0][1] == 5
-    assert providers[0][2] == 1
+    assert providers[0].average == 5
+    assert providers[0].count == 1
+    assert providers[0].cost == 5
     # test for filtering of friends_only
     search_form.friends_only.data = True
     search_form.groups_only.data = False
     providers = u.search_providers(search_form).all()
-    assert providers[0][1] == 1
-    assert providers[0][2] == 1
+    assert providers[0].average == 1
+    assert providers[0].count == 1
+    assert providers[0].cost == 5
 
 
 def test_user_pwd_tokens(test_app, test_db, base_user):

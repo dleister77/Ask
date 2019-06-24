@@ -121,6 +121,7 @@ def review():
                         provider_id=form.name.data, 
                         category_id=form.category.data,
                         rating=form.rating.data,
+                        cost=form.cost.data,
                         description=form.description.data,
                         service_date=form.service_date.data,
                         comments=form.comments.data,
@@ -143,14 +144,16 @@ def search():
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
         providers = current_user.search_providers(form)
+        print(providers.all())
         providers = providers.paginate(page, current_app.config["REVIEWS_PER_PAGE"],
                                        False)
         pag_urls = pagination_urls(providers, 'main.search', request.args)
         filter_fields = [form.friends_only, form.groups_only]
         filter={}
         for field in filter_fields:
-            if field.data == True:
+            if field.data is True:
                 filter[field.name] = 'y'
+        print(providers.items)
         return render_template("index.html", form=form, title="Search", 
                                providers=providers.items, pag_urls=pag_urls,
                                filter=filter)      

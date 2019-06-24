@@ -26,9 +26,12 @@ def form_test(test_app, test_form, test_case):
 			test_errors[key] = test_case[key][1]
 	with test_app.app_context():
 		form = test_form(**test_args)
+		for field in form:
+			field.raw_data = field.data
 		# if no validation errors to check form, check that form validates
 		if len(test_errors) == 0:
 			form.validate()
+			print(form.errors)
 			assert form.validate()
 		# otherwise check that it doesn't validate and correct value errors are included
 		else:
@@ -174,10 +177,10 @@ def test_user_update(test_app, active_client, test_db, base_user, parameters, va
 						 ("name", "5", ["Please choose a provider from the list."]),
 						 ("rating", "", ["Rating is required."]),
 						 ("rating", "7", ["Not a valid choice"]),
-						 ("service_description", "", None),
+						 ("description", "", None),
 						 ("service_date", "", None),
 						 ("comments", "", None),
-						 (["category", "name", "rating", "service_description"],
+						 (["category", "name", "rating", "description"],
 						 ["", "", "", ""], [["Category is required."], 
 						 ["Provider name is required."], ["Rating is required."],
 						 None])
@@ -195,6 +198,7 @@ def test_review(test_app, test_db, base_review, parameters, values, assertions):
 						("telephone", "704-843-1910", ["Telephone number is already registered."]),
 						("email", "douthit@gmail.com", ["Email address is already registered."]),
 						("email", "douthitgmail.com", ["Invalid email address."]),
+						("email", "", None),
 						(["name", "address"], 
 						 ["Evers Electric", {"line1": "3924 Cassidy Drive",
 						 					"line2": "", "city": "Waxhaw", 

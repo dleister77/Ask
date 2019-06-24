@@ -13,21 +13,6 @@ from wtforms.ext.dateutil.fields import DateField
 from app.auth.forms import AddressField
 from app.models import State, Provider, Category, Address
 
-def state_list():
-    """Query db to populate state list on forms."""
-    if current_app.config['TESTING'] == True:
-        list = current_app.config['TEST_STATES']
-    else:
-        list = [(s.id, s.name) for s in State.query.order_by("name")]
-    return list
-
-def category_list():
-    """Query db to populate state list on forms."""
-    if current_app.config['TESTING'] == True:
-        list = current_app.config['TEST_CATEGORIES']
-    else:
-        list = [(c.id, c.name) for c in Category.query.order_by("name")]
-    return list
 
 def Picture_Upload_Check(form, field):
     """Verify that picture is image type and less than 7.5mb.
@@ -35,7 +20,7 @@ def Picture_Upload_Check(form, field):
     print("picture upload checking")
     allowed = ['jpeg', 'png', 'gif', 'bmp', 'tiff']
     print("picture content:" , field.data)
-    if field.data is None or not field.data[0]:
+    if field.data is None or field.data == "" or not field.data[0]:
         print("didn't find picture")
         field.errors[:] = []
         raise StopValidation
@@ -81,6 +66,7 @@ def unique_check(modelClass, columnName):
         print(f"Data: {data}")
         print(f"entity: {entity}")
         if entity is not None:
+            print("raising error")
             raise ValidationError(message)
     return _unique_check
 
@@ -95,7 +81,7 @@ class NonValSelectField(SelectField):
 
 class ReviewForm(FlaskForm):
     """Form to submit review."""
-    category = SelectField("Category", choices=category_list(), 
+    category = SelectField("Category", choices=Category.category_list(), 
                            validators=[DataRequired(message="Category is required.")], coerce=int,
                            id="provider_category")
     name = NonValSelectField("Provider Name", choices=[], coerce=int,
@@ -110,11 +96,20 @@ class ReviewForm(FlaskForm):
                         coerce=int,
                         validators=[DataRequired(message="Rating is required.")] 
                         )
-    description = StringField("Service Description")
+    cost = RadioField("Cost", choices=[
+                        (5, "$$$$$ (Much higher than competitors)"),
+                        (4, "$$$$ (Above Average)"), 
+                        (3, "$$$ (Average / should be default choice"),
+                        (2, "$$ (Below Average)"),
+                        (1, "$ (Significantly less than competitors)")],
+                        coerce=int,
+                        validators=[DataRequired(message="Cost is required.")] 
+                        )
+    description = StringField("Service Description", validators=[Optional()])
     service_date = DateField("Service Date", validators=[Optional()])
-    comments = TextAreaField("Comments")
+    comments = TextAreaField("Comments", validators=[Optional()])
     picture = MultipleFileField("Picture", render_kw=({"accept": 'image/*'}),
-                                validators=[Picture_Upload_Check])
+                                validators=[Picture_Upload_Check, Optional()])
     submit = SubmitField("Submit")
 
     def validate_name(self, name):
@@ -133,16 +128,17 @@ class ReviewForm(FlaskForm):
 class ProviderAddForm(FlaskForm):
     """Form to add new provider."""
     name = StringField("Provider Name", validators=[DataRequired(message="Provider name is required.")])
-    category = SelectMultipleField("Category", choices=category_list(), 
-                                    validators=[DataRequired(message="Category is required.")],
-                                    coerce=int,
-                                    id="modal_category")
+    category = SelectMultipleField("Category",
+                                   choices=Category.category_list(), 
+                                   validators=[DataRequired(message="Category is required.")],
+                                   coerce=int,
+                                   id="modal_category")
     address = FormField(AddressField)
     email = StringField("Email", validators=[Email(),
-                         unique_check(Provider, Provider.email)])
+                         unique_check(Provider, Provider.email), Optional()])
     telephone = StringField("Telephone",
                 validators=[DataRequired(message="Telephone number is required."),
-                Regexp("[(]?[0-9]{3}[)-]{0,2}[0-9]{3}[-]?[0-9]{4}"), 
+                Regexp("[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"), 
                 unique_check(Provider, Provider.telephone)])
     submit = SubmitField("Submit", id="modal_submit")
 
@@ -166,10 +162,10 @@ class ProviderSearchForm(FlaskForm):
     class Meta:
         csrf = False
     
-    category = SelectField("Category", choices=category_list(), 
+    category = SelectField("Category", choices=Category.category_list(), 
                            validators=[DataRequired(message="Category is required.")], coerce=int)
     city = StringField("City", validators=[DataRequired(message="City is required.")])
-    state = SelectField("State", choices=state_list(),
+    state = SelectField("State", choices=State.state_list(),
                          validators=[DataRequired(message="State is required.")], coerce=int)
     friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
     groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
