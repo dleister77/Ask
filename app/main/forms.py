@@ -12,7 +12,7 @@ from wtforms.validators import (DataRequired, Email, ValidationError, Optional,
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
-from app.models import State, Provider, Category, Address
+from app.models import Address, Category, Provider, Sector, State
 
 
 def Picture_Upload_Check(form, field):
@@ -84,14 +84,17 @@ class NonValSelectField(SelectField):
 
 class ReviewForm(FlaskForm):
     """Form to submit review."""
-    category = SelectField("Category", choices=Category.category_list(), 
+    sector = SelectField("Sector", choices=Sector.list(), 
+                           validators=[DataRequired(message="Sector is required.")], coerce=int,
+                           id="provider_sector")   
+    category = SelectField("Category", choices=[], 
                            validators=[DataRequired(message="Category is required.")], coerce=int,
                            id="provider_category")
     name = NonValSelectField("Provider Name", choices=[], coerce=int,
                              validators=[DataRequired(message="Provider name is required.")],
                              id="provider_name")
     rating = RadioField("Rating", choices=[
-                        (5, "***** (Highest quality work)"),
+                        (5, "***** (Highest quality)"),
                         (4, "**** (Above Average)"), 
                         (3, "*** (Satisfied - should be default choice"),
                         (2, "** (Below Average)"),
@@ -130,12 +133,17 @@ class ReviewForm(FlaskForm):
 
 class ProviderAddForm(FlaskForm):
     """Form to add new provider."""
-    name = StringField("Provider Name", validators=[DataRequired(message="Provider name is required.")])
+    name = StringField("Provider / Business Name", validators=[DataRequired(message="Provider name is required.")])
+    sector = SelectField("Sector",
+                                 choices=Sector.list(), 
+                                 validators=[DataRequired(message="Sector is required.")],
+                                 coerce=int,
+                                 id="provider_sector")   
     category = SelectMultipleField("Category",
-                                   choices=Category.category_list(), 
+                                   choices=[],
                                    validators=[DataRequired(message="Category is required.")],
                                    coerce=int,
-                                   id="modal_category")
+                                   id="provider_category")
     address = FormField(AddressField)
     email = StringField("Email", validators=[Email(),
                          unique_check(Provider, Provider.email), Optional()])
@@ -143,7 +151,7 @@ class ProviderAddForm(FlaskForm):
                 validators=[DataRequired(message="Telephone number is required."),
                 Regexp("[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"), 
                 unique_check(Provider, Provider.telephone)])
-    submit = SubmitField("Submit", id="modal_submit")
+    submit = SubmitField("Submit", id="provider_submit")
 
     def validate_name(self, name):
         """Verify business does not already exist.
@@ -157,18 +165,22 @@ class ProviderAddForm(FlaskForm):
                                    Address.state_id == self.address.state.data,
                                    Address.zip == self.address.zip.data)\
                            .first()
-        print("Name validation check: ", p)
         if p:
             raise ValidationError("Provider already exists, please select a new name.")
 class ProviderSearchForm(FlaskForm):
     """Form to search for providers."""
     class Meta:
         csrf = False
-    
-    category = SelectField("Category", choices=Category.category_list(), 
-                           validators=[DataRequired(message="Category is required.")], coerce=int)
+    sector = SelectField("Sector",
+                                 choices=Sector.list(), 
+                                 validators=[DataRequired(message="Sector is required.")],
+                                 coerce=int,
+                                 id="provider_sector")
+    category = SelectField("Category", choices=[], 
+                           validators=[DataRequired(message="Category is required.")],
+                           coerce=int, id="provider_category")
     city = StringField("City", validators=[DataRequired(message="City is required.")])
-    state = SelectField("State", choices=State.state_list(),
+    state = SelectField("State", choices=State.list(),
                          validators=[DataRequired(message="State is required.")], coerce=int)
     friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
     groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])

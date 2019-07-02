@@ -3,6 +3,7 @@
 {% block title %} {{ super() }} {% endblock %}
 
 {% block content_narrow %}
+    <h3>Add Provider / Business</h3>
     <form action="/provideradd" method="post", id="provideraddform">
         {{form_render(form)}}
     </form>

@@ -3,9 +3,10 @@
 {% block title %} {{ super() }} {% endblock %}
 
 {% block content_narrow %}
-    
+    <h3>Add Review</h3>
     <form action="/review" method="post", id="review_form", enctype="multipart/form-data">
         {{form.hidden_tag()}}
+        {{field_render(form.sector)}}
         {{ field_render(form.category) }}
         {{ field_render(form.name)}}
         <a href="/provideradd">Add new provider</a>

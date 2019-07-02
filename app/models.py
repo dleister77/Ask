@@ -6,9 +6,10 @@ from time import time
 from flask import current_app, render_template
 from flask_login import UserMixin, current_user
 import jwt
-from sqlalchemy import CheckConstraint, or_, and_
+from sqlalchemy import CheckConstraint
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import backref
 from sqlalchemy.sql import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -48,7 +49,7 @@ class State(Model):
     addresses = db.relationship("Address", backref="state")
 
     @staticmethod
-    def state_list():
+    def list():
         """Query db to populate state list on forms."""
         if current_app.config['TESTING'] == True:
             list = current_app.config['TEST_STATES']
@@ -81,7 +82,7 @@ class Address(Model):
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
 
     __table_args__ = (
-        CheckConstraint('provider_id IS NOT NULL AND user_id IS NOT NULL',
+        CheckConstraint('provider_id IS NOT NULL OR user_id IS NOT NULL',
                         name="chk_address_fks"),
     )
 
@@ -536,6 +537,7 @@ class FriendRequest(Model):
     def __repr__(self):
         return f"<FriendRequest {self.requestor.full_name} {self.requested_friend.full_name}>"
 
+
 class GroupRequest(Model):
     """Tracks pending group requests not yet verified."""
 
@@ -553,27 +555,62 @@ class GroupRequest(Model):
     def __repr__(self):
         return f"<FriendRequest {self.requestor.full_name} {self.requested_group.name}>"
 
+
+class Sector(Model):
+    """Sector that categories are a member of.
+    Relationships:
+        Parent of: category
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True, unique=True, nullable=False)
+
+    categories = db.relationship("Category", backref=backref("sector",
+                                                             uselist=False))
+
+    @staticmethod
+    def list():
+        """Query db to populate state list on forms."""
+        if current_app.config['TESTING'] == True:
+            list = current_app.config['TEST_SECTOR']
+        else:
+            try:
+                list = [(s.id, s.name) for s in Sector.query.order_by("name")]
+            except OperationalError:
+                list = [(1, "Test")]
+        return list
+
+    def __repr__(self):
+        return f"<Sector {self.name}>"
+
+
 class Category(Model):
     """List service categories.
     Relationships:
         Parent of: Review
         Many to Many: Provider
+        Child of: Sector
     """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True)
+    sector_id = db.Column(db.Integer, db.ForeignKey("sector.id"))
 
     providers = db.relationship("Provider", secondary=category_provider_table,
                                 backref="categories")
     reviews = db.relationship("Review", backref="category")
 
     @staticmethod
-    def category_list():
-        """Query db to populate state list on forms."""
+    def list(sector_id):
+        """Query db to populate form category list based on selected sector."""
         if current_app.config['TESTING'] == True:
             list = current_app.config['TEST_CATEGORIES']
         else:
             try:
-                list = [(c.id, c.name) for c in Category.query.order_by("name")]
+                sector = (Sector.query.get(sector_id))
+                list = (Category.query.filter(Category.sector == sector)
+                                          .order_by(Category.name)).all()
+                list = [(category.id, category.name) for category
+                                in list]                
+                
             except OperationalError:
                 list = [(1, "Test")]
         return list

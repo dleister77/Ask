@@ -6,9 +6,11 @@
 
   
 {% block content_narrow %}
-        <h3>Search for Provider:</h3>
-        <form action="/search" method="get">
+        <h3>Search for Provider</h3>
+        <form action="/search" method="get", id="providersearch">
 {#            {{form.hidden_tag()}} #}
+            {{form.hidden_tag()}}
+            {{field_render(form.sector)}}
             {{field_render(form.category)}}
             {{field_render(form.city)}}
             {{field_render(form.state)}}

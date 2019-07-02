@@ -79,6 +79,31 @@ function check_validity(input){
     }
 }
 
+
+function category_get(){
+    var s = document.getElementById("provider_sector");
+    s.addEventListener("click", function(event){
+        var url =  "/categorylist";
+        var sector = {"sector": s.value};
+        $.getJSON(url, sector, function(data) {
+            d = data;
+            var category_list = document.getElementById("provider_category");
+            //remove existing options
+            while (category_list.hasChildNodes()){
+                category_list.removeChild(category_list.firstChild);
+            }
+            for (var i = 0; i < data.length; i++){
+                //append child option element to it with above as content
+                var option = document.createElement('option');
+                option.textContent = d[i].name;
+                option.value = d[i].id;
+                category_list.appendChild(option);
+
+            }
+        });
+    });
+}
+
 function validity_test(input){
 
 }
@@ -110,6 +135,7 @@ function initRegister(jquery) {
 
 
 function initReview (jquery) {
+    category_get();
     var c = document.getElementById("provider_category");
     c.addEventListener("click", function(event){
         var csrf_token = document.getElementById("csrf_token").value;
@@ -143,47 +169,6 @@ function initReview (jquery) {
             }
         });
     });
-    // // update provider list on review form based on modal input
-    // $("#modal_submit").on("click", function(event){
-    //     event.preventDefault();
-    //     var csrf_token = document.getElementById("csrf_token").value;
-    //     $.ajaxSetup({
-    //         beforeSend: function(xhr, settings) {
-    //             if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-    //                 xhr.setRequestHeader("X-CSRFToken", csrf_token);
-    //             }
-    //         }
-    //     });
-    //     var inputs = document.getElementsByClassName("modalinput");
-    //     var provider = {}
-    //     for (var i=0; i<inputs.length; i++){
-    //         if (inputs[i].multiple == true){
-    //             provider[inputs[i].name] = Array.from(inputs[i].querySelectorAll("option:checked"),e=>e.value);
-    //         } else {
-    //             provider[inputs[i].name] = inputs[i].value;
-    //         }
-    //     }
-    //     console.log(provider)
-    //     var parameters = {
-    //         url:    "/provideradd",
-    //         data:   provider,
-    //         type: "POST",
-    //         dataType: "json"
-    //     };
-    //     $.ajax(parameters)
-    //     .done(function(data){
-    //         $('#modal_new_provider').modal('hide');
-    //         if (provider["category"] == document.getElementById("provider_category").value){
-    //             var provider_list = document.getElementById("provider_name");
-    //             var option = document.createElement("option");
-    //             option.textContent = provider["name"];
-    //             provider_list.appendChild(option);
-    //         }
-    //     })
-    //     .fail(function(data){
-    //         alert(data.responseJSON.msg);
-    //     });
-    // });
     var forms = document.querySelectorAll("form");
     forms.forEach(function(form){
         var inputs = form.querySelectorAll("input, select, textarea");
@@ -320,6 +305,11 @@ function initSearch(jquery){
         this.search = query;
 
     });
+    category_get()
+}
+//JS for provider add form
+function initProviderAdd(jquery){
+    category_get()
 }
 
 
@@ -333,7 +323,9 @@ $(document).ready(function(){
 
     } else if ($("#network").length){
         $(document).ready(initNetwork);
-    } else if ($("#rating_search").length){
+    } else if ($("#providersearch").length){
         $(document).ready(initSearch);
-    }
+    } else if ($("#provideraddform").length){
+        $(document).ready(initProviderAdd);
+    } 
 });

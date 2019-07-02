@@ -42,7 +42,7 @@ class AddressField(FlaskForm):
     line1 = StringField("Street Address", validators=[DataRequired(message="Street address is required.")])
     line2 = StringField("Address Line 2", validators=[Optional()])
     city = StringField("City", validators=[DataRequired(message="City is required.")])
-    state = SelectField("State", choices=State.state_list(), coerce=int,
+    state = SelectField("State", choices=State.list(), coerce=int,
                          validators=[DataRequired(message="State is required.")])
     zip = StringField("Zip", validators=[DataRequired(message="Zip code is required.")])
 

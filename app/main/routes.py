@@ -9,10 +9,27 @@ from werkzeug.utils import secure_filename
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            ProviderFilterForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
-from app.models import User, Address, Review, Picture, Category, Provider
+from app.models import  Address, Category, Picture, Provider, Review, Sector,\
+                        User
 from app.utilities.helpers import disable_form, email_verified, name_check,\
                                   pagination_urls, thumbnail_from_buffer
 from app.main import bp
+
+
+@bp.route('/categorylist', methods=['GET'])
+@login_required
+def category_list():
+    """Pulls list of categories matching sector from db."""
+    print(request.method)
+    sector_id = request.args.get('sector')
+    print(sector_id)
+    sector = Sector.query.get(sector_id)
+    category_list = (Category.query.filter(Category.sector == sector)
+                                   .order_by(Category.name)).all()
+    category_list = [{"id": category.id, "name": category.name} for category
+                     in category_list]
+    category_list = jsonify(category_list)
+    return category_list
 
 
 @bp.route('/photos/<int:id>/<path:filename>')
@@ -60,14 +77,16 @@ def provider(name, id):
 def providerAdd():
     """Adds provider to db."""
     form = ProviderAddForm()
+    if request.method == 'POST':
+        # populate category choices for form validation
+        form.category.choices = Category.list(form.sector.data)
     if form.validate_on_submit():
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
                           state_id=form.address.state.data, 
                           zip=form.address.zip.data)
-        categories = [Category.query.filter_by(id=cat).first() for cat in 
-                     form.category.data]
+        categories = [Category.query.get(cat) for cat in form.category.data]
         provider = Provider.create(name=form.name.data, email=form.email.data,
                                    telephone=form.telephone.data, 
                                    address=address, categories=categories)
@@ -101,6 +120,9 @@ def providerList():
 @email_verified
 def review():
     form = ReviewForm()
+    if request.method == 'POST':
+        # populate category choices for form validation
+        form.category.choices = Category.list(form.sector.data)
     if form.validate_on_submit():
         pictures = []
         if form.picture.data[0]:
@@ -140,6 +162,7 @@ def review():
 @email_verified
 def search():
     form = ProviderSearchForm(request.args)
+    form.category.choices = Category.list(form.sector.data)
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
         providers = current_user.search_providers(form)
