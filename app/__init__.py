@@ -1,45 +1,24 @@
-from config import Config
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy, Model
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_mail import Mail
-from flask_wtf.csrf import CSRFProtect
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from sqlalchemy import MetaData
+
+from flask import Flask
+
+from config import Config
+from app.extensions import csrf, db, login, mail, migrate
+from app.models import User, Address, State, Category, Review, Provider, Group
 
 
-class AskModel(Model):
-    """Added functionality to standard flask-sa db.model."""
-    def update(self, **kwargs):
-        for k, v in kwargs.items():
-            if getattr(self, k) != v:
-                setattr(self, k, v)
-        return self
-
-metadata = MetaData(naming_convention=Config.SQLALCHEMY_NAMING_CONVENTION)
-db = SQLAlchemy(metadata=metadata, model_class=AskModel)
-# db = SQLAlchemy()
-migrate = Migrate()
-login = LoginManager()
-login.login_view = "auth.index"
-login.login_message = 'Please log in to access the requested page.'
-csrf = CSRFProtect()
-mail = Mail()
-
-
-def create_app(config_class=Config):
-    app = Flask(__name__)
-    app.config.from_object(config_class)
-    app.app_context().push()
+def register_extensions(app):
+    """Register extension with app."""
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
 
+
+def register_blueprints(app):
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
 
@@ -52,6 +31,21 @@ def create_app(config_class=Config):
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
 
+
+def register_shell(app):
+    """Register shell context objects."""
+
+    def shell_context():
+        namespace = {"User":User, "Address":Address, "State":State, "Category": 
+                     Category, "Review": Review, "Provider": Provider,
+                     "Group": Group, "db": db}
+        return  namespace
+
+    app.shell_context_processor(shell_context)
+
+
+def configure_logging(app):
+    """Configure logging for app."""
     if not app.debug and not app.testing:
         if app.config['MAIL_SERVER']:
             auth = None
@@ -76,8 +70,17 @@ def create_app(config_class=Config):
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
         app.logger.info('Ask startup')
-    
+
+
+def create_app(config_class=Config):
+    """Application factor."""
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    app.app_context().push()
+    register_extensions(app)
+    register_blueprints(app)
+    configure_logging(app)
+    register_shell(app)
     return app
 
-
-from app import models
+from app import database

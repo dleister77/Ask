@@ -1,0 +1,10 @@
+Dear {{user.first_name}}:
+
+{{new_member.full_name}} would like to join {{group.name}} on Ask a Neighbor.
+
+Alternatively, you can paste the below link into your web browser or approve under pending requests on the network page.
+{{ url_for('relationship.group_verify', token=token, _external=True) }}
+
+Sincerely,
+
+The Ask a Neighbor Team

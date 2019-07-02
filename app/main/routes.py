@@ -1,18 +1,19 @@
+import os
+from urllib import parse
+
 from flask import flash, redirect, render_template, request, url_for, jsonify,\
                   send_from_directory, current_app
 from flask_login import current_user, login_required
-from app import db
+from werkzeug.utils import secure_filename
+
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            ProviderFilterForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import User, Address, Review, Picture, Category, Provider
-from app.helpers import dbAdd, disable_form, email_verified, name_check, pagination_urls, \
-                        thumbnail_from_buffer
+from app.utilities.helpers import disable_form, email_verified, name_check,\
+                                  pagination_urls, thumbnail_from_buffer
 from app.main import bp
-import os
-from sqlalchemy.sql import func
-from urllib import parse
-from werkzeug.utils import secure_filename
+
 
 @bp.route('/photos/<int:id>/<path:filename>')
 def download_file(filename, id):
@@ -67,10 +68,9 @@ def providerAdd():
                           zip=form.address.zip.data)
         categories = [Category.query.filter_by(id=cat).first() for cat in 
                      form.category.data]
-        provider = Provider(name=form.name.data, email=form.email.data,
-                            telephone=form.telephone.data, address=address,
-                            categories=categories)
-        dbAdd(provider)
+        provider = Provider.create(name=form.name.data, email=form.email.data,
+                                   telephone=form.telephone.data, 
+                                   address=address, categories=categories)
         flash(provider.name + " added.")
         return redirect(url_for("main.review"))
     elif request.method == "POST":
@@ -117,16 +117,15 @@ def review():
                 pictures.append(Picture(path=file_location,
                                         name=filename, thumb=thumb))
                 
-        review = Review(user_id=current_user.id, 
-                        provider_id=form.name.data, 
-                        category_id=form.category.data,
-                        rating=form.rating.data,
-                        cost=form.cost.data,
-                        description=form.description.data,
-                        service_date=form.service_date.data,
-                        comments=form.comments.data,
-                        pictures=pictures)
-        dbAdd(review)
+        review = Review.create(user_id=current_user.id, 
+                               provider_id=form.name.data, 
+                               category_id=form.category.data,
+                               rating=form.rating.data,
+                               cost=form.cost.data,
+                               description=form.description.data,
+                               service_date=form.service_date.data,
+                               comments=form.comments.data,
+                               pictures=pictures)
         flash("review added")
         return redirect(url_for('main.review'))
     elif request.method == "POST" and not form.validate():

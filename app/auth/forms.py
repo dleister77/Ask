@@ -1,11 +1,11 @@
-
-from flask import current_app
+from flask import current_app, has_request_context, _request_ctx_stack
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import (StringField, PasswordField, BooleanField, SelectField,
                      SubmitField, FormField)
 from wtforms.validators import (DataRequired, Email, EqualTo, Length,
                                 Optional, ValidationError)
+                                
 from app.models import State, User
 
 
@@ -88,6 +88,8 @@ class UserUpdateForm(FlaskForm):
     submit = SubmitField("Submit")
     
     def validate_username(self, username):
+        print(f"auth form request status: {has_request_context()}")
+        print(f"auth form request stack: {_request_ctx_stack.top}")
         user = User.query.filter_by(username=username.data).first()
         if user is not None and user != current_user:
             raise ValidationError("Username is already registered, please choose a "

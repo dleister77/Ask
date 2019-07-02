@@ -5,6 +5,16 @@ from sqlalchemy.exc import IntegrityError
 import pytest
 
 
+def null_test(test_db, model_class, test_case, key):
+    """Test instance creation for required fields."""
+    # instance = model_class.create(**test_case)
+    # assert instance is not None
+    # instance.delete()
+    test_case[key] = None
+    with pytest.raises(IntegrityError):
+        m = model_class.create(**test_case)
+
+
 def test_user(test_db):
     """
     GIVEN a User, Address model
@@ -27,6 +37,27 @@ def test_user(test_db):
     assert u.email_verified is False
 
 
+@pytest.mark.parametrize("key", ["line1", "city", "state_id","zip", "user_id"])
+def test_new_address(test_db, key):
+    test_case = {"line1": "13 Brook St", "city": "Lakewood",
+                 "state_id": "2", "zip": "14750","provider_id": None,
+                 "user_id": "2"}
+    null_test(test_db, Address, test_case, key)
+
+
+@pytest.mark.parametrize("key", ["first_name", "last_name", "address",
+                                "username", "email"])
+def test_new_user(test_db, key):
+    address = {"line1": "13 Brook St", "city": "Lakewood",
+                             "state_id": "2", "zip": "14750"}
+    address = Address.create(**address)
+    test_case = {"first_name": "Roberto", "last_name": "Firmino",
+                 "email": "rfirmino@lfc.com", "username": "rfirmino",
+                 "address": address}
+    null_test(test_db, User, test_case, key)
+    
+          
+
 def test_relationships(test_db):
     """
     GIVEN a User, Group Model and Association Tables
@@ -42,6 +73,22 @@ def test_relationships(test_db):
     assert nf not in u.friends
     assert u in f.friends
     assert u in g.members
+
+
+@pytest.mark.parametrize("key", ["name", "telephone",
+                                "categories", "address"])
+def test_new_provider(test_db, key):
+    address = {"line1": "13 Brook St", "city": "Lakewood",
+                             "state_id": "2", "zip": "14750"}
+    address = Address.create(**address)
+    cat_list = ["1", "2"]
+    categories = []
+    for cat in cat_list:
+        categories.append(Category.query.get(int(cat)))
+    test_case = {"name": "Smith Electric", "categories": categories,
+                 "telephone": "704-410-3873", "email": "smith@smith.com",
+                 "address": address}
+    null_test(test_db, Provider, test_case, key)
 
 
 def test_provider(test_db, active_client):
@@ -94,13 +141,19 @@ def test_user_update(test_db):
     assert u.email == "jjones1@gmail.com"
     assert u.address.line1 == "7000 Covey Chase Dr"
     with pytest.raises(IntegrityError):
-        u.update(username="yardsmith")
-        dbUpdate()
+        try:
+            u.update(username="yardsmith")
+        except:
+            test_db.session.rollback()
+            raise
     with pytest.raises(IntegrityError):
-        u.update(email="sarahsmith@yahoo.com")
-        dbUpdate()
- 
+        try:
+            u.update(email="sarahsmith@yahoo.com")
+        except:
+            test_db.session.rollback()
+            raise
 
+            
 def test_user_search_reviews(test_db, search_form):
     """
     GIVEN User Model, search criteria

@@ -1,39 +1,11 @@
-from app import db
-from flask import flash, Markup, session, url_for
-from flask_login import current_user
 import functools
 from io import BytesIO
 import os
 from pathlib import Path
+
+from flask import flash, Markup, session, url_for
+from flask_login import current_user
 from PIL import Image
-from sqlalchemy.exc import IntegrityError
-
-
-def dbAdd(item):
-    """Add item to db and handle errors
-    item: SQLALCHEMY model class from models.py.
-    """
-    try:
-        db.session.add(item)
-        db.session.commit()
-
-    except IntegrityError:
-        db.session.rollback()
-        print("caught an integrity error")
-        raise
-
-
-def dbUpdate():
-    """Update db and handle errors
-    item: SQLALCHEMY model class from models.py.
-    """
-    try:
-        db.session.commit()
-
-    except IntegrityError:
-        db.session.rollback()
-        print("caught an integrity error")
-        raise
 
 
 def thumbnail_from_buffer(buffer, size, name, path):

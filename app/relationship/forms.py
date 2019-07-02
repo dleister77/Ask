@@ -1,8 +1,12 @@
+from flask import current_app, has_request_context, _request_ctx_stack
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import (StringField, SubmitField, TextAreaField, HiddenField)
+from wtforms import (StringField, SubmitField, TextAreaField, HiddenField,
+                     SelectMultipleField)
 from wtforms.validators import DataRequired, ValidationError
-from app.models import User, Group
+
+from app.models import FriendRequest, Group, GroupRequest, User
+from app.utilities.forms import MultiCheckboxField, select_multi_checkbox
 
 
 def unique_check(modelClass, columnName):
@@ -11,7 +15,6 @@ def unique_check(modelClass, columnName):
         modelClass: db model class to query
         columnName: db column in modelclass.columname format
     """
-    
     def _unique_check(form, field):
         key = {"email": "Email address",
                "telephone": "Telephone number",
@@ -21,6 +24,7 @@ def unique_check(modelClass, columnName):
         if entity is not None:
             raise ValidationError(message)
     return _unique_check
+
 
 def exists_check(modelClass):
     """validate that item being added as relationship already exists.
@@ -35,6 +39,7 @@ def exists_check(modelClass):
         if new is None:
             raise ValidationError(message)
     return _exists_check
+
 
 def relation_check(relationshipType):
     """validate that not already in relation with item being added.
@@ -57,12 +62,41 @@ def relation_check(relationshipType):
             raise ValidationError(message_dict[relationshipType])
     return _relation_check
 
+
 class GroupSearchForm(FlaskForm):
     """Form to search for group."""
     name = StringField("Group Name", id="group_name", validators=[DataRequired(message="Group name is required.")])
     value = HiddenField("Group Value", id="group_value", validators=
                         [DataRequired(message="Group name is required."), exists_check(Group), relation_check("groups")])
     submit = SubmitField("Add Group", id="submit-group-add")
+
+
+class FriendApproveForm(FlaskForm):
+    """Form to select friends to delete."""
+    name = MultiCheckboxField("Received - select and submit to approve", render_kw={"class":"nobullets"}, coerce=int)
+    submit = SubmitField("Submit", id="friend_approve")
+
+    def validate_name(self, name):
+        """verfiy request being approved is valid and current user request recipient."""
+        # verify request is valid
+        print(self.name.data, name.data)
+        friendrequest = FriendRequest.query.get(self.name.data)
+        if friendrequest is None or friendrequest not in current_user.receivedfriendrequests:
+            raise ValidationError("Invalid request. Please select request from"
+                                  " the list.")
+
+
+class FriendEditForm(FlaskForm):
+    """Form to select friends to delete."""
+    name = MultiCheckboxField("Select friends to remove", render_kw={"class":"nobullets"}, coerce=int)
+    submit = SubmitField("Submit", id="friend_delete")
+
+    def validate_name(self, name):
+        """verfiy name being deleted exists and is in user's friend list."""
+        for friend_id in self.name.data:
+            f = User.query.get(friend_id)
+            if f is None or f not in current_user.friends:
+                raise ValidationError("Select friend from friend list.")
 
 
 class FriendSearchForm(FlaskForm):
@@ -81,6 +115,21 @@ class GroupCreateForm(FlaskForm):
     description = TextAreaField("Description", validators=[DataRequired("Description is required.")])
     submit = SubmitField("Add Group", id="submit_new_group")
 
+
+class GroupDeleteForm(FlaskForm):
+    """Form to select groups to exit."""
+    name = MultiCheckboxField("Select groups to remove", render_kw={"class":"nobullets"}, coerce=int)
+    submit = SubmitField("Submit", id="group_delete")
+
+    def validate_name(self, name):
+        """verfiy name being deleted exists and is in user's group list."""
+        for group_id in self.name.data:
+            group = Group.query.get(group_id)
+            print(f"validating {group}")
+            if group is None or group not in current_user.groups:
+                raise ValidationError("Select group from friend list.")
+
+
 class GroupEditForm(GroupCreateForm):
     """Form to edit existing group."""
     name = StringField("Group Name", validators=[DataRequired(
@@ -95,7 +144,25 @@ class GroupEditForm(GroupCreateForm):
     
     def validate_name(self, name):
         """Check if new name not equal to another group."""
+        print(f"Current User {current_user}")
         g = Group.query.filter_by(name=self.name.data).first()
         existing = Group.query.filter_by(id=self.id.data).first()
         if g is not None and g != existing:
             raise ValidationError("Group name is already registered.")
+
+
+class GroupMemberApproveForm(FlaskForm):
+    """Form to select friends to delete."""
+    request = MultiCheckboxField("Received - select and submit to approve", render_kw={"class":"nobullets"}, coerce=int)
+    submit = SubmitField("Submit", id="group_approve")
+
+    def validate_request(self, request):
+        """verf exists and is in group's request list."""
+        # verify that request exists
+        request = GroupRequest.query.get(self.request.data)
+        if request is None:
+            raise ValidationError("Invalid request. Please select request from the list.")
+        # verify that current user is group admin
+        request_admin = request.group.admin
+        if request_admin != current_user:
+            raise ValidationError("User not authorized to approve this request.")

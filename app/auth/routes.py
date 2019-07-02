@@ -1,15 +1,16 @@
-from app import db
 from flask import flash, redirect, render_template, request, url_for, \
                   current_app, session
 from flask_login import current_user, login_required, login_user, logout_user
+from werkzeug.urls import url_parse
+
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, PasswordChangeForm, \
                            PasswordResetRequestForm, PasswordResetForm,\
                            UserUpdateForm
+from app.extensions import db
 from app.main.forms import ProviderSearchForm
 from app.models import User, Address
-from app.helpers import dbAdd, dbUpdate, pagination_urls, email_verified
-from werkzeug.urls import url_parse
+from app.utilities.helpers import pagination_urls, email_verified
 
 @bp.route('/')
 @bp.route('/index')
@@ -38,7 +39,7 @@ def email_verify(token):
                   "verification code to try again." 
     else:
         user.email_verified = True
-        dbUpdate()
+        user.save()
         msg = "Email successfully verified."
     flash(msg)
     return redirect(url_for('auth.index'))
@@ -152,15 +153,14 @@ def register():
                           city=form.address.city.data, 
                           state_id=form.address.state.data,
                           zip=form.address.zip.data)
-        user = User(first_name=form.first_name.data, 
-                    last_name=form.last_name.data, email=form.email.data, 
-                    username=form.username.data, address=address)
+        user = User.create(first_name=form.first_name.data, 
+                           last_name=form.last_name.data, email=form.email.data, 
+                           username=form.username.data, address=address)
         user.set_password(form.password.data)
-        dbAdd(user)
         user.send_email_verification()
         session['email_verification_sent'] = True
-        flash("Please check your email for an email verification message.")
         flash("Congratulations! You've successfully registered.")
+        flash("Please check your email for an email verification message.")
         return redirect(url_for('auth.index'))
     return render_template("auth/register.html", title='Register', form=form)
 
@@ -183,7 +183,6 @@ def userupdate():
                             email=form.email.data,
                             username=form.username.data,
                             address=address)
-        dbUpdate()
         current_user.send_email_verification()
         flash("User information updated")
         return redirect(url_for('main.user', username=current_user.username))

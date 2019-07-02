@@ -19,7 +19,7 @@
 
         {% if related %}
             <dl class="row">
-                    {{ renderInlineList("Name", (user.first_name + " " + user.last_name))}}
+                    {{ renderInlineList("Name", (user.full_name))}}
                     {{ renderInlineList("Username", user.username)}}
                     {{ renderInlineList("Email", user.email)}}
                     {{ renderInlineList("Address", renderList(["card-item", "card-item py-1 px-0"], user.address.line1,
@@ -40,7 +40,8 @@
             <br>
             <h4 class="text-center">Password</h4>
             <dl class="row">
-                {{ renderInlineList("Last Updated", user.password_set_date)}}
+                {% set pwd_date = user.password_set_date %}
+                {{ renderInlineList("Last Updated", '%s-%s-%s'|format(pwd_date.month, pwd_date.day, pwd_date.year))}}
             </dl>
             <p class="card-item text-center">
             <a href="" data-toggle="modal" data-target="#modal_password">

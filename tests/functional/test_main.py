@@ -144,7 +144,6 @@ def test_search(active_client, test_db):
     response = search(active_client, test_case)
     assert response.status_code == 200
     assert b"Douthit Electrical" in response.data
-    print(response.data.decode())
     assert '<h4><a href="/provider/Douthit%20Electrical/1">Douthit Electrical</a></h4>' in response.data.decode()
     # test correct stars rendered
     var = '<i class="fas fa-star star-full"></i>'
@@ -153,6 +152,7 @@ def test_search(active_client, test_db):
     assert '<li class="list-inline-item">3.0</li>' in response.data.decode()
     # test num reviews
     assert '<li class="list-inline-item">(3)</li>' in response.data.decode()
+    print(response.data.decode())
     #test pagination links
     assert '<li class="page-item"><a class="page-link" href="/search?page=2&amp;category=1&amp;city=Charlotte&amp;state=1">Next</a></li>' in response.data.decode()
     test_case = {"category": 1, "city": "Charlotte", "state": id, "page": 2}
@@ -231,10 +231,10 @@ def test_provider_profile(active_client, test_db):
     assert b'Relationship: Self' in response.data
     assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=2">2</a></li>' in response.data
     response = provider_profile(active_client, test_case, 2)
-    assert b'Friends:  Yes' in response.data
-    response = provider_profile(active_client, test_case, 3)
     assert b'Common Groups:' in response.data
     assert b'Qhiv Hoa' in response.data
+    response = provider_profile(active_client, test_case, 3)
+    assert b'Friends:  Yes' in response.data
     test_case = test_case = {"name": "Douthit Electrical", "id": 35}
     response = provider_profile(active_client, test_case, 1)
     assert response.status_code == 404

@@ -1,15 +1,16 @@
-from flask import current_app
+import os
+import re
+
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from magic import from_file, from_buffer
-import os
-import re
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
      MultipleFileField)
 from wtforms.validators import (DataRequired, Email, ValidationError, Optional,
  Regexp, InputRequired, StopValidation)
 from wtforms.ext.dateutil.fields import DateField
+
 from app.auth.forms import AddressField
 from app.models import State, Provider, Category, Address
 
@@ -18,6 +19,7 @@ def Picture_Upload_Check(form, field):
     """Verify that picture is image type and less than 7.5mb.
        Stop validation if no file submitted."""
     print("picture upload checking")
+    print(f"current user {current_user}")
     allowed = ['jpeg', 'png', 'gif', 'bmp', 'tiff']
     print("picture content:" , field.data)
     if field.data is None or field.data == "" or not field.data[0]:
@@ -52,6 +54,7 @@ def unique_check(modelClass, columnName):
     """
 
     def _unique_check(form, field):
+        print(current_user)
         print("unique checking ", field.name)
         key = {"email": "Email address",
                "telephone": "Telephone number",
