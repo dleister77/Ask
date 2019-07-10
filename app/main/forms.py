@@ -6,7 +6,7 @@ from flask_wtf import FlaskForm
 from magic import from_file, from_buffer
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
-     MultipleFileField)
+     MultipleFileField, HiddenField)
 from wtforms.validators import (DataRequired, Email, ValidationError, Optional,
  Regexp, InputRequired, StopValidation)
 from wtforms.ext.dateutil.fields import DateField
@@ -73,6 +73,25 @@ def unique_check(modelClass, columnName):
             raise ValidationError(message)
     return _unique_check
 
+def unknown_check(form, field):
+    """Removes validation errors from field if address unknown is checked."""
+    if form.full_address_unknown.data is True:
+        field.errors[:] = []
+        raise StopValidation()
+
+
+class ProviderAddress(AddressField):
+    """Subclass of Address to allow address unknown checkbox."""
+    full_address_unknown = BooleanField("Check if full address unknown",
+                                        id="addressUnknown",
+                                        validators=[Optional()])    
+    line1 = StringField("Street Address",
+            validators=[DataRequired(message="Street address is required."),
+                                     unknown_check])    
+    zip = StringField("Zip", 
+          validators=[DataRequired(message="Zip code is required."),
+                                   unknown_check])
+
 
 class NonValSelectField(SelectField):
     """Select field with validation removed to allow for client side generated 
@@ -84,15 +103,16 @@ class NonValSelectField(SelectField):
 
 class ReviewForm(FlaskForm):
     """Form to submit review."""
-    sector = SelectField("Sector", choices=Sector.list(), 
-                           validators=[DataRequired(message="Sector is required.")], coerce=int,
-                           id="provider_sector")   
-    category = SelectField("Category", choices=[], 
-                           validators=[DataRequired(message="Category is required.")], coerce=int,
-                           id="provider_category")
-    name = NonValSelectField("Provider Name", choices=[], coerce=int,
-                             validators=[DataRequired(message="Provider name is required.")],
-                             id="provider_name")
+
+    name = StringField("Provider / Business Name",
+                        render_kw = {'disabled':True})
+    id = HiddenField("Provider Value", 
+                     render_kw = {'readonly':True},
+                     validators=[DataRequired(message="Provider name is required")])
+    category = SelectField("Category",
+                      choices=[],
+                      validators=[DataRequired(message="Category is required.")],
+                      coerce=int, id="category")    
     rating = RadioField("Rating", choices=[
                         (5, "***** (Highest quality)"),
                         (4, "**** (Above Average)"), 
@@ -116,9 +136,9 @@ class ReviewForm(FlaskForm):
     comments = TextAreaField("Comments", validators=[Optional()])
     picture = MultipleFileField("Picture", render_kw=({"accept": 'image/*'}),
                                 validators=[Picture_Upload_Check, Optional()])
-    submit = SubmitField("Submit")
+    submit = SubmitField("Submit", id="review_submit")
 
-    def validate_name(self, name):
+    def validate_value(self, name):
         """Verify submitted name came from db."""
         category = Category.query.filter_by(id=self.category.data).first()
         if category is None:
@@ -138,13 +158,13 @@ class ProviderAddForm(FlaskForm):
                                  choices=Sector.list(), 
                                  validators=[DataRequired(message="Sector is required.")],
                                  coerce=int,
-                                 id="provider_sector")   
+                                 id="sector")   
     category = SelectMultipleField("Category",
                                    choices=[],
                                    validators=[DataRequired(message="Category is required.")],
                                    coerce=int,
-                                   id="provider_category")
-    address = FormField(AddressField)
+                                   id="category")
+    address = FormField(ProviderAddress)
     email = StringField("Email", validators=[Email(),
                          unique_check(Provider, Provider.email), Optional()])
     telephone = StringField("Telephone",
@@ -167,6 +187,10 @@ class ProviderAddForm(FlaskForm):
                            .first()
         if p:
             raise ValidationError("Provider already exists, please select a new name.")
+
+
+
+
 class ProviderSearchForm(FlaskForm):
     """Form to search for providers."""
     class Meta:
@@ -175,27 +199,29 @@ class ProviderSearchForm(FlaskForm):
                                  choices=Sector.list(), 
                                  validators=[DataRequired(message="Sector is required.")],
                                  coerce=int,
-                                 id="provider_sector")
+                                 id="sector")
     category = SelectField("Category", choices=[], 
                            validators=[DataRequired(message="Category is required.")],
-                           coerce=int, id="provider_category")
-    city = StringField("City", validators=[DataRequired(message="City is required.")])
+                           coerce=int)
+    city = StringField("City",
+                        validators=[DataRequired(message="City is required.")])
     state = SelectField("State", choices=State.list(),
                          validators=[DataRequired(message="State is required.")], coerce=int)
-    friends_only = BooleanField("Friends Only", validators=[NotEqualTo('groups_only')])
-    groups_only = BooleanField("Groups Only", validators=[NotEqualTo('friends_only')])
+    name = StringField("Provider / Business Name", validators=[Optional()],
+                       id="provider_name")
+    friends_filter = BooleanField("Friends")
+    groups_filter = BooleanField("Groups")
     submit = SubmitField("Submit")
+
+    def populate_choices(self):
+        self.category.choices = Category.list(self.sector.data)
+        return self
 
 class ProviderFilterForm(FlaskForm):
     """Form to apply social filters to provider profile page."""
 
     class Meta:
         csrf = False
-    
-    friends_only = BooleanField("Friends Only",
-                                validators=[NotEqualTo('groups_only')],
-                                false_values = (False, 'false','False', ''))
-    groups_only = BooleanField("Groups Only",
-                               validators=[NotEqualTo('friends_only')],
-                               false_values = (False, 'false', 'False', ''))
+    friends_filter = BooleanField("Friends")
+    groups_filter = BooleanField("Groups")
     submit = SubmitField("Update")

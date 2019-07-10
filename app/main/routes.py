@@ -16,13 +16,21 @@ from app.utilities.helpers import disable_form, email_verified, name_check,\
 from app.main import bp
 
 
+@bp.route('/')
+@bp.route('/index')
+@login_required
+@email_verified
+def index():
+    form = ProviderSearchForm(obj=current_user.address)
+    form.state.data = current_user.address.state.id
+    return render_template("index.html", form=form,title="Search")
+
+
 @bp.route('/categorylist', methods=['GET'])
 @login_required
 def category_list():
     """Pulls list of categories matching sector from db."""
-    print(request.method)
     sector_id = request.args.get('sector')
-    print(sector_id)
     sector = Sector.query.get(sector_id)
     category_list = (Category.query.filter(Category.sector == sector)
                                    .order_by(Category.name)).all()
@@ -50,14 +58,14 @@ def provider(name, id):
         flash("Provider not found.  Please try a different search.")
         return render_template('errors/404.html'), 404
     if form.validate():
-        filter = {"friends_only": form.friends_only.data,
-                "groups_only": form.groups_only.data}
+        filter = {"friends_filter": form.friends_filter.data,
+                "groups_filter": form.groups_filter.data}
         page = request.args.get('page', 1, int)
         return_code = 200
      #if args don't validate set filter to last page values
     else:
         last = dict(parse.parse_qsl(parse.urlsplit(request.referrer).query))
-        filter_keys = ['friends_only', 'groups_only']
+        filter_keys = ['friends_filter', 'groups_filter']
         filter = {k: last.get(k) == 'y' for k in filter_keys}
         page = last.get('page', 1)
         return_code = 422
@@ -71,17 +79,17 @@ def provider(name, id):
                             reviews=reviews.items, form=form, filter=filter), return_code
 
 
-@bp.route('/provideradd', methods=['GET', 'POST'])
+@bp.route('/provider/add', methods=['GET', 'POST'])
 @login_required
 @email_verified
-def providerAdd():
+def provider_add():
     """Adds provider to db."""
     form = ProviderAddForm()
     if request.method == 'POST':
-        # populate category choices for form validation
         form.category.choices = Category.list(form.sector.data)
     if form.validate_on_submit():
-        address = Address(line1=form.address.line1.data, 
+        address = Address(# unknown=form.address.full_address_unknown.data,
+                          line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
                           state_id=form.address.state.data, 
@@ -91,7 +99,7 @@ def providerAdd():
                                    telephone=form.telephone.data, 
                                    address=address, categories=categories)
         flash(provider.name + " added.")
-        return redirect(url_for("main.review"))
+        return redirect(url_for("main.index"))
     elif request.method == "POST":
         flash("Failed to add provider")
         return render_template("provideradd.html", title="Add Provider",
@@ -102,27 +110,50 @@ def providerAdd():
     return render_template("provideradd.html", title="Add Provider", form=form)
 
 
-@bp.route('/providerlist', methods=['POST'])
+@bp.route('/provider/list/dropdown', methods=['GET'])
 @login_required
-def providerList():
+def provider_list():
     """Pulls list of providers matching category from db."""
-    category = (Category.query.filter_by(id=request.form.get("category"))
-                .first())
-    provider_list = (Provider.query.filter(Provider.categories.contains(category))
-                                   .order_by(Provider.name)).all()
-    provider_list = [{"id": provider.id, "name": provider.name} for provider
-                     in provider_list]
+    category_id = request.args.get("category")
+    provider_list = Provider.list(category_id, format="dict")
+    optional = request.args.get("optional")
+    if optional == "true":
+        provider_list.insert(0, {"id": 0, "name": "<---Choose from list--->"})
     provider_list = jsonify(provider_list)
     return provider_list
 
-@bp.route('/review', methods=["GET", "POST"])
+@bp.route('/provider/list/autocomplete', methods=['GET'])
+@login_required
+def provider_autocomplete():
+    """Pulls list of providers matching input text."""
+    if request.args.get("name"):
+        name = parse.unquote_plus(request.args.get("name"))
+    if request.args.get("city"):
+        city = parse.unquote_plus(request.args.get("city"))
+    if request.args.get("state"):
+        state_id = parse.unquote_plus(request.args.get("state"))
+    if request.args.get("category"):
+        category_id = parse.unquote_plus(request.args.get("category"))
+
+    providers = Provider.autocomplete(name, category_id, city, state_id)
+    providers = [{"name": provider.name, "line1": provider.address.line1,
+                  "city": provider.address.city,
+                  "state": provider.address.state.state_short} for provider in providers]
+    return jsonify(providers)
+
+
+
+@bp.route('/provider/review', methods=["GET", "POST"])
 @login_required
 @email_verified
 def review():
-    form = ReviewForm()
+    if request.method == 'GET' and len(request.args) != 0:
+        form = ReviewForm(request.args)
+        provider = Provider.query.get(request.args.get('id'))
     if request.method == 'POST':
-        # populate category choices for form validation
-        form.category.choices = Category.list(form.sector.data)
+        form = ReviewForm()
+        provider = Provider.query.get(form.id.data)
+    form.category.choices = [(c.id, c.name) for c in provider.categories]
     if form.validate_on_submit():
         pictures = []
         if form.picture.data[0]:
@@ -140,7 +171,7 @@ def review():
                                         name=filename, thumb=thumb))
                 
         review = Review.create(user_id=current_user.id, 
-                               provider_id=form.name.data, 
+                               provider_id=form.id.data, 
                                category_id=form.category.data,
                                rating=form.rating.data,
                                cost=form.cost.data,
@@ -149,7 +180,7 @@ def review():
                                comments=form.comments.data,
                                pictures=pictures)
         flash("review added")
-        return redirect(url_for('main.review'))
+        return redirect(url_for('main.index'))
     elif request.method == "POST" and not form.validate():
         return render_template("review.html", title="Review", form=form), 422
     if not current_user.email_verified:
@@ -157,27 +188,27 @@ def review():
         flash("Form disabled. Please verify email to unlock.")
     return render_template("review.html", title="Review", form=form)
 
-@bp.route('/search')
+@bp.route('/provider/search', methods=['GET'])
 @login_required
 @email_verified
 def search():
-    form = ProviderSearchForm(request.args)
-    form.category.choices = Category.list(form.sector.data)
+    form = ProviderSearchForm(request.args).populate_choices()
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
-        providers = current_user.search_providers(form)
-        print(providers.all())
-        providers = providers.paginate(page, current_app.config["REVIEWS_PER_PAGE"],
-                                       False)
+        providers_query = Provider.search(form)
+        providers = providers_query.paginate(page,
+                    current_app.config["REVIEWS_PER_PAGE"], False)
         pag_urls = pagination_urls(providers, 'main.search', request.args)
-        filter_fields = [form.friends_only, form.groups_only]
+        filter_fields = [form.friends_filter, form.groups_filter]
         filter={}
         for field in filter_fields:
             if field.data is True:
                 filter[field.name] = 'y'
-        print(providers.items)
+        providers=providers.items
+        if providers == []:
+            flash("No results found. Please try a different search.")
         return render_template("index.html", form=form, title="Search", 
-                               providers=providers.items, pag_urls=pag_urls,
+                               providers=providers, pag_urls=pag_urls,
                                filter=filter)      
 
     return render_template("index.html", form=form, title="Search"), 422

@@ -8,24 +8,14 @@ from app.auth.forms import LoginForm, RegistrationForm, PasswordChangeForm, \
                            PasswordResetRequestForm, PasswordResetForm,\
                            UserUpdateForm
 from app.extensions import db
-from app.main.forms import ProviderSearchForm
 from app.models import User, Address
 from app.utilities.helpers import pagination_urls, email_verified
 
-@bp.route('/')
-@bp.route('/index')
-@email_verified
-def index():
-    logged_in = current_user.is_authenticated
-    if current_user.is_authenticated:
-        user = current_user
-        form = ProviderSearchForm(obj=current_user.address)
-        form.state.data = current_user.address.state.id
-        return render_template("index.html", user=user, form=form,
-                               title="Search", logged_in=logged_in)
-    else:
-        form = LoginForm()
-        return render_template("auth/welcome.html", form=form, title="Welcome")
+
+@bp.route('/welcome')
+def welcome():
+    form = LoginForm()
+    return render_template("auth/welcome.html", form=form, title="Welcome")
 
 @bp.route('/emailverify/<token>')
 def email_verify(token):
@@ -42,13 +32,13 @@ def email_verify(token):
         user.save()
         msg = "Email successfully verified."
     flash(msg)
-    return redirect(url_for('auth.index'))
+    return redirect(url_for('auth.welcome'))
 
 @bp.route('/emailverifyrequest')
 def email_verify_request():
     if not current_user.is_authenticated:
         flash("Please log in to request a new email verification link.")
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("auth.welcome"))
     else:
         current_user.send_email_verification()
         session['email_verification_sent'] = True
@@ -65,11 +55,11 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user is None or not user.check_password(form.password.data):
             flash("Invalid username or password")
-            return redirect(url_for("auth.index"))
+            return redirect(url_for("auth.welcome"))
         login_user(user, remember=form.remember_me.data)
         next_page = request.args.get("next")
         if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for("auth.index")
+            next_page = url_for("main.index")
         return redirect(next_page)
     return render_template("auth/welcome.html", title="Sign In", form=form)
 
@@ -77,7 +67,7 @@ def login():
 @bp.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('auth.index'))
+    return redirect(url_for('auth.welcome'))
 
 
 @bp.route('/passwordresetrequest', methods=['GET', 'POST'])
@@ -90,7 +80,7 @@ def password_reset_request():
         if user:
             user.send_password_reset_email()
         flash("Check email for instructions to reset your password.")
-        return redirect(url_for('auth.index'))
+        return redirect(url_for('auth.welcome'))
     return render_template('auth/password_reset_request.html',
                           title="Password Reset", form=form)
 
@@ -98,16 +88,16 @@ def password_reset_request():
 @bp.route('/passwordreset/<token>', methods=['GET', 'POST'])
 def passwordreset(token):
     if current_user.is_authenticated:
-        return redirect(url_for('auth.index'))
+        return redirect(url_for('main.index'))
     user = User.verify_password_reset_token(token)
     if not user:
-        return redirect(url_for('auth.index'))
+        return redirect(url_for('auth.welcome'))
     form = PasswordResetForm()
     if form.validate_on_submit():
         user.set_password(form.password_new.data)
-        db.session.commit()
+        user.save()
         flash("Your password has been reset.")
-        return redirect(url_for('auth.index'))
+        return redirect(url_for('auth.welcome'))
     return render_template('auth/reset_password.html', form=form)
 
 
@@ -118,7 +108,7 @@ def passwordupdate():
     pform = PasswordChangeForm()
     if pform.validate_on_submit():
         current_user.set_password(pform.new.data)
-        dbUpdate()
+        current_user.save()
         flash("Password updated")
         return redirect(url_for('main.user', username=current_user.username))
     form = UserUpdateForm()
@@ -161,7 +151,7 @@ def register():
         session['email_verification_sent'] = True
         flash("Congratulations! You've successfully registered.")
         flash("Please check your email for an email verification message.")
-        return redirect(url_for('auth.index'))
+        return redirect(url_for('auth.welcome'))
     return render_template("auth/register.html", title='Register', form=form)
 
     

@@ -1,0 +1,15 @@
+{% extends "single_column.html" %}
+{% from "macros.html" import form_render%}
+{% block title %} {{ super() }} {% endblock %}
+
+{% block content_narrow_form %}
+    <h3>Add Group</h3>
+    <form action="{{url_for('relationship.group_create')}}" method="post", id="groupcreateform">
+        {{form_render(form)}}
+    </form>
+{% endblock %}
+
+
+
+
+

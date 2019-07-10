@@ -1,0 +1,95 @@
+{% extends "single_column.html" %}
+{% from "macros.html" import form_render, field_render, modal_render, render_errors %}
+
+    
+{% block content_narrow_form %}
+    <h3>Search For Friends</h3>
+    <form action="/friendadd" method="post">
+        {{form_render(FriendSearch)}}
+    </form>
+    <br>
+    <div id="network_friends"></div>
+    <div class="row justify-content-center">
+        <h3> Your Friends</h3>
+        <ul class="nav">
+                {% set pending_count = current_user.sentfriendrequests|count + current_user.receivedfriendrequests|count %}
+                <a href="" class="nav-link" data-toggle="modal" data-target="#pending_friends">Pending<span>({{pending_count}})</span></a>
+                <a href="" class="nav-link" data-toggle="modal" data-target="#FriendDelete">Delete</a>
+            </li>
+        </ul>
+    </div>   
+    <ul>
+        {% for friend in current_user.friends %}
+        <li> 
+            <a href="{{url_for('main.user', username=friend.username)}}">
+                {{friend.full_name}} </a></li>
+                {% endfor %}
+    </ul>
+    <br>
+{% endblock %}
+
+            
+{% block modal %}
+
+    {% if modal_open['modal'] != false %}
+        
+        <script>
+            var modal = {{modal_open|tojson}}.modal
+            console.log(modal)
+            $(window).on('load', function(){
+            $(modal).modal('show');
+        });
+        </script>
+    {% endif %}
+ 
+    <!--Modal to delete friends -->
+    {{modal_render(FriendDelete, "Delete Friends", action=url_for('relationship.friend_remove'), modalID="FriendDelete")}}
+
+    <!-- Modal for Pending Friend Requests / approval of incoming requests -->
+    <div class="modal" id="pending_friends" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Pending Friends</h3>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body px-5">
+                    <h5>Sent</h5>
+                        <ul>
+                            {% if current_user.sentfriendrequests|length == 0 %}
+                                <li>None</li>
+                            {% else %}
+                                {% for request in current_user.sentfriendrequests %}
+                                    <li>{{request.requested_friend.full_name}}</li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    <!--display form if users to approve or list with none -->
+                    {% if current_user.receivedfriendrequests != [] %}
+                        <form id = "modal_form_group" action="{{url_for('relationship.friend_approve')}}" method="POST">
+                            <h5>Received <small>(Select and submit to approve)</small></h5>
+                            {{FriendApprove.hidden_tag()}}
+                            {{FriendApprove.name()}}
+                            {{render_errors(FriendApprove.name)}}
+                    {% else %}
+                        <h5>Received</h5>
+                            <ul>
+                                <li>None</li>
+                            </ul>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    {% if current_user.receivedfriendrequests != [] %}
+                        {{FriendApprove.submit(class_=("btn btn-primary btn-block-submit submit"))}}
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+

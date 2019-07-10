@@ -1,7 +1,6 @@
 from datetime import datetime, date
 import re
 from string import capwords
-from time import time
 
 from flask import current_app, render_template
 from flask_login import UserMixin, current_user
@@ -15,7 +14,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.database import Model
 from app.extensions import db
-from app.utilities.email import send_email
+from app.utilities.email import decode_token, get_token, send_email
 
 
 
@@ -35,7 +34,6 @@ category_provider_table = db.Table('category_provider', db.Model.metadata,
 user_friend = db.Table('user_friend', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('friend_id', db.Integer, db.ForeignKey('user.id')))
-
 
 
 class State(Model):
@@ -71,10 +69,11 @@ class Address(Model):
         Child of: State, User, Provider
     """
     id = db.Column(db.Integer, primary_key=True)
-    _line1 = db.Column(db.String(128), nullable=False)
+    _line1 = db.Column(db.String(128))
     _line2 = db.Column(db.String(128))
-    zip = db.Column(db.String(20), index=True, nullable=False)
+    zip = db.Column(db.String(20), index=True)
     _city = db.Column(db.String(64), index=True, nullable=False)
+    # unknown = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                   ondelete="CASCADE"))
     provider_id = db.Column(db.Integer, db.ForeignKey("provider.id",
@@ -84,6 +83,8 @@ class Address(Model):
     __table_args__ = (
         CheckConstraint('provider_id IS NOT NULL OR user_id IS NOT NULL',
                         name="chk_address_fks"),
+        # CheckConstraint('_line1 IS NOT NULL AND zip IS NOT NULL OR unknown == 1',
+        #                 name='chk_line1zipunknown')
     )
 
 
@@ -158,7 +159,8 @@ class User(UserMixin, Model):
 
     sentgrouprequests = db.relationship("GroupRequest", backref="requestor",
                                         passive_deletes=True)
-
+    email_token_key = 'verify_email'
+    password_token_key = 'reset_password'
 
     @hybrid_property
     def first_name(self):
@@ -204,27 +206,11 @@ class User(UserMixin, Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def _get_token(self, payload, expiration):
-        """Generic function to get token.
-        Inputs:
-        payload: dict of custom inputs
-        expiration: days until expiry
-        """
-        # convert expiration to seconds
-        if expiration is None:
-            msg = {}
-        else:
-            expires_in = expiration * 24 * 60 * 60
-            msg = {'exp': time() + expires_in}
-        msg.update(payload)
-        return jwt.encode(msg, current_app.config['SECRET_KEY'],
-                          algorithm='HS256').decode('utf-8')
-    
     def get_reset_password_token(self):
         """Get password reset token."""
-        payload = {'reset_password': self.id}
+        payload = {self.password_token_key: self.id}
         expiration = 10/(60*24)  # 10 minutes
-        return self._get_token(payload, expiration)
+        return get_token(payload, expiration)
 
     def send_password_reset_email(self):
         token = self.get_reset_password_token()
@@ -242,17 +228,16 @@ class User(UserMixin, Model):
         Returns: User based on token id.
         """
         try:
-            id = jwt.decode(token, current_app.config['SECRET_KEY'],
-                            algorithms=['HS256'])['reset_password']
+            id = decode_token(token, User.password_token_key)
         except:
             return
         return User.query.get(id)
 
     def get_email_verification_token(self):
         """Get jwt token for email address verification."""
-        payload = {'verify_email': self.id}
+        payload = {self.email_token_key: self.id}
         expiration = 10
-        return self._get_token(payload, expiration)
+        return get_token(payload, expiration)
 
     def send_email_verification(self):
         """Send email to request email verification."""
@@ -270,8 +255,7 @@ class User(UserMixin, Model):
         """Check email verification token and returns user if valid and error
            if invalid."""
         try:
-            id = jwt.decode(token, current_app.config['SECRET_KEY'],
-                            algorithms=['HS256'])['verify_email']
+            id = decode_token(token, User.email_token_key)
             user = User.query.get(id)
             error = None
         except jwt.ExpiredSignatureError:
@@ -281,164 +265,6 @@ class User(UserMixin, Model):
             error = "Invalid"
             user = None
         return (user, error)
-
-    def get_friend_list(self):
-        """Generate list of tuples containing friend's id and full name."""
-        friend_list = []
-        for friend in self.friends:
-            friend_list.append((friend.id, friend.full_name))
-        return friend_list
-
-    def get_friend_request_token(self, friend, request):
-        """Get friend request token.
-        Inputs:
-        friend: User that friend request is being sent to.
-        """
-
-        payload = {"request": request.id}
-        expiration = None
-        return self._get_token(payload, expiration)
-
-    def send_friend_request(self, friend):
-        """Send friend request email and update FriendRequest table."""
-        request = FriendRequest(friend_id=friend.id,
-                                requestor_id=self.id,
-                                date_sent=date.today())
-        request.save()
-        try:
-            token = self.get_friend_request_token(friend, request)
-            send_email('Ask a Neighbor: Friend Verification',
-                    sender=current_app.config['ADMINS'][0],
-                    recipients=[friend.email],
-                    text_body=render_template('relationship/email/friend_request.txt',
-                                                user=friend, friend=self,
-                                                token=token),
-                    html_body=render_template('relationship/email/friend_request.html',
-                                                user=friend, friend=self,
-                                                token=token))
-        except:
-            request.delete()
-
-        return None
-
-    def get_requested_friends(self):
-        """Return list of persons with unconfirmed friend requests."""
-        requested = []
-        for request in self.sentfriendrequests:
-            if request.requested_friend not in requested:
-                requested.append(request.requested_friend)
-        return requested
-
-    def get_friend_approval_choices(self):
-        if len(self.receivedfriendrequests) > 0:
-            choices = [(request.id, request.requestor.full_name) for request in
-                       self.receivedfriendrequests]
-        else:
-            choices = None
-        return choices
-
-    def get_received_friend_requests(self):
-        """Get list of persons that sent user unconfirmed friend requests.
-           Returns None if no requests."""
-        if len(self.receivedfriendrequests) > 0:
-            requested = []
-            for request in self.receivedfriendrequests:
-                if request.requestor not in requested:
-                    requested.append(request.requestor)
-            return requested
-        else:
-            return None
-
-    @staticmethod
-    def verify_friend_request_token(token):
-        """Check friend request token and returns request if valid and error
-           if invalid."""
-        try:
-            request_id = jwt.decode(token, current_app.config['SECRET_KEY'],
-                            algorithms=['HS256'])['request']
-            request = FriendRequest.query.get(request_id)
-        except:
-            request = None
-        return request
-
-    def get_group_list(self):
-        """Generate list of tuples containing group's id and name."""
-        group_list = []
-        for group in self.groups:
-            group_list.append((group.id, group.name))
-        return group_list
-
-    def get_group_admin_choices(self):
-        """Get group admin approval choices for approval form.
-        Outputs list of tuples containing request id and
-        group name / requestor name."""
-        choices = []
-        for group in self.group_admin:
-            for request in group.join_requests:
-                choice = (request.id, f"{request.group.name} - {request.requestor.full_name}")
-                choices.append(choice)
-        return choices
-
-    def get_group_approval_requests(self):
-        """Return pending approval requests for groups user is admin for."""
-        pending = []
-        # iterate through groups that user is admin
-        for group in self.group_admin:
-        # for each group, iterate through received requests & add to list
-            for request in group.join_requests:
-                pending.append(request)
-        if pending == []:
-            return None
-        else:
-            return pending
-
-    def get_group_request_token(self, request):
-        """Get group request token.
-        Inputs:
-        request: GroupRequest to join the group.
-        """
-
-        payload = {"request": request.id}
-        expiration = None
-        return self._get_token(payload, expiration)
-
-    def send_group_request(self, group):
-        """Send group admin request to join & update GroupRequest table."""
-        # create group join request
-        request = GroupRequest(group_id=group.id,
-                                requestor_id=self.id,
-                                date_sent=date.today())
-        request.save()
-        try: 
-            token = self.get_group_request_token(request)
-            send_email('Ask a Neighbor: Group Join Request',
-                    sender=current_app.config['ADMINS'][0],
-                    recipients=[group.admin.email],
-                    text_body=render_template('relationship/email/group_request.txt',
-                                                user=group.admin, group=group,
-                                                new_member=self, token=token),
-                    html_body=render_template('relationship/email/group_request.html',
-                                                user=group.admin, group=group,
-                                                new_member=self, token=token))
-        except:
-            # delete request if request fails to send.
-            request.delete()
-            raise
-
-        return None
-
-    @staticmethod
-    def verify_group_request_token(token):
-        """Check group request token and returns GroupRequest if valid and error
-           if invalid."""
-        try:
-            request_id = jwt.decode(token, current_app.config['SECRET_KEY'],
-                                    algorithms=['HS256'])['request']
-            request = GroupRequest.query.get(request_id)
-
-        except:
-            request = None
-        return request
 
     def _addfriend(self, person):
         """Add friend relationship bi-directionally."""
@@ -472,7 +298,6 @@ class User(UserMixin, Model):
         elif type(relation) == Group:
             self._removegroup(relation)
 
-
     def summary(self):
         """Return user object with review summary information(avg/count)"""
         # need to accomodate zero reviews...joins makes it unable to calc
@@ -490,32 +315,6 @@ class User(UserMixin, Model):
                                            .filter(User.id == self.id))
         return reviews
 
-    def search_providers(self, form):
-        """Returns filtered provider query object."""
-        category = Category.query.filter_by(id=form.category.data).first()
-        # common joins and filters used by all queries
-        filter_args = [Provider.categories.contains(category),
-                       Address.city.ilike(form.city.data),
-                       Address.state_id == form.state.data]
-        join_args = [Provider.address, Provider.reviews, Review.user]
-        # update filter for relationship filters
-        if form.friends_only.data is True:
-            filter_args.append(User.friends.contains(self))
-        elif form.groups_only.data is True:
-            groups = [g.id for g in self.groups]
-            filter_args.extend([Group.id.in_(groups), User.id != self.id])
-            join_args.extend([User.groups])
-
-        providers = (db.session.query(Provider,
-                                      func.avg(Review.rating).label("average"),
-                                      func.avg(Review.cost).label("cost"),
-                                      func.count(Review.id).label("count"))
-                               .join(*join_args)
-                               .filter(*filter_args)
-                               .group_by(Provider.name)
-                               .order_by(Provider.name))
-        return providers
-
     def __repr__(self):
         return f"<User {self.username}>"
 
@@ -532,11 +331,46 @@ class FriendRequest(Model):
     requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                        ondelete="CASCADE"), 
                              nullable=False)
-    date_sent = db.Column(db.Date, index=True, nullable=False)
+    date_sent = db.Column(db.Date, index=True, nullable=False,
+                          default=date.today())
+    token_key = 'request'
+
 
     def __repr__(self):
         return f"<FriendRequest {self.requestor.full_name} {self.requested_friend.full_name}>"
 
+    def get_request_token(self):
+        """Get friend request token."""
+        payload = {self.token_key: self.id}
+        expiration = None
+        return get_token(payload, expiration)
+
+    def send(self):
+        """Send friend request email and update FriendRequest table."""
+        token = self.get_request_token()
+        send_email('Ask a Neighbor: Friend Verification',
+                sender=current_app.config['ADMINS'][0],
+                recipients=[self.requested_friend.email],
+                text_body=render_template('relationship/email/friend_request.txt',
+                                            user=self.requested_friend,
+                                            friend=self.requestor,
+                                            token=token),
+                html_body=render_template('relationship/email/friend_request.html',
+                                            user=self.requested_friend,
+                                            friend=self.requestor,
+                                            token=token))
+        return None
+
+    @staticmethod
+    def verify_token(token):
+        """Check friend request token and returns request if valid and error
+           if invalid."""
+        try:
+            request_id = decode_token(token, FriendRequest.token_key)
+            request = FriendRequest.query.get(request_id)
+        except:
+            request = None
+        return request
 
 class GroupRequest(Model):
     """Tracks pending group requests not yet verified."""
@@ -550,12 +384,54 @@ class GroupRequest(Model):
     requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                         ondelete="CASCADE"),
                              nullable=False)
-    date_sent = db.Column(db.Date, index=True, nullable=False)
+    date_sent = db.Column(db.Date, index=True, nullable=False, default=date.today())
+    token_key = 'request'
+
+    def get_request_token(self):
+        """Get group request token."""
+        payload = {self.token_key: self.id}
+        expiration = None
+        return get_token(payload, expiration)
+
+    def send(self):
+        """Send group admin request to join & update GroupRequest table."""
+        # create group join request
+        token = self.get_request_token()
+        send_email('Ask a Neighbor: Group Join Request',
+                sender=current_app.config['ADMINS'][0],
+                recipients=[self.group.admin.email],
+                text_body=render_template('relationship/email/group_request.txt',
+                                            user=self.group.admin, group=self.group,
+                                            new_member=self.requestor, token=token),
+                html_body=render_template('relationship/email/group_request.html',
+                                            user=self.group.admin, group=self.group,
+                                            new_member=self.requestor, token=token))
+        return None
+
+    @staticmethod
+    def verify_token(token):
+        """Check group request token and returns GroupRequest if valid and error
+           if invalid."""
+        try:
+            request_id = decode_token(token, GroupRequest.token_key)
+            request = GroupRequest.query.get(request_id)
+        except:
+            request = None
+            raise
+        return request
+
+
 
     def __repr__(self):
-        return f"<FriendRequest {self.requestor.full_name} {self.requested_group.name}>"
+        return f"<GroupRequest {self.requestor.full_name} {self.group.name}>"
 
-
+    @staticmethod
+    def get_pending(user):
+        """Return pending approval requests user is admin for."""
+        pending = GroupRequest.query.join(Group)\
+                                    .filter(Group.admin_id == user.id).all()
+        return pending
+ 
 class Sector(Model):
     """Sector that categories are a member of.
     Relationships:
@@ -655,6 +531,107 @@ class Provider(Model):
             telephone = re.sub('\D+', '', telephone)
         self._telephone = telephone
 
+    @staticmethod
+    def list(category_id, format='tuple'):
+        """Returns list of provider id and name based on category filter
+        Inputs:
+        category_id: category to filter by
+        format: output format, either 'dict' or 'tuple'
+        """
+        category = Category.query.get(category_id)
+        query = (Provider.query.filter(Provider.categories.contains(category))
+                               .order_by(Provider.name)).all()
+        if format == 'dict':
+            provider_list = [{"id": provider.id, "name": provider.name} for provider
+                            in query]
+        elif format == 'tuple':
+            provider_list = [(provider.id, provider.name) for provider
+                            in query]           
+        return provider_list
+
+    @staticmethod
+    def autocomplete(name, category_id, city, state_id, limit=10):
+        """Returns list of providers to populate autocomplete."""
+        filter_args = [Provider.name.ilike(f"%{name}%")]
+        join_args = [Provider.address]
+        if city:
+            filter_args.append(Address.city.ilike(f"%{city}%"))
+        if state_id:
+            filter_args.append(Address.state_id == state_id)
+        if category_id:
+            category = Category.query.get(category_id)
+            filter_args.append(Provider.categories.contains(category))
+        providers = Provider.query.join(*join_args).filter(*filter_args)\
+                                    .order_by(Provider.name).limit(limit).all()
+        if providers == []:
+            name = name.replace("", "%")
+            providers = Provider.query.join(*join_args).filter(*filter_args)\
+                                .order_by(Provider.name).limit(limit).all()
+        return providers
+
+        # filter_args = []
+        # join_args = []
+        # query_args = [Provider]
+        # if summary:
+        #     query_args.extend([func.avg(Review.rating).label("average"),
+        #                       func.avg(Review.cost).label("cost"),
+        #                       func.count(Review.id).label("count")])
+        #     join_args.extend([Provider.review])
+        # if criteria.get('category'):
+        #     category = Category.query.get(criteria.get('category'))
+        #     filter_args.extend([Provider.categories.contains(category)])
+        # if criteria.get('city'):
+        #     filter_args.extend([Provider.address.city.ilike(criteria.get('city'))])
+        # if criteria.get('state'):
+        #     filter_args.extend([Provider.address.state_id==criteria.get('state')])
+        # if criteria.get('friends_filter') is True:
+        #     filter_args.append(User.friends.contains(current_user)) 
+        #     if Review.user not in join_args:
+        #         join_args.extend([Review.user])
+        # if criteria.get('groups_filter') is True:
+        #     groups = [g.id for g in current_user.groups]
+        #     filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
+        #     if Review.user not in join_args:
+        #         join_args.extend([Review.user, User.groups])
+        #     else:
+        #         join_args.extend([User.groups])                       
+        # providers_query = (db.session.query(*query_args)
+        #                              .join(*join_args)
+        #                              .filter(*filter_args)
+        #                              .group_by(Provider.name)
+        #                              .order_by(sort_crit)
+        #                              .limit(limit_crit))
+        # return providers_query
+
+    @staticmethod
+    def search(form):
+        """Returns filtered provider query object."""
+        category = Category.query.filter_by(id=form.category.data).first()
+        # common joins and filters used by all queries
+        filter_args = [Provider.categories.contains(category),
+                       Address.city.ilike(form.city.data),
+                       Address.state_id == form.state.data]
+        join_args = [Provider.address, Provider.reviews, Review.user]
+        # update filter for relationship filters
+        if form.friends_filter.data is True:
+            filter_args.append(User.friends.contains(current_user))
+        if form.groups_filter.data is True:
+            groups = [g.id for g in current_user.groups]
+            filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
+            join_args.extend([User.groups])
+        if form.name.data is not None:
+            name = f"%{form.name.data}%"
+            filter_args.append(Provider.name.ilike(name))
+        providers_query = (db.session.query(Provider,
+                                        func.avg(Review.rating).label("average"),
+                                        func.avg(Review.cost).label("cost"),
+                                        func.count(Review.id).label("count"))
+                                     .join(*join_args)
+                                     .filter(*filter_args)
+                                     .group_by(Provider.name)
+                                     .order_by(Provider.name))
+        return providers_query
+
     def profile(self, filter):
         """Return tuple of provider object with review summary information(avg/count)
         form: boolean form with friend/group filters
@@ -663,9 +640,9 @@ class Provider(Model):
         filter_args = [Provider.id == self.id]
         join_args = [Review.provider, Review.user]
         # update filter and joins for relationship filters
-        if filter['friends_only'] is True:
+        if filter['friends_filter'] is True:
             filter_args.append(User.friends.contains(current_user))
-        elif filter['groups_only'] is True:
+        if filter['groups_filter'] is True:
             groups = [g.id for g in current_user.groups]
             join_args.extend([User.groups])
             filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
@@ -684,9 +661,9 @@ class Provider(Model):
         join_args = [Review.provider, Review.user]
 
         # update filter and joins for relationship filters
-        if filter['friends_only'] is True:
+        if filter['friends_filter'] is True:
             filter_args.append(User.friends.contains(current_user))
-        elif filter['groups_only'] is True:
+        if filter['groups_filter'] is True:
             groups = [g.id for g in current_user.groups]
             join_args.extend([User.groups])
             filter_args.extend([Group.id.in_(groups), User.id != current_user.id])

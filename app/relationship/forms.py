@@ -85,10 +85,21 @@ class FriendApproveForm(FlaskForm):
             raise ValidationError("Invalid request. Please select request from"
                                   " the list.")
 
-
-class FriendEditForm(FlaskForm):
+    def populate_choices(self, user):
+        if len(user.receivedfriendrequests) > 0:
+            choices = [(request.id, request.requestor.full_name) for request in
+                       user.receivedfriendrequests]
+        else:
+            choices = []
+        self.name.choices = choices
+        return self
+    
+    
+class FriendDeleteForm(FlaskForm):
     """Form to select friends to delete."""
-    name = MultiCheckboxField("Select friends to remove", render_kw={"class":"nobullets"}, coerce=int)
+    name = MultiCheckboxField("Select friends to remove",
+                              render_kw={"class":"nobullets"}, coerce=int, 
+                              validators=[DataRequired()])
     submit = SubmitField("Submit", id="friend_delete")
 
     def validate_name(self, name):
@@ -98,6 +109,14 @@ class FriendEditForm(FlaskForm):
             if f is None or f not in current_user.friends:
                 raise ValidationError("Select friend from friend list.")
 
+    def populate_choices(self, user):
+        """Generate list of tuples containing friends' id and full name."""
+        if len(user.friends) > 0:
+            choices = [(friend.id, friend.full_name) for friend in user.friends]
+        else:
+            choices = []
+        self.name.choices = choices
+        return self
 
 class FriendSearchForm(FlaskForm):
     """Form to search for group."""
@@ -118,7 +137,8 @@ class GroupCreateForm(FlaskForm):
 
 class GroupDeleteForm(FlaskForm):
     """Form to select groups to exit."""
-    name = MultiCheckboxField("Select groups to remove", render_kw={"class":"nobullets"}, coerce=int)
+    name = MultiCheckboxField("Select groups to remove", render_kw={"class":"nobullets"}, coerce=int,
+                              validators=[DataRequired()])
     submit = SubmitField("Submit", id="group_delete")
 
     def validate_name(self, name):
@@ -129,6 +149,14 @@ class GroupDeleteForm(FlaskForm):
             if group is None or group not in current_user.groups:
                 raise ValidationError("Select group from friend list.")
 
+    def populate_choices(self, user):
+        """Generate list of tuples containing group's id and name."""
+        if len(user.groups) > 0:
+            choices = [(group.id, group.name) for group in user.groups]
+        else:
+            choices = []
+        self.name.choices = choices
+        return self
 
 class GroupEditForm(GroupCreateForm):
     """Form to edit existing group."""
@@ -166,3 +194,15 @@ class GroupMemberApproveForm(FlaskForm):
         request_admin = request.group.admin
         if request_admin != current_user:
             raise ValidationError("User not authorized to approve this request.")
+
+    def populate_choices(self, user):
+        """Get group admin approval choices for approval form.
+        Outputs list of tuples containing request id and
+        group name / requestor name."""
+        choices = []
+        for group in user.group_admin:
+            for request in group.join_requests:
+                choice = (request.id, f"{request.group.name} - {request.requestor.full_name}")
+                choices.append(choice)
+        self.request.choices = choices
+        return self

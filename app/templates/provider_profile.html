@@ -1,23 +1,26 @@
 {% extends "single_column.html" %}
 {% from "macros.html" import render_provider, render_review, pagination, field_render_inline, field_row_render %}
 
-{% block content_wide %}
+{% block content_medium %}
     <form class="form-inline" action='{{url_for("main.provider", 
     name=provider[0].name, id=provider[0].id)}}' method="get">
         {{form.hidden_tag()}}
             <legend class="col-form-label">Applied Social Filter:</legend>
             <div class="form-check mb-2 mr-sm-2">
-                {{field_row_render(form.friends_only)}}
+                {{field_row_render(form.friends_filter)}}
             </div>
             <div class="form-check mb-2 mr-sm-2">
-                {{field_row_render(form.groups_only)}}
+                {{field_row_render(form.groups_filter)}}
             </div>       
             {{form.submit(class_="btn btn-primary submit mb-2")}}
     </form>
     <br>
     {{render_provider(provider, filter)}}
     <br>   
-    
+
+{% endblock content_medium %}
+
+{% block content_wide %}
     {%for review in reviews %}
         {{render_review(review, current_user, false)}}
         <br>
@@ -25,4 +28,4 @@
 
     {{pagination(pag_urls)}}
 
-{% endblock %}
+{% endblock content_wide %}

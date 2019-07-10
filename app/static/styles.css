@@ -1,4 +1,7 @@
 
+.alert {
+  color: red;
+}
 .container-fluid {
    padding: 0;
  }
@@ -80,9 +83,12 @@
 .nobullets{
   list-style:none
 }
+.prov-link{
+  color: white;
+}
 .search_grid_1{
  display: block;
- width: 300px;
+ width: 600px;
 }
 .star-full{
  color:maroon;

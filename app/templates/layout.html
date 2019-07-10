@@ -1,4 +1,4 @@
-{% from "macros.html" import Navlink, NavlinkKW %}
+{% from "macros.html" import Navlink, Navdropdown %}
 
 <!DOCTYPE html>
 
@@ -38,7 +38,7 @@
 
     <body>
 
-        <nav class="navbar navbar-expand-md navbar-light bg-light border">
+        <nav class="navbar navbar-expand-sm navbar-light bg-light border">
             <a class="navbar-brand h1" href="/">Ask a Neighbor</a>
             <button aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-target="#navbar" data-toggle="collapse" type="button">
                 <span class="navbar-toggler-icon"></span>
@@ -46,10 +46,11 @@
             <div class="collapse navbar-collapse" id="navbar">
                 <ul class="navbar-nav ml-auto mt-2">
                     {% if current_user.is_authenticated %}
-                        {{ Navlink('auth.index', 'Search') }}
-                        {{ Navlink('main.review', 'Add Review') }}
+                        {{ Navlink('main.index', 'Search') }}
                         {{ Navlink('main.user', 'Profile', username=current_user.username)}}
-                        {{ Navlink('relationship.network', 'Network') }}
+                        {% set dropdownname = 'Network' %}
+                        {% set dropdownlinks = [('relationship.network_friends','Friends'),('relationship.network_groups','Groups')] %}
+                        {{ Navdropdown(dropdownname, dropdownlinks )}}
                         {{ Navlink('auth.logout', 'Logout') }}
 
                     {% else %}
@@ -70,7 +71,7 @@
             </header>
         {% endif %}
 
-        <main class="container pt-5">
+        <main class="container-fluid">
 
         {% block main %} {% endblock %}
 

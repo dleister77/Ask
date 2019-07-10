@@ -1,9 +1,9 @@
 {% extends "single_column.html" %}
 {% from "macros.html" import renderInlineList, render_review, renderList, pagination, modal_render %}
 
-{% block content_medium %}
+{% block content_narrow_form %}
 
-<div class="card pb-0" id="user_profile">
+<div class="card" id="user_profile">
     <div class="card-header p-2">
         <h4 class="text-center">Profile Information
         {% if user == current_user %}    
@@ -67,7 +67,7 @@
         <br>
 {% endblock %}
 
-{% block content_wide %}
+{% block content_medium %}
         <div id = "reviews">
                 {%for review in reviews %}
                     {{render_review(review, current_user)}}

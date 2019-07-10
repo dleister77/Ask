@@ -46,19 +46,24 @@
                 {{field(class_=fieldClass + " " + classAdjust)}}
                 <!-- {{field.render_kw}} -->
             {% endif %}
-            {% if field.errors|length > 0 %}
-                <span style="color:red;">{{field.errors}}</span>
-            {% endif %}
+            {{render_errors(field)}}
 
-            {# {% if field.errors|length == 1 %}
-                <span style="color:red;">{{field.errors}}</span>
-                {% else %}
-                {% for error in field.errors %}
-                    <span style="color:red;">{{error}}</span>
-                {% endfor %}
-            {% endif %} #}
+
         </div>
     </div>
+{% endmacro %}
+
+{% macro render_errors(field) %}
+    {% if field.errors|length > 0 %}
+        <span style="color:red;">{{field.errors}}</span>
+    {% endif %}
+    {% if field.errors|length == 1 %}
+        <span style="color:red;">{{field.errors}}</span>
+    {% else %}
+        {% for error in field.errors %}
+            <span style="color:red;">{{error}}</span>
+        {% endfor %}
+    {% endif %}
 {% endmacro %}
 
 <!-- Macro to render form field in line, without creating new row. -->
@@ -269,11 +274,21 @@
     {% set cost = 3 %}
     <div class="card">
         <div class="card-header">
-            {% if provider.name not in request.view_args.values() %}
-            <h4><a href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
-            {% else %}
-            <h4>{{provider.name}}</h4>
-            {% endif %}
+            <div class="row">
+                <div class="col-7 col-md-8">
+                    {% if provider.name not in request.view_args.values() %}
+                    <h4><a class="prov-link" href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
+                    {% else %}
+                    <h4>{{provider.name}}</h4>
+                    {% endif %}
+                </div>
+                <div class="col-5 col-md-4">
+                    <ul class="nav justify-content-end">
+                        <a class="prov-link nav-link" href="{{ url_for('main.review', name=provider.name, id=provider.id) }}">
+                        Add Review</a>
+                    </ul>
+                </div>
+            </div>    
         </div>
         <div class="card-body">
             <div class="row">
@@ -324,7 +339,7 @@
         <div class="card-header">
             {% if bizname == true %}
                 <h4>
-                    <a href='{{url_for("main.provider", name=review.provider.name|replace(" ","-")|replace("'", ''),
+                    <a href='{{url_for("main.provider", name=review.provider.name,
                                        id=review.provider.id)}}'>
                         {{review.provider.name}}
                     </a>: {{review.title}}</h4>
@@ -334,7 +349,7 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-5 p-3">
+                <div class="col-12 col-md-5 px-3">
                     <ul class="list-unstyled">
                         {% set common_groups = review.user.groups|select('in', current_user.groups)|list %}  
                         {% set related = review.user in current_user.friends or review.user_id == current_user.id or common_groups|length > 0 %}
@@ -375,13 +390,13 @@
                         <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
                     </ul>
                 </div>
-                <div class="col-7 p-3">
+                <div class="col-12 col-md-7 px-3">
                     <ul class="list-unstyled">
                         <li>Comments: {{review.comments|replace(None,' Not provided')}}</li>
                     </ul>
                 </div>
             <div class="row">
-                <div class="col-12 p-3">
+                <div class="col-12 px-3">
                     {% for image in review.pictures %}
                     <img src="{{url_for('main.download_file', id=review.user.id, filename=image.thumb)}}" alt="" class="thumbnail">
                     {%endfor %}
@@ -400,7 +415,28 @@
     {%  else %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
     {% endif %}
-{% endmacro %}   
+{% endmacro %}  
+
+{% macro Navdropdown(dropdownname, dropdownlinks) %}
+    {% set dropdownclass = "nav-item dropdown" %}
+    {% if request.endpoint and dropdownname|lower in request.endpoint %}
+        {% set dropdownclass = dropdownclass|join(' active') %}
+    {% endif %}
+    <li class="{{dropdownclass}}">
+        <a class="nav-link dropdown-toggle" href="" id="navbarDropDownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        {{dropdownname}}</a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropDownMenuLink">
+        {% for endpoint, name in dropdownlinks %}
+            {% if request.endpoint == endpoint %}
+                {% set dropdownclass = "dropdown-item active" %}
+            {% else %}
+                {% set dropdownclass = "dropdown-item" %}
+            {% endif %}
+            <a class="{{dropdownclass}}" href="{{url_for(endpoint) }}">{{name}}</a>
+        {% endfor %}
+        </div>
+    </li>
+{% endmacro %}
 
 {% macro pagination(pag_urls) %}
 
@@ -419,5 +455,3 @@
     </nav>
 
 {% endmacro %}
-
-

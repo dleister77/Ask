@@ -4,7 +4,7 @@
 {% block content_left_top %}
     <form action="/groupadd" method="post">
         {{form_render(GroupSearch)}}
-        <a href="" data-toggle="modal" data-target="#group_create">Create New Group</a>
+        <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
     </form>
 {% endblock %}
     
@@ -24,7 +24,7 @@
             {% set pending_count = current_user.sentgrouprequests | count + 
                current_user.get_group_admin_choices() | count %}
             <a href="" class="nav-link" data-toggle="modal" data-target="#pending_groups">Pending<span>({{pending_count}})</span></a>
-            <a href="" class="nav-link" data-toggle="modal" data-target="#edit_groups">Delete</a>
+            <a href="" class="nav-link" data-toggle="modal" data-target="#GroupDelete">Delete</a>
         </li>
     </ul>
     </div>
@@ -44,7 +44,7 @@
         <ul class="nav">
                 {% set pending_count = current_user.sentfriendrequests|count + current_user.receivedfriendrequests|count %}
                 <a href="" class="nav-link" data-toggle="modal" data-target="#pending_friends">Pending<span>({{pending_count}})</span></a>
-                <a href="" class="nav-link" data-toggle="modal" data-target="#edit_friends">Delete</a>
+                <a href="" class="nav-link" data-toggle="modal" data-target="#FriendDelete">Delete</a>
             </li>
         </ul>
     </div>   
@@ -60,18 +60,27 @@
             {% endblock %}
             
 {% block modal %}
-    <!-- Modal to create new group -->
-    {{modal_render(GroupCreate, "Create New Group", modalID="group_create")}}
 
+    {% if modal_open['modal'] != false %}
+        
+        <script>
+            var modal = {{modal_open|tojson}}.modal
+            console.log(modal)
+            $(window).on('load', function(){
+            $(modal).modal('show');
+        });
+        </script>
+    {% endif %}
+ 
     <!--Modal to delete friends -->
-    {{modal_render(FriendEdit, "Delete Friends", action=url_for('relationship.friend_remove'), modalID="edit_friends")}}
+    {{modal_render(FriendDelete, "Delete Friends", action=url_for('relationship.friend_remove'), modalID="FriendDelete")}}
 
     <!-- Modal to delete groups -->
-    {{modal_render(GroupDelete, "Delete Groups", action=url_for('relationship.group_remove'), modalID="edit_groups")}}
+    {{modal_render(GroupDelete, "Delete Groups", action=url_for('relationship.group_remove'), modalID="GroupDelete")}}
 
     <!-- Modal for Pending Friend Requests / approval of incoming requests -->
     <div class="modal" id="pending_friends" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-md" role="document">
+        <div class="modal-dialog modal-md modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">Pending Friends</h3>
@@ -91,7 +100,7 @@
                             {% endif %}
                         </ul>
                     <!--display form if users to approve or list with none -->
-                    {% if current_user.get_received_friend_requests() != none %}
+                    {% if current_user.receivedfriendrequests != [] %}
                         <form id = "modal_form_group" action="{{url_for('relationship.friend_approve')}}" method="POST">
                             <h5>Received <small>(Select and submit to approve)</small></h5>
                             {{FriendApprove.hidden_tag()}}
@@ -108,7 +117,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    {% if current_user.get_received_friend_requests() != none %}
+                    {% if current_user.receivedfriendrequests != [] %}
                         {{FriendApprove.submit(class_=("btn btn-primary btn-block-submit submit"))}}
                         </form>
                     {% endif %}
@@ -140,7 +149,7 @@
                             </ul>
                         <!--if admin display none or list of pending approvals -->
                         {% if current_user.group_admin | length > 0 %}
-                            {% if current_user.get_group_approval_requests() != none %}
+                            {% if GroupRequest.get_pending(current_user) != [] %}
                             <form id = "modal_form_group" action="{{url_for('relationship.group_approve')}}" method="POST">
                                 <h5>Received <small>(Select and submit to approve)</small></h5>
                                 {{GroupMemberApprove.hidden_tag()}}
@@ -158,7 +167,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        {% if current_user.get_group_approval_requests() != none %}
+                        {% if GroupRequest.get_pending(current_user) != [] %}
                             {{FriendApprove.submit(class_=("btn btn-primary btn-block-submit submit"))}}
                             </form>
                         {% endif %}

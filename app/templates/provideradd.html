@@ -1,12 +1,29 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import form_render%}
+{% from "macros.html" import field_render%}
 {% block title %} {{ super() }} {% endblock %}
 
-{% block content_narrow %}
+{% block content_narrow_form %}
     <h3>Add Provider / Business</h3>
     <form action="/provideradd" method="post", id="provideraddform">
-        {{form_render(form)}}
+        {{form.hidden_tag()}}
+        {{field_render(form.name)}}
+        {{field_render(form.sector)}}
+        {{field_render(form.category)}}
+        {{field_render(form.email)}}
+        {{field_render(form.telephone)}}
+        <div class="form-group row mx-2">
+            <div class="col">
+            {{form.address.full_address_unknown(class_="form-check-input")}}
+            {{form.address.full_address_unknown.label(class_="form-check-label")}}
+            </div>
+        </div>
+        <p hidden class="alert pl-1" id="toggle_message">Please enter city and state.</p>
+        {{field_render(form.address.line1)}}
+        {{field_render(form.address.line2)}}
+        {{field_render(form.address.city)}}
+        {{field_render(form.address.state)}}
     </form>
+        {{field_render(form.address.zip)}}
 {% endblock %}
 
 

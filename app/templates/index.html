@@ -5,26 +5,42 @@
 {% block full %}{%endblock%}
 
   
-{% block content_narrow %}
-        <h3>Search for Provider</h3>
-        <form action="/search" method="get", id="providersearch">
-{#            {{form.hidden_tag()}} #}
-            {{form.hidden_tag()}}
-            {{field_render(form.sector)}}
-            {{field_render(form.category)}}
-            {{field_render(form.city)}}
-            {{field_render(form.state)}}
-            <fieldset class="form-group">
-                <legend class="col-form-label mx-auto">Check to filter by:</legend>
-                    {{field_render(form.friends_only)}}
-                    {{field_render(form.groups_only)}}
-            </fieldset>
-            {{field_render(form.submit)}}
-        </form>
-        <br>
+{% block content_narrow_form %}
+    <div class="row">
+    <h3>Search for Provider</h3>
+        <ul class="nav">
+            <a class="nav-link" href="{{url_for('main.provider_add')}}">(Add new provider)</a>
+        </ul>
+    </div>
+
+    <form action="/search" method="get", id="providersearch">
+        {{form.hidden_tag()}}
+        {{field_render(form.sector)}}
+        {{field_render(form.category)}}
+        {{field_render(form.city)}}
+        {{field_render(form.state)}}
+        {{field_render(form.name)}}
+        <fieldset class="form-group">
+            <legend class="col-form-label">Check to filter by:</legend>
+            <div class="form-group row mx-4">
+                <div class="col">
+                {{form.friends_filter(class_="form-check-input")}}
+                {{form.friends_filter.label(class_="form-check-label")}}
+                </div>
+            </div>
+            <div class="form-group row mx-4">
+                <div class="col">
+                {{form.groups_filter(class_="form-check-input")}}
+                {{form.groups_filter.label(class_="form-check-label")}}
+                </div>
+            </div>
+        </fieldset>
+        {{field_render(form.submit)}}
+    </form>
+    <br>
 {% endblock %}  
 
-{% block content_wide %}
+{% block content_medium %}
         {%for provider in providers %}
             {{render_provider(provider, filter)}}
             <br>
