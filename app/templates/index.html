@@ -13,15 +13,20 @@
         </ul>
     </div>
 
-    <form action="/search" method="get", id="providersearch">
+    <form action="{{url_for('main.search')}}" method="get", id="providersearch">
         {{form.hidden_tag()}}
         {{field_render(form.sector)}}
         {{field_render(form.category)}}
-        {{field_render(form.city)}}
-        {{field_render(form.state)}}
         {{field_render(form.name)}}
+        <!-- form filters -->
         <fieldset class="form-group">
             <legend class="col-form-label">Check to filter by:</legend>
+            <div class="form-group row mx-4">
+                <div class="col">
+                {{form.reviewed_filter(class_="form-check-input")}}
+                {{form.reviewed_filter.label(class_="form-check-label")}}
+                </div>
+            </div>
             <div class="form-group row mx-4">
                 <div class="col">
                 {{form.friends_filter(class_="form-check-input")}}
@@ -35,8 +40,11 @@
                 </div>
             </div>
         </fieldset>
+        <!-- form sorts -->
+        {{field_render(form.sort)}}
         {{field_render(form.submit)}}
     </form>
+    
     <br>
 {% endblock %}  
 

@@ -1,45 +1,42 @@
 
-.alert {
-  color: red;
-}
 .container-fluid {
-   padding: 0;
- }
- .container {
+  padding: 0;
+}
+.container {
   padding: 100px;
 
- }.d-flex {
+}.d-flex {
   background-color: #003366;
- }
+}
 
- .error {
- border: 2px solid red;
- }
+.error {
+  border: 2px solid red;
+}
 
  .italic{
-  font-style: italic;
- }
+   font-style: italic;
+  }
   .jumbotron {
-  background-color: #003366;
- }
-
-.modal-table{
-  width: 75%;
-  height: 85%;
-  position: fixed;
-  top: 50%;
+    background-color: #003366;
+  }
+  
+  .modal-table{
+    width: 75%;
+    height: 85%;
+    position: fixed;
+    top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
 .biz_rating_category{
- font-style:italic;
+  font-style:italic;
 }
 .biz_rating_name{
- font-size:2rem;
- font-weight: bold;
+  font-size:2rem;
+  font-weight: bold;
 }
 .biz_rating_left{
- border-top-style: solid;
+  border-top-style: solid;
  border-bottom-style: solid;
  border-left-style: solid;
  border-width: thin;
@@ -49,8 +46,8 @@
  background-color: #f2f2f2;
 }
 .biz_rating_right{
- border-right-style: solid;
- border-width: thin;
+  border-right-style: solid;
+  border-width: thin;
  border-color: grey;
  border-top-right-radius: 15px;
  border-top-style: solid;
@@ -72,14 +69,14 @@
   background-color: #f2f2f2
 }
 .h-15{
- height: 15%!important;
+  height: 15%!important;
 }
 .h-40{
- height: 40%!important;
+  height: 40%!important;
 }
  .inline{
   display:inline;
- }
+}
 .nobullets{
   list-style:none
 }
@@ -87,7 +84,7 @@
   color: white;
 }
 .search_grid_1{
- display: block;
+  display: block;
  width: 600px;
 }
 .star-full{
@@ -100,14 +97,17 @@
   padding: 0%;
 }
 .ui-autocomplete {
- position: absolute;
- cursor: default;
- z-index:3000 !important;
- }
+  position: absolute;
+  cursor: default;
+  z-index:3000 !important;
+}
  .table_head{
-  background-color: darkblue;
-  color:white;
- }
+   background-color: darkblue;
+   color:white;
+  }
+.togglealert {
+  color: red;
+}
 
   #map {
     /* The height is 400 pixels */
@@ -115,7 +115,7 @@
     /* The width is the width of the web page */
     width: 100%;
  }
-.thumbnail{
+ .thumbnail{
   height: 100px;
   width: auto;
 }

@@ -10,8 +10,6 @@ from app.extensions import mail
 
 
 def send_async_email(app, msg):
-    # app = create_app()
-    print(f"async app {app}")
     with app.app_context():
         mail.send(msg)
 

@@ -82,7 +82,7 @@ function check_validity(input){
 
 function category_get(category_id="provider_category", sector_id="provider_sector"){
     var s = document.getElementById(sector_id);
-    s.addEventListener("click", function(event){
+    s.addEventListener("input", function(event){
         var url =  "/categorylist";
         var sector = {"sector": s.value};
         $.getJSON(url, sector, function(data) {

@@ -4,7 +4,7 @@
 
 {% block content_narrow_form %}
     <h3>Add Provider / Business</h3>
-    <form action="/provideradd" method="post", id="provideraddform">
+    <form action="{{url_for('main.provider_add')}}" method="post", id="provideraddform">
         {{form.hidden_tag()}}
         {{field_render(form.name)}}
         {{field_render(form.sector)}}
@@ -17,13 +17,14 @@
             {{form.address.full_address_unknown.label(class_="form-check-label")}}
             </div>
         </div>
-        <p hidden class="alert pl-1" id="toggle_message">Please enter city and state.</p>
+        <p hidden class="togglealert pl-1" id="toggle_message">Please enter city and state.</p>
         {{field_render(form.address.line1)}}
         {{field_render(form.address.line2)}}
         {{field_render(form.address.city)}}
         {{field_render(form.address.state)}}
-    </form>
         {{field_render(form.address.zip)}}
+        {{field_render(form.submit)}}
+    </form>
 {% endblock %}
 
 

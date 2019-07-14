@@ -267,11 +267,16 @@
     </li>
 {% endmacro %}
 
-{% macro render_provider(provider_tuple, filter) %}
+{% macro render_provider(provider, filter) %}
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
-    {% set provider, average, cost, count = provider_tuple %}
-    {% set cost = 3 %}
+    {% if 'y' in filter.values() %}
+        {% set provider, average, cost, count = provider %}
+    {% else %}
+        {% set average = provider.average_rating %}
+        {% set cost = provider.average_cost %}
+        {% set count = provider.review_count %}
+    {% endif %}
     <div class="card">
         <div class="card-header">
             <div class="row">

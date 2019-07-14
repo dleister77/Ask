@@ -165,6 +165,14 @@ class ProviderAddForm(FlaskForm):
                                    coerce=int,
                                    id="category")
     address = FormField(ProviderAddress)
+    # service_state = SelectMultipleField("Service Area State",
+    #                                     choices=State.list(),
+    #                                     validators=[DataRequired(message="Service area state is required.")],
+    #                                     coerce=int, id="service_state")
+    # service_city = SelectMultipleField("Service Area City",
+    #                                     choices=[],
+    #                                     validators=[DataRequired(message="Service area city is required.")],
+    #                                     coerce=int, id="service_city")
     email = StringField("Email", validators=[Email(),
                          unique_check(Provider, Provider.email), Optional()])
     telephone = StringField("Telephone",
@@ -188,7 +196,24 @@ class ProviderAddForm(FlaskForm):
         if p:
             raise ValidationError("Provider already exists, please select a new name.")
 
+    # def _make_address_fields_optional(self):
+    #     """Update form to make physical address fields optional for service providers with a service area."""
+    #     for field in self.address:
+    #         field.validators.append(Optional())
 
+    # def _remove_service_area_fields(self):
+    #     """Update form to remove service area for business with physical locations."""
+    #     del(self.service_state)
+    #     del(self.service_city)
+
+
+    # def check_service_area_required(self):
+    #     """Determine whether service area or address field data required validators need to be removed."""
+    #     if self.category.service_area_required is True:
+    #         self._make_address_fields_optional()
+    #     elif not self.category.service_area_required:
+    #         self._remove_service_area_fields()
+    #     return self
 
 
 class ProviderSearchForm(FlaskForm):
@@ -203,14 +228,19 @@ class ProviderSearchForm(FlaskForm):
     category = SelectField("Category", choices=[], 
                            validators=[DataRequired(message="Category is required.")],
                            coerce=int)
-    city = StringField("City",
-                        validators=[DataRequired(message="City is required.")])
-    state = SelectField("State", choices=State.list(),
-                         validators=[DataRequired(message="State is required.")], coerce=int)
+    # city = StringField("City",
+    #                     validators=[DataRequired(message="City is required.")])
+    # state = SelectField("State", choices=State.list(),
+    #                      validators=[DataRequired(message="State is required.")], coerce=int)
     name = StringField("Provider / Business Name", validators=[Optional()],
                        id="provider_name")
-    friends_filter = BooleanField("Friends")
-    groups_filter = BooleanField("Groups")
+    reviewed_filter = BooleanField("Reviewed - all")
+    friends_filter = BooleanField("Reviewed - friends")
+    groups_filter = BooleanField("Reviewed - groups")
+    sort = SelectField("Sort By",
+                        choices=[("rating", "Rating"), ("name", "Name"),
+                                ("distance", "Distance")],
+                        default=("rating", "Rating"))
     submit = SubmitField("Submit")
 
     def populate_choices(self):

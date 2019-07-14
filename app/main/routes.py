@@ -12,7 +12,8 @@ from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
                         User
 from app.utilities.helpers import disable_form, email_verified, name_check,\
-                                  pagination_urls, thumbnail_from_buffer
+                                  thumbnail_from_buffer
+from app.utilities.pagination import Pagination
 from app.main import bp
 
 
@@ -22,7 +23,6 @@ from app.main import bp
 @email_verified
 def index():
     form = ProviderSearchForm(obj=current_user.address)
-    form.state.data = current_user.address.state.id
     return render_template("index.html", form=form,title="Search")
 
 
@@ -88,7 +88,7 @@ def provider_add():
     if request.method == 'POST':
         form.category.choices = Category.list(form.sector.data)
     if form.validate_on_submit():
-        address = Address(# unknown=form.address.full_address_unknown.data,
+        address = Address(unknown=form.address.full_address_unknown.data,
                           line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
@@ -98,6 +98,7 @@ def provider_add():
         provider = Provider.create(name=form.name.data, email=form.email.data,
                                    telephone=form.telephone.data, 
                                    address=address, categories=categories)
+        address.get_coordinates()
         flash(provider.name + " added.")
         return redirect(url_for("main.index"))
     elif request.method == "POST":
@@ -194,17 +195,17 @@ def review():
 def search():
     form = ProviderSearchForm(request.args).populate_choices()
     page = request.args.get('page', 1, int)
+    per_page = 1
     if form.validate() or request.args.get('page') is not None:
-        providers_query = Provider.search(form)
-        providers = providers_query.paginate(page,
-                    current_app.config["REVIEWS_PER_PAGE"], False)
-        pag_urls = pagination_urls(providers, 'main.search', request.args)
-        filter_fields = [form.friends_filter, form.groups_filter]
+        providers = Provider.search(form)
+        pagination = Pagination(providers, page, current_app.config['PER_PAGE'])
+        pag_urls = pagination.get_urls('main.search', request.args)
+        providers = pagination.paginatedData
+        filter_fields = [form.reviewed_filter, form.friends_filter, form.groups_filter]
         filter={}
         for field in filter_fields:
             if field.data is True:
                 filter[field.name] = 'y'
-        providers=providers.items
         if providers == []:
             flash("No results found. Please try a different search.")
         return render_template("index.html", form=form, title="Search", 
