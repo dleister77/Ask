@@ -3,21 +3,22 @@ from operator import attrgetter
 import re
 from string import capwords
 
-from flask import current_app, render_template
+from flask import current_app, render_template, session
 from flask_login import UserMixin, current_user
 import jwt
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, func as saFunc
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import desc
 from threading import Thread
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
-from app.utilities.geo import geocode, get_distance, get_geo_range
+from app.utilities.geo import get_distance
 
 
 
@@ -41,7 +42,7 @@ user_friend = db.Table('user_friend', db.Model.metadata,
 # many to many table linking pictures with providers with service area locations
 # provider_location = db.Table('provider_location', db.Model.metadata,
 #     db.Column('provider_id', db.Integer, db.ForeignKey('provider.id')),
-#     db.Column('location_id', db.Integer, db.ForeignKey('location.id')))
+#     db.Column('location_id', db.Integer, db.ForeignKey('filters['location'].id')))
 
 class State(Model):
     """States used in db.
@@ -137,12 +138,19 @@ class Address(Model):
         latitude, longitude = geocode(address)
         self.update(latitude=latitude, longitude=longitude)
         return None
+    
+    @property
+    def distance(self):
+        """Return distance from location stored in session to address."""
+        origin = session['location']['coordinates']
+        distance = get_distance(origin, self.coordinates)
+        return distance
 
     def __repr__(self):
         return f"<Address {self.line1}, {self.city}, {self.state}>"
 
 
-# def Location(Model):
+# def filters['location'](Model):
 #     """US cities and States used to populate service area locations.
 #     Relationships:
 #     Many to Many: Providers
@@ -153,7 +161,7 @@ class Address(Model):
 #     state_short = db.Column(db.String(64))
 
 #     def __repr__(self):
-#         return f"<Location {self.city} {self.state}>"
+#         return f"<filters['location'] {self.city} {self.state}>"
 
 
 class User(UserMixin, Model):
@@ -546,7 +554,7 @@ class Provider(Model):
     
     Methods:
     list: generate list of provider id and name based on category.
-    autocomplete: generate autocomplete data based on already entered criteria
+    autocomplete: generate autocomplete data based on already entered filters
     search: generate list of providers based on submitted form data
     profile: return tuple of provider summary statistics / provider object
             based on social filter
@@ -560,7 +568,7 @@ class Provider(Model):
     address = db.relationship("Address", backref="provider", uselist=False,
                               passive_deletes=True)
     reviews = db.relationship("Review", backref="provider")
-    # service_area = db.relationship("Location", secondary="provider_location",
+    # service_area = db.relationship("filters['location']", secondary="provider_location",
     #                                backref = "providers")
 
     @hybrid_property
@@ -606,10 +614,20 @@ class Provider(Model):
     @staticmethod
     def list(category_id, format='tuple'):
         """Returns list of provider id and name based on category filter
-        Inputs:
-        category_id: category to filter by
-        format: output format, either 'dict' or 'tuple'
+        
+        Args:
+            category_id (int): category id to filter providers by
+            format (str): output format (dict or tuple) for id/name output in
+                          list
+
+        Returns:
+            list: list of providers (id and name)
+        
+        Raises:
+            ValueError: if format other than dict or tuple is passed as
+                        parameter
         """
+
         category = Category.query.get(category_id)
         query = (Provider.query.filter(Provider.categories.contains(category))
                                .order_by(Provider.name)).all()
@@ -618,68 +636,121 @@ class Provider(Model):
                             in query]
         elif format == 'tuple':
             provider_list = [(provider.id, provider.name) for provider
-                            in query]           
+                            in query]
+        else:
+            raise ValueError("incorrect format")   
         return provider_list
 
-    @staticmethod
-    def autocomplete(name, category_id, city, state_id, limit=10):
-        """Returns list of providers to populate autocomplete."""
-        filter_args = [Provider.name.ilike(f"%{name}%")]
-        join_args = [Provider.address]
-        if city:
-            filter_args.append(Address.city.ilike(f"%{city}%"))
-        if state_id:
-            filter_args.append(Address.state_id == state_id)
-        if category_id:
-            category = Category.query.get(category_id)
-            filter_args.append(Provider.categories.contains(category))
-        providers = Provider.query.join(*join_args).filter(*filter_args)\
-                                    .order_by(Provider.name).limit(limit).all()
-        if providers == []:
-            name = name.replace("", "%")
-            providers = Provider.query.join(*join_args).filter(*filter_args)\
-                                .order_by(Provider.name).limit(limit).all()
-        return providers
-
     @classmethod
-    def search(cls, form, range=30):
-        """Determine which method to call."""
-        category = Category.query.get(form.category.data)
-        origin = current_user.address.coordinates
-        min_long, max_long, min_lat, max_lat = get_geo_range(origin, range)
-        sort_criteria = form.sort.data
-        filtered = form.reviewed_filter.data is True\
-                   or form.friends_filter.data is True\
-                   or form.groups_filter.data is True
-        query_args = [Provider]
-        filter_args = [Provider.categories.contains(category),
-                       Address.longitude > min_long,
-                       Address.longitude < max_long,
-                       Address.latitude > min_lat,
-                       Address.latitude < max_lat]
+    def searchOld(cls, filters, reviewFilters=None, limit=None):
+        """Search for providers meeting specified filters and social filters.
+        
+        Args:
+            filters (dict): main search filters (category, name, location)
+            reviewFilters (dict): optional, additional search filters based on if 
+                            reviewed and whether reviewed by users social circle
+            limit (int): optional, defaults to none, limits number of results 
+                         returned
+        Returns:
+            list: list of providers plus summary statistics for each provider,
+                  sorted by provider name
+        """
+
+        name = filters.get('name')
+        filter_args = [Provider.categories.contains(filters['category']),
+                       Address.longitude > filters['location'].minLong,
+                       Address.longitude < filters['location'].maxLong,
+                       Address.latitude > filters['location'].minLat,
+                       Address.latitude < filters['location'].maxLat]
         join_args = [Provider.address]
-        if form.name.data is not None:
-            name = f"%{form.name.data}%"
+        query_args = [Provider]
+        if name is not None:
+            name = f"%{name}%"
             filter_args.append(Provider.name.ilike(name))
-        if filtered:
-            query_args.extend([func.avg(Review.rating).label("average"),
-                               func.avg(Review.cost).label("cost"),
-                               func.count(Review.id).label("count")])
+        if reviewFilters and True in reviewFilters.values():
+            query_args.extend([func.avg(Review.rating).label("reviewAverage"),
+                               func.avg(Review.cost).label("reviewCost"),
+                               func.count(Review.id).label("reviewCount")])
             join_args.extend([Provider.reviews, Review.user])
-            if form.friends_filter.data is True:
+            if filters.get('friends') is True:
                 filter_args.append(User.friends.contains(current_user))
-            if form.groups_filter.data is True:
+            if filters.get('groups') is True:
                 groups = [g.id for g in current_user.groups]
                 filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
                 join_args.extend([User.groups])
+        
         providers = (db.session.query(*query_args)
                                      .join(*join_args)
                                      .filter(*filter_args)
                                      .group_by(Provider.name)
                                      .order_by(Provider.name)
-                                     .all())
-        cls._sort(providers, sort_criteria, filtered, origin)
+                                     .limit(limit)
+                                     .all())      
+        return providers
+
+    @classmethod
+    def search(cls, filters, sort=None, reviewFilters=None, limit=None):
+        """Search for providers meeting specified filters and social filters.
+
+        Search for providers based on category and distance from search origin.
+        Sorting by name or average rating are done by database.  Distance sort
+        done outside of this method.  
         
+        Args:
+            filters (dict): main search filters (category, name, location, id)
+            sort (str): sort criteria to use.  name, distance, rating
+            reviewFilters (dict): optional, additional search filters based on if 
+                            reviewed and whether reviewed by users social circle
+            limit (int): optional, defaults to none, limits number of results 
+                         returned
+        Returns:
+            list: list of providers plus summary statistics for each provider,
+                  sorted by provider name
+        """
+
+
+        filter_args = []
+        if "category" in filters.keys():
+            filter_args.append(Provider.categories.contains(filters['category']))
+        if "location" in filters.keys():
+            filter_args.extend([Address.longitude > filters['location'].minLong,
+                               Address.longitude < filters['location'].maxLong,
+                               Address.latitude > filters['location'].minLat,
+                               Address.latitude < filters['location'].maxLat])
+        if "id" in filters.keys():
+            filter_args.append(Provider.id == filters['id'])
+        if "name" in filters.keys():
+            name = f"%{filters['name']}%"
+            filter_args.append(Provider.name.ilike(name))
+        join_args = [Provider.address, Address.state, Provider.categories]
+        outerjoin_args = [Provider.reviews, Review.user]
+        query_args = [Provider.id, Provider.name, Provider.email,
+                      Provider.telephone, Address.line1, Address.line2,
+                      Address.city, State.state_short, Address.zip,
+                      Address.latitude, Address.longitude,
+                      saFunc.group_concat(Category.name.distinct()).label("categories"),
+                      func.avg(Review.rating).label("reviewAverage"),
+                      func.avg(Review.cost).label("reviewCost"),
+                      func.count(Review.id).label("reviewCount")]
+        if reviewFilters and True in reviewFilters.values():
+            if filters.get('friends') is True:
+                filter_args.append(User.friends.contains(current_user))
+            if filters.get('groups') is True:
+                groups = [g.id for g in current_user.groups]
+                filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
+                join_args.extend([User.groups])
+        if sort and sort == "rating":
+            sort_arg = [desc("reviewAverage"), Provider.name]
+        else:
+            sort_arg = [Provider.name]
+        providers = (db.session.query(*query_args)
+                                     .join(*join_args)
+                                     .outerjoin(*outerjoin_args)
+                                     .filter(*filter_args)
+                                     .group_by(Provider.id)
+                                     .order_by(*sort_arg)
+                                     .limit(limit)
+                                     .all())      
         return providers
 
     def profile(self, filter):
@@ -704,49 +775,60 @@ class Provider(Model):
                              .first())
         return (self, summary.average, summary.cost, summary.count)
 
-    def profile_reviews(self, filter):
+    def getReviews(self, reviewFilter):
         """Returns review object query."""
         # base filter and join args
         filter_args = [Provider.id == self.id]
-        join_args = [Review.provider, Review.user]
-
-        # update filter and joins for relationship filters
-        if filter['friends_filter'] is True:
+        join_args = [Provider.reviews, Review.user]
+        if reviewFilter['friends_filter'] is True:
             filter_args.append(User.friends.contains(current_user))
-        if filter['groups_filter'] is True:
+        if reviewFilter['groups_filter'] is True:
             groups = [g.id for g in current_user.groups]
             join_args.extend([User.groups])
             filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
         reviews = (db.session.query(Review).join(*join_args)
-                                           .filter(*filter_args))
+                                           .filter(*filter_args)
+                                           .all())
         return reviews
     
     @classmethod
-    def _sort(cls,results, sort_criteria, filtered, origin):
-        """Sort search results.
-        Inputs:
-           search_results: list of providers or providers/summary stat tuples
-           sort_criteria: criteria to sort by (either distance, rating or name)
-           filtered: whether results only include providers with reviews
-           origin: starting point for distance calculations
+    def sortResults(cls,results, sortCriteria, filters, searchOrigin):
+        """Sort search results based on filters.
+
+        Args:
+           search_results (list): list of providers or providers/summary stat 
+                                  tuples
+           sortCriteria (str): filters to sort by (either distance, rating or
+                                name)
+           filters (dict): review and social filters applied to search
+           searchOrigin (tuple): lat/long starting point for
+                                 distance calculations
+        
+        Returns:
+           results: sorted list
+
         """
+        filtered = True in filters.values()
         if filtered:
-            if sort_criteria == 'distance':
+            if sortCriteria == 'distance':
                 results.sort(key=lambda provider:
-                get_distance(origin, provider[0].address.coordinates))
-            elif sort_criteria == 'rating':
+                                        get_distance(searchOrigin,
+                                        provider[0].address.coordinates)
+                            )
+            elif sortCriteria == 'rating':
                 results.sort(key=attrgetter('average'), reverse=True)
         else:
-            if sort_criteria == 'distance':
+            if sortCriteria == 'distance':
                 results.sort(key=lambda provider:
-                get_distance(origin, provider.address.coordinates))
-            elif sort_criteria == 'rating':
+                                        get_distance(searchOrigin,
+                                        provider.address.coordinates)
+                            )
+            elif sortCriteria == 'rating':
                 results.sort(key=attrgetter('average_rating'), reverse=True)
-        return None
+        return results
 
     def __repr__(self):
         return f"<Provider {self.name}>"
-
 
 class Review(Model):
     """Class to create define review table in db.
@@ -795,10 +877,37 @@ class Review(Model):
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"
 
+    @classmethod
+    def search(cls, providerId, reviewFilter):
+        """Searches for reviews based on provider id and social filters.
+        
+        Args:
+            providerId (int): provider id from database
+            reviewFilter (dict): determines whether to only include reviews
+                                 that have been reviewed by friends or members
+                                 users groups
+        Returns:
+            list of review objects
+        
+        """
+        # base filter and join args
+        filter_args = [Provider.id == providerId]
+        join_args = [Review.provider, Review.user]
+        if reviewFilter['friends_filter'] is True:
+            filter_args.append(User.friends.contains(current_user))
+        if reviewFilter['groups_filter'] is True:
+            groups = [g.id for g in current_user.groups]
+            join_args.extend([User.groups])
+            filter_args.extend([Group.id.in_(groups), User.id != current_user.id])
+        reviews = (db.session.query(Review).join(*join_args)
+                                           .filter(*filter_args)
+                                           .all())
+        return reviews
+
 
 class Picture(Model):
     """Class to define picture table in db, to be linked with reviews.
-    picture_path - location of picture in file storage system
+    picture_path - filters['location'] of picture in file storage system
     Relationships:
         Child of: Review
     """

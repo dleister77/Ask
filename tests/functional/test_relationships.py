@@ -1,4 +1,4 @@
-from app.helpers import dbUpdate
+from app.utilities.helpers import dbUpdate
 from app.models import User, Group
 from flask import escape, url_for
 from flask_login import current_user

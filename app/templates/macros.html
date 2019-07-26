@@ -47,19 +47,14 @@
                 <!-- {{field.render_kw}} -->
             {% endif %}
             {{render_errors(field)}}
-
-
         </div>
     </div>
 {% endmacro %}
 
 {% macro render_errors(field) %}
-    {% if field.errors|length > 0 %}
-        <span style="color:red;">{{field.errors}}</span>
-    {% endif %}
     {% if field.errors|length == 1 %}
         <span style="color:red;">{{field.errors}}</span>
-    {% else %}
+    {% elif field.errors|length > 1 %}
         {% for error in field.errors %}
             <span style="color:red;">{{error}}</span>
         {% endfor %}
@@ -255,7 +250,7 @@
 {% endmacro %}
 
 {% macro cost_rating(rating) %}
-<!-- Converts numerical cost rating to html inline list of dollar signs-->
+<!-- Converts numerical reviewCost rating to html inline list of dollar signs-->
     <li class="list-inline-item">
         {#-- convert rating to stars #}
         {% set var = (rating*100)|int %}
@@ -271,11 +266,11 @@
 <!-- Renders provider card. -->
 <!-- Input: provider object -->
     {% if 'y' in filter.values() %}
-        {% set provider, average, cost, count = provider %}
+        {% set provider, reviewAverage, reviewCost, reviewCount = provider %}
     {% else %}
-        {% set average = provider.average_rating %}
-        {% set cost = provider.average_cost %}
-        {% set count = provider.review_count %}
+        {% set reviewAverage = provider.average_rating %}
+        {% set reviewCost = provider.average_cost %}
+        {% set reviewCount = provider.review_count %}
     {% endif %}
     <div class="card">
         <div class="card-header">
@@ -301,21 +296,21 @@
                     <ul class="list-unstyled">
                         <li>Category: {{ provider.categories|map(attribute='name')|join(', ') }}</li>
                         <li>
-                            {% if count > 0 %}
+                            {% if reviewCount > 0 %}
                             <ul class="list-inline">
-                                <li class="list-inline-item">{{average}}</li>
-                                <li class="list-inline-item">{{star_rating(average)}}</li>
-                                <li class="list-inline-item">({{count}})</li>                                    
+                                <li class="list-inline-item">{{reviewAverage}}</li>
+                                <li class="list-inline-item">{{star_rating(reviewAverage)}}</li>
+                                <li class="list-inline-item">({{reviewCount}})</li>                                    
                             </ul>
                             {% else %}
                             No ratings
                             {% endif %}
                         </li>
                         <li>
-                            {% if count > 0 %}
+                            {% if reviewCount > 0 %}
                             <ul class="list-inline">
-                                <li class="list-inline-item">{{cost}}</li>
-                                <li class="list-inline-item">{{cost_rating(cost)}}</li>                                    
+                                <li class="list-inline-item">{{reviewCost}}</li>
+                                <li class="list-inline-item">{{cost_rating(reviewCost)}}</li>                                    
                             </ul>                           
                             {% endif %}                            
                         </li>
@@ -335,7 +330,71 @@
         </div>
     </div>
     
-{% endmacro %}         
+{% endmacro %} 
+
+{% macro render_provider_alt(provider, filter) %}
+<!-- Renders provider card. -->
+<!-- Input: provider named tuple -->
+
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <div class="col-7 col-md-8">
+                    {% if provider.name not in request.view_args.values() %}
+                    <h4><a class="prov-link" id="{{provider.name}}-{{provider.id}}-link", href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
+                    {% else %}
+                    <h4>{{provider.name}}</h4>
+                    {% endif %}
+                </div>
+                <div class="col-5 col-md-4">
+                    <ul class="nav justify-content-end">
+                        <a class="prov-link nav-link" href="{{ url_for('main.review', name=provider.name, id=provider.id) }}">
+                        Add Review</a>
+                    </ul>
+                </div>
+            </div>    
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6 p-3">
+                    <ul class="list-unstyled">
+                        <li>Category: {{ provider.categories | replace(",", ", ") }}</li>
+                        <li>
+                            {% if provider.reviewCount > 0 %}
+                            <ul class="list-inline">
+                                <li class="list-inline-item">{{provider.reviewAverage}}</li>
+                                <li class="list-inline-item">{{star_rating(provider.reviewAverage)}}</li>
+                                <li class="list-inline-item">({{provider.reviewCount}})</li>                                    
+                            </ul>
+                            {% else %}
+                            No ratings
+                            {% endif %}
+                        </li>
+                        <li>
+                            {% if provider.reviewCount > 0 %}
+                            <ul class="list-inline">
+                                <li class="list-inline-item">{{provider.reviewCost}}</li>
+                                <li class="list-inline-item">{{cost_rating(provider.reviewCost)}}</li>                                    
+                            </ul>                           
+                            {% endif %}                            
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-6 p-3">
+                    <ul class="list-unstyled">
+                        <li>{{provider.line1}}</li>
+                        <li>{{provider.line2}}</li>
+                        <li>{{"%s, %s %s"|format(provider.city, provider.state_short, provider.zip)}}</li>
+                        <li>{{'(%s) %s-%s'|format(provider.telephone[0:3],provider.telephone[3:6], provider.telephone[6:10])}}</li>
+                        <li>{{provider.email}}
+                        <li>{{provider.website}}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+{% endmacro %}     
 
 {% macro render_review(review, current_user, bizname=true) %}
 <!-- render review card.  -->

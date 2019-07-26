@@ -1,14 +1,16 @@
 import os
 import re
 
+from flask import session
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from magic import from_file, from_buffer
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
-     MultipleFileField, HiddenField)
+     MultipleFileField, HiddenField, FloatField)
 from wtforms.validators import (DataRequired, Email, ValidationError, Optional,
  Regexp, InputRequired, StopValidation)
+from wtforms.widgets import HiddenInput
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
@@ -220,11 +222,23 @@ class ProviderSearchForm(FlaskForm):
     """Form to search for providers."""
     class Meta:
         csrf = False
+    
+    home = SelectField("Search Location",
+                       choices = [],
+                       validators=[DataRequired(message="Home location is required.")],
+                       id="home")  
+    manual_location = StringField("Enter New Location", validators=[],
+                             id="manual_location",
+                             render_kw={"hidden":True, "placeholder":
+                             "Street address, city, state"})
+
+    gpsLat = HiddenField("New latitude", id="gpsLat")
+    gpsLong = HiddenField("New longitude", id="gpsLong")
     sector = SelectField("Sector",
                                  choices=Sector.list(), 
-                                 validators=[DataRequired(message="Sector is required.")],
                                  coerce=int,
-                                 id="sector")
+                                 id="sector",
+                                 ) 
     category = SelectField("Category", choices=[], 
                            validators=[DataRequired(message="Category is required.")],
                            coerce=int)
@@ -239,13 +253,45 @@ class ProviderSearchForm(FlaskForm):
     groups_filter = BooleanField("Reviewed - groups")
     sort = SelectField("Sort By",
                         choices=[("rating", "Rating"), ("name", "Name"),
-                                ("distance", "Distance")],
-                        default=("rating", "Rating"))
+                                ("distance", "Distance")]
+                       )
     submit = SubmitField("Submit")
 
     def populate_choices(self):
-        self.category.choices = Category.list(self.sector.data)
+        if self.sector.data:
+            self.category.choices = Category.list(self.sector.data)
+        else:
+            self.category.choices = Category.list(1)
+        self.home.choices = [("home", f"Home - "
+                                           f"{current_user.address.line1}, "
+                                           f"{current_user.address.city}, "
+                                           f"{current_user.address.state.state_short}"),
+                                  ("gps", "New - Use GPS"), ("manual", "New - Manually Enter")]
+        self.home.default = self.home.choices[0]
+        location = session.get('location')
+        if location is not None and self.home.data == "manualExisting":
+            self.home.choices.insert(0, ("manualExisting", 
+                                         f"{location['address']}"))        
         return self
+    
+    def initialize(self):
+        """Update home choices and empty manual location input."""
+        location = session.get('location')
+        if location is not None and self.home.data=="manual":
+            self.home.choices.insert(0, ("manualExisting", 
+                                         f"{location['address']}"))
+            self.home.data = self.home.choices[0]    
+            self.manual_location.data = ""
+        return self
+
+    def remove_empty_fields(self):
+        """Removes empty fields to allow for validation for autocomplete."""
+        for field in self:
+            if field.data is None:
+                del(field)
+        return self
+    
+
 
 class ProviderFilterForm(FlaskForm):
     """Form to apply social filters to provider profile page."""

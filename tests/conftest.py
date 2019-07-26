@@ -1,7 +1,7 @@
 from app import create_app
 from app import db
 from app.models import User, Address, State, Category, Group, Provider, Review
-from config import Config, basedir
+from config import TestConfig
 from datetime import date
 import os
 import pytest
@@ -33,18 +33,6 @@ def scenarioUpdate(test_case, parameters, values, assertions):
             test_case[param] = (val, assertion)
     else:
         test_case[parameters] = (values, assertions)
-
-
-class TestConfig(Config):
-    TESTING = True
-    SERVER_NAME = 'localhost.localdomain'
-    SQLALCHEMY_DATABASE_URI = "sqlite://"
-    TEST_STATES = [(2, "New York"),(1, "North Carolina")]
-    TEST_CATEGORIES = [(1, "Electrician"), (2, "Plumber")]
-    TEST_USER = {"username": "jjones", "password": "password"}
-    WTF_CSRF_ENABLED = False
-    MEDIA_FOLDER = os.path.join(basedir, 'instance', 'tests', 'photos')
-    REVIEWS_PER_PAGE = 1
 
 
 @pytest.fixture(scope='module')

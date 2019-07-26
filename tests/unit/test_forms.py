@@ -2,7 +2,8 @@ import pytest
 from app import create_app
 from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
 								    GroupSearchForm, GroupEditForm)
-from tests.conftest import login, scenarioUpdate, TestConfig
+from tests.conftest import login, scenarioUpdate
+from config import TestConfig
 
 app = create_app(TestConfig)
 with app.app_context():

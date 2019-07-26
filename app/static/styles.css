@@ -109,13 +109,17 @@
   color: red;
 }
 
-  #map {
-    /* The height is 400 pixels */
-    height: 400px;
-    /* The width is the width of the web page */
-    width: 100%;
- }
+#map {
+  /* The height is 400 pixels */
+  height: 400px;
+  /* The width is the width of the web page */
+  width: 100%;
+}
  .thumbnail{
   height: 100px;
   width: auto;
+}
+#viewDiv {
+  height: 600px;
+  width: 100%;
 }

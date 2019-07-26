@@ -8,7 +8,7 @@
 
         <!-- Required meta tags -->
         <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
 
         <!-- Bootstrap CSS -->
 
@@ -31,6 +31,10 @@
 
         <!-- link to include icons for star ratings -->
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+
+        <!-- link to ArcGis map API -->
+        <link rel="stylesheet" href="https://js.arcgis.com/4.12/esri/themes/light/main.css">
+        <script src="https://js.arcgis.com/4.12/"></script>
 
         {% block title %}<title> Ask a Neighbor: {{title}} </title>{% endblock %}
 
@@ -72,7 +76,6 @@
         {% endif %}
 
         <main class="container-fluid">
-
         {% block main %} {% endblock %}
 
         </main>

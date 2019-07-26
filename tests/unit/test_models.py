@@ -1,5 +1,4 @@
 from app import db, mail
-from app.helpers import dbUpdate
 from app.models import User, Address, Group, Category, Review, Provider
 from sqlalchemy.exc import IntegrityError
 import pytest
@@ -135,7 +134,6 @@ def test_user_update(test_db):
     u = User.query.filter_by(username="jjones").first()
     u.update(username="jjones1", email="jjones1@gmail.com")
     u.address.update(line1="7000 covey Chase dr")
-    dbUpdate()
     assert u.username == "jjones1"
     assert u.username != "jjones"
     assert u.email == "jjones1@gmail.com"

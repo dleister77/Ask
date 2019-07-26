@@ -1,4 +1,4 @@
-from app.helpers import name_check, pagination_urls
+from app.utilities.helpers import name_check
 from app.models import Provider, Review
 import os
 import pytest

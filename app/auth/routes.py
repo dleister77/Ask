@@ -11,9 +11,11 @@ from app.extensions import db
 from app.models import User, Address
 from app.utilities.helpers import pagination_urls, email_verified
 
-
+@bp.route('/')
 @bp.route('/welcome')
 def welcome():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
     form = LoginForm()
     return render_template("auth/welcome.html", form=form, title="Welcome")
 
@@ -49,7 +51,7 @@ def email_verify_request():
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("main.index"))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -67,6 +69,9 @@ def login():
 @bp.route('/logout')
 def logout():
     logout_user()
+    keysToRemove = ['location', 'email_verification_sent']
+    for key in keysToRemove:
+        session.pop(key)
     return redirect(url_for('auth.welcome'))
 
 

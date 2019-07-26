@@ -1,9 +1,15 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import render_provider, render_review, pagination, field_render_inline, field_row_render %}
+{% from "macros.html" import render_provider_alt, render_review, pagination, field_render_inline, field_row_render %}
 
 {% block content_medium %}
+
+    {% if 'y' in reviewFilter.values() %}
+        {% set providerObject = provider[0] %}
+    {% else %}
+        {% set providerObject = provider %}
+    {% endif %}
     <form class="form-inline" action='{{url_for("main.provider", 
-    name=provider[0].name, id=provider[0].id)}}' method="get">
+    name=providerObject.name, id=providerObject.id)}}' method="get">
         {{form.hidden_tag()}}
             <legend class="col-form-label">Applied Social Filter:</legend>
             <div class="form-check mb-2 mr-sm-2">
@@ -15,17 +21,19 @@
             {{form.submit(class_="btn btn-primary submit mb-2")}}
     </form>
     <br>
-    {{render_provider(provider, filter)}}
+    {{render_provider_alt(provider, reviewFilter)}}
     <br>   
 
 {% endblock content_medium %}
 
 {% block content_wide %}
-    {%for review in reviews %}
-        {{render_review(review, current_user, false)}}
-        <br>
-    {% endfor %}
+    {% if reviews %}
+        {%for review in reviews %}
+            {{render_review(review, current_user, false)}}
+            <br>
+        {% endfor %}
 
-    {{pagination(pag_urls)}}
+        {{pagination(pag_urls)}}
+    {% endif %}
 
 {% endblock content_wide %}

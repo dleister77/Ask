@@ -1,10 +1,10 @@
 import math
 
-from flask import url_for
+from flask import current_app, url_for
 
 class Pagination:
     """Basic pagination function"""
-    def __init__(self, data, page, per_page):
+    def __init__(self, data, page, per_page=current_app.config.get('PER_PAGE')):
         self.data = data
         self.page = page
         self.per_page = per_page

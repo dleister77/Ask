@@ -1,5 +1,5 @@
 {% extends "single_column.html" %}
-{% from "macros.html" import field_render, form_render, render_provider, pagination %}
+{% from "macros.html" import field_render, form_render, render_provider, pagination, render_provider_alt %}
 
 
 {% block full %}{%endblock%}
@@ -14,7 +14,14 @@
     </div>
 
     <form action="{{url_for('main.search')}}" method="get", id="providersearch">
-        {{form.hidden_tag()}}
+        {{field_render(form.home)}}
+        <div hidden="true" class = "form-group row" id="manual_location_div">
+            <div class = "col">
+                {{ form.manual_location.label(hidden=true, class_="col-form-label") }}
+                {{ form.manual_location(hidden=true, class_="form-control") }}
+            </div>
+        </div>
+        {{ form.hidden_tag(form.gpsLat, form.gpsLong) }}
         {{field_render(form.sector)}}
         {{field_render(form.category)}}
         {{field_render(form.name)}}
@@ -49,14 +56,31 @@
 {% endblock %}  
 
 {% block content_medium %}
-        {%for provider in providers %}
-            {{render_provider(provider, filter)}}
-            <br>
-        {% endfor %}
-        {% if pag_urls %}
-            {{ pagination(pag_urls) }}
+    <div id="businessList">
+        <div class="row justify-content-end mx-2">
+            <button class="btn btn-link" id="viewOnMap" type="button">View on Map</button>
+        </div>
+        {% if providers and providers != none %}
+            {%for provider in providers %}
+                {{render_provider_alt(provider, reviewFilter)}}
+                <br>
+            {% endfor %}
+            {% if pag_urls %}
+                {{ pagination(pag_urls) }}
+            {% endif %}
         {% endif %}
-
-{% endblock %}  
+    </div>
+{% endblock %} 
+        
+{% block content_wide %}
+    <div hidden id="mapView">
+        <div class="row justify-content-end mx-2">
+                <button class="btn btn-link" id="viewList" type="button">View List</button>
+        </div>
+        <div id="viewDiv"> 
+        <!-- <p> where map should go</p>     -->
+        </div>
+    </div>    
+{% endblock %}
 
 
