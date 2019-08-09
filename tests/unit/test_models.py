@@ -1,5 +1,8 @@
 from app import db, mail
-from app.models import User, Address, Group, Category, Review, Provider
+from app.models import User, Address, Group, Category, Review, Provider,\
+                       FriendRequest, GroupRequest, Sector
+from app.utilities.email import get_token
+from app.utilities.geo import geocode, AddressError, Location
 from sqlalchemy.exc import IntegrityError
 import pytest
 
@@ -13,241 +16,603 @@ def null_test(test_db, model_class, test_case, key):
     with pytest.raises(IntegrityError):
         m = model_class.create(**test_case)
 
+@pytest.mark.usefixtures('session')
+class TestUser(object):
+    """Tests for User model class."""
 
-def test_user(test_db):
-    """
-    GIVEN a User, Address model
-    WHEN a new User is created
-    THEN check the email, hashed_password, address, are set correctly.
-    """
-    u = User.query.filter_by(username="jjones").first()
-    assert u.username == "jjones"
-    assert u.email == "jjones@yahoo.com"
-    assert u.password_hash != "shithead"
-    assert u.check_password("password") is True
-    assert u.check_password("liverpoolfc") is False
-    assert u.address.line1 == "7708 Covey Chase Dr"
-    assert u.address.city == "Charlotte"
-    assert u.address.city != "charlotte"
-    assert u.address.state.name == "North Carolina"
-    assert u.summary().average == 3
-    assert u.summary().count == 2
-    assert u.summary().cost == 2.5
-    assert u.email_verified is False
+    def test_attributes(self):
+        """
+        GIVEN a User, Address model
+        WHEN a new User is created
+        THEN check the email, hashed_password, address, are set correctly.
+        """
+        u = User.query.filter_by(username="jjones").first()
+        assert u.username == "jjones"
+        assert u.email == "jjones@yahoo.com"
+        assert len(u.reviews) == 2
+        assert u.email_verified is False
+        assert u._email_token_key == 'verify_email'
+        assert u._password_token_key == 'reset_password'
+        assert u.sentfriendrequests == []
+        assert u.receivedfriendrequests == []
+        assert u.sentgrouprequests == []
+        u2 = User.query.get(1)
+        assert u2 in u.friends
+        assert type(u.address) == Address
 
+    def test_newSameEmail(self):
+        with pytest.raises(IntegrityError):
+                User.create(first_name="Roberto", last_name="Firmino",
+                        email="jjones@yahoo.com", username="lfclegend")
 
-@pytest.mark.parametrize("key", ["line1", "city", "state_id","zip", "user_id"])
-def test_new_address(test_db, key):
-    test_case = {"line1": "13 Brook St", "city": "Lakewood",
-                 "state_id": "2", "zip": "14750","provider_id": None,
-                 "user_id": "2"}
-    null_test(test_db, Address, test_case, key)
+    def test_newSameUsername(self):
+        with pytest.raises(IntegrityError):
+                User.create(first_name="Roberto", last_name="Firmino",
+                        email="rfirmino@lfc.com", username="yardsmith")
 
+    @pytest.mark.parametrize('key', ['first_name', 'last_name', 'username', 'email'])
+    def test_newMissingInformation(self, newUserDict, key):
+        newUserDict[key] = None
+        with pytest.raises(IntegrityError):
+                User.create(**newUserDict)
 
-@pytest.mark.parametrize("key", ["first_name", "last_name", "address",
-                                "username", "email"])
-def test_new_user(test_db, key):
-    address = {"line1": "13 Brook St", "city": "Lakewood",
-                             "state_id": "2", "zip": "14750"}
-    address = Address.create(**address)
-    test_case = {"first_name": "Roberto", "last_name": "Firmino",
-                 "email": "rfirmino@lfc.com", "username": "rfirmino",
-                 "address": address}
-    null_test(test_db, User, test_case, key)
+        # change ever field except user_id
+    def test_update(self, testUser):
+        testUser.update(first_name="Jurgen", last_name="Klopp",
+                        email="coachinggod@lfc.com", username="jklopp")
+        assert testUser.first_name == "Jurgen"
+        assert testUser.last_name == "Klopp"
+        assert testUser.email == "coachinggod@lfc.com"
+        assert testUser.username == "jklopp"
+
+    def test_updateSingleField(self, testUser):
+        testUser.update(first_name="Jurgen")
+        assert testUser.first_name == "Jurgen"
+
+    def test_updateMissingInformation(self, testUser):
+        with pytest.raises(IntegrityError):
+                testUser.update(first_name=None, last_name="Klopp")
+
+    def test_updateDuplicateInformation(self, testUser):
+        with pytest.raises(IntegrityError):
+                testUser.update(username="yardsmith")
     
-          
+    def test_checkUpdateSingleField(self, testUser):
+        assert testUser.first_name != "Jurgen"
 
-def test_relationships(test_db):
-    """
-    GIVEN a User, Group Model and Association Tables
-    WHEN a new relationship is create
-    THEN that group and friendships are established correctly
-    """
-    u = User.query.filter_by(username="jjones").first()
-    f = User.query.filter_by(username="sarahsmith").first()
-    nf = User.query.filter_by(username="yardsmith").first()
-    g = Group.query.filter_by(name="Qhiv Hoa").first()
-    assert f in u.friends
-    assert g in u.groups
-    assert nf not in u.friends
-    assert u in f.friends
-    assert u in g.members
+    def test_delete(self, testUser):
+        FriendRequest.create(requestor_id=testUser.id, friend_id=4)
+        GroupRequest.create(requestor_id=testUser.id, group_id=2)
+        assert testUser.address.user_id == 2
+        assert len(User.query.all()) == 4
+        assert len(testUser.reviews) == 2
+        assert len(Review.query.all()) == 4
+        assert len(FriendRequest.query.all()) == 1
+        assert len(GroupRequest.query.all()) == 1
+        testUser.delete()
+        testUser = User.query.get(2)
+        assert testUser is None
+        assert Review.query.filter_by(user_id=2).all() == []
+        assert FriendRequest.query.filter_by(requestor_id=2).all() == []
+        assert GroupRequest.query.filter_by(requestor_id=2).all() == []
+        assert len(User.query.all()) == 3
 
+    def test_checkPassword(self, testUser):
+        assert testUser.check_password("password") is True
+        assert testUser.check_password("liverpoolfc") is False
 
-@pytest.mark.parametrize("key", ["name", "telephone",
-                                "categories", "address"])
-def test_new_provider(test_db, key):
-    address = {"line1": "13 Brook St", "city": "Lakewood",
-                             "state_id": "2", "zip": "14750"}
-    address = Address.create(**address)
-    cat_list = ["1", "2"]
-    categories = []
-    for cat in cat_list:
-        categories.append(Category.query.get(int(cat)))
-    test_case = {"name": "Smith Electric", "categories": categories,
-                 "telephone": "704-410-3873", "email": "smith@smith.com",
-                 "address": address}
-    null_test(test_db, Provider, test_case, key)
+    def test_setPassword(self, testUser):
+        testUser.set_password("longpassword")
+        assert testUser.check_password("longpassword") is True
 
+    def test_summary(self, testUser):
+        assert testUser.summary().average == 4
+        assert testUser.summary().count == 2
+        assert testUser.summary().cost == 2.5
 
-def test_provider(test_db, active_client):
-    """
-    GIVEN a Provider model
-    WHEN Provider added to db
-    Then check name, categories, contact information
-    """
-    p = Provider.query.filter_by(id=1).first()
-    c = Category.query.filter_by(name="Electrician").first()
-    c2 = Category.query.filter_by(name="Plumber").first()
-    assert p.name != "douthit electrical"
-    assert p.name == "Douthit Electrical"
-    assert p.telephone == "7047263329"
-    assert p.telephone != "704-726-3329"
-    assert p.email == "douthit@gmail.com"
-    assert c in p.categories
-    assert c2 not in p.categories
-    filter = {"friends_only": False, "groups_only": False}
-    assert p.profile_reviews(filter).first().rating == 3
-    assert p.profile(filter)[3] == 3
-    assert p.profile(filter)[2] == (13/3)
-    assert p.profile(filter)[1] == 3
-    assert p.profile(filter)[0] == p
-    filter['friends_only'] = True
-    assert p.profile_reviews(filter).first().rating == 1
-    assert p.profile(filter)[3] == 1
-    assert p.profile(filter)[2] == 5
-    assert p.profile(filter)[1] == 1
-    filter = {"friends_only": False, "groups_only": True}
-    assert p.profile_reviews(filter).first().comments == "Very clean"
-    assert p.profile(filter)[3] == 1
-    assert p.profile(filter)[2] == 5
-    assert p.profile(filter)[1] == 5
+    def test_addFriend(self, testUser, testUser4):
+        assert len(testUser.receivedfriendrequests)==0
+        request = FriendRequest.create(friend_id=testUser.id,
+                                        requestor_id=testUser4.id)
+        assert len(testUser.receivedfriendrequests)==1
+        assert len(testUser4.sentfriendrequests)==1
+        testUser.add(testUser4, request)
+        assert testUser4 in testUser.friends
+        assert len(testUser.receivedfriendrequests)==0
+        assert len(testUser4.sentfriendrequests)==0
 
+    def test_removeFriend(self, testUser, testUser2, testUser3):
+        testUser.remove(testUser2)
+        assert testUser2 not in testUser.friends
+        with pytest.raises(ValueError):
+                testUser.remove(testUser3)
 
-def test_user_update(test_db):
-    """
-    GIVEN User model
-    WHEN User is updated
-    CHECK ability to change name, address, and ability to detect duplicate
-    email addresses and usernames
-    """
-    u = User.query.filter_by(username="jjones").first()
-    u.update(username="jjones1", email="jjones1@gmail.com")
-    u.address.update(line1="7000 covey Chase dr")
-    assert u.username == "jjones1"
-    assert u.username != "jjones"
-    assert u.email == "jjones1@gmail.com"
-    assert u.address.line1 == "7000 Covey Chase Dr"
-    with pytest.raises(IntegrityError):
-        try:
-            u.update(username="yardsmith")
-        except:
-            test_db.session.rollback()
-            raise
-    with pytest.raises(IntegrityError):
-        try:
-            u.update(email="sarahsmith@yahoo.com")
-        except:
-            test_db.session.rollback()
-            raise
+    def test_addGroup(self, testUser):
+        assert(len(testUser.groups)==1)
+        assert(len(testUser.sentgrouprequests)==0)
+        testGroup = Group.query.get(2)
+        request = GroupRequest.create(group_id=2, requestor_id=2)
+        assert(len(testUser.sentgrouprequests)==1)
+        testUser.add(testGroup, request)
+        assert(len(testUser.sentgrouprequests)==0)
+        assert testGroup in testUser.groups
 
-            
-def test_user_search_reviews(test_db, search_form):
-    """
-    GIVEN User Model, search criteria
-    WHEN User searches and filters by groups or friends
-    CHECK returned reviews and summarized ratings
-    """
-    u = User.query.filter_by(username="jjones").first()
-    #test average and count and return provider
-    providers = u.search_providers(search_form).all()
-    assert providers[0].average == 3
-    assert providers[0].count == 3
-    assert providers[0].cost == (13/3)
-    assert providers[0][0].name == "Douthit Electrical"
-    #test casing on cities
-    search_form.city.data = 'charlotte'
-    providers = u.search_providers(search_form).all()
-    assert providers[0][0].name == "Douthit Electrical"
-    # test for filtering of groups_only
-    search_form.groups_only.data = True
-    providers = u.search_providers(search_form).all()
-    assert providers[0].average == 5
-    assert providers[0].count == 1
-    assert providers[0].cost == 5
-    # test for filtering of friends_only
-    search_form.friends_only.data = True
-    search_form.groups_only.data = False
-    providers = u.search_providers(search_form).all()
-    assert providers[0].average == 1
-    assert providers[0].count == 1
-    assert providers[0].cost == 5
+    def test_removeGroup(self, testUser):
+        assert(len(testUser.groups)==1)
+        testGroup = Group.query.get(1)
+        testUser.remove(testGroup)
+        assert testGroup not in testUser.groups
+        assert len(testUser.groups)==0
+        with pytest.raises(ValueError):
+                testUser.remove(testGroup)
 
 
-def test_user_pwd_tokens(test_app, test_db, base_user):
-    """Test pwd reset token generation and verification."""
-    test_user = User.query.filter_by(username=base_user['username']).first()
-    alt_user = User.query.get(1)
-    with mail.record_messages() as outbox:
-        # test matched tokens
-        t = test_user.get_reset_password_token()
-        u = User.verify_password_reset_token(t)
-        assert u == test_user
-        # test mismatched tokens
-        t2 = alt_user.get_reset_password_token()
-        u = User.verify_password_reset_token(t2)
-        assert u == alt_user
-        assert u != test_user
+    def test_sendEmailVerification(self, testUser):     
+        """Test sending of email verification emails."""
+        with mail.record_messages() as outbox:
+                testUser.send_email_verification()
+                assert len(outbox) == 1
+                msg = outbox[0]
+                assert "jjones@yahoo.com" in msg.recipients
+                assert msg.subject == 'Ask a Neighbor: Email Verification'
+                assert 'To verify your email' in msg.body
+                assert 'Dear John' in msg.body
 
-def test_send_pswd_reset(test_app, test_db, base_user):
-    """Test sending of password reset emails."""
-    test_user = User.query.filter_by(username=base_user['username']).first()
-    with mail.record_messages() as outbox:
-        test_user.send_password_reset_email()
-        t = test_user.get_reset_password_token()
-        assert len(outbox) == 1
-        msg = outbox[0]
-        assert "jjones@yahoo.com" in msg.recipients
-        assert msg.subject == 'Ask a Neighbor: Password Reset'
-        assert 'To reset your password, please paste the below link into your browser' in msg.body
+    def test_verifyEmailToken(self, testUser):
+        """Test verification of email tokens along with error codes."""
+        test_token = testUser._get_email_verification_token()
+        resulting_user, error = User.verify_email_verification_token(test_token)
+        assert resulting_user == testUser
+        assert error == None
 
-def test_send_email_verification(test_app, test_db, base_user):     
-    """Test sending of email verification emails."""
-    test_user = User.query.filter_by(username=base_user['username']).first()
-    with mail.record_messages() as outbox:
-        test_user.send_email_verification()
-        assert len(outbox) == 1
-        msg = outbox[0]
-        assert "jjones@yahoo.com" in msg.recipients
-        assert msg.subject == 'Ask a Neighbor: Email Verification'
-        assert 'To verify your email' in msg.body
-        assert 'Dear John' in msg.body
-
-def test_verify_email_token(test_app, test_db, base_user):
-    """Test verification of email tokens along with error codes."""
-    test_user = User.query.filter_by(username=base_user['username']).first()
-    test_token = test_user.get_email_verification_token()
-    resulting_user, error = User.verify_email_verification_token(test_token)
-    assert resulting_user == test_user
-    assert error == None
-    # check expired token
-    test_token = test_user.get_email_verification_token(expires_in=-200)
-    resulting_user, error = User.verify_email_verification_token(test_token)
-    assert resulting_user == None
-    assert error == "Expired"
-    test_token = "xjdkldfj1893.xdkld.jfkdl"
-    resulting_user, error = User.verify_email_verification_token(test_token)
-    assert resulting_user == None
-    assert error == "Invalid"   
-
-    
+    def test_verifyEmailTokenExpired(self, testUser):
+        test_token = testUser._get_email_verification_token(expiration=-200)
+        resulting_user, error = User.verify_email_verification_token(test_token)
+        assert resulting_user == None
+        assert error == "Expired"
+        test_token = "xjdkldfj1893.xdkld.jfkdl"
+        resulting_user, error = User.verify_email_verification_token(test_token)
+        assert resulting_user == None
+        assert error == "Invalid" 
 
 
-    
-    
+    def test_passwordTokens(self, base_user):
+        """Test pwd reset token generation and verification."""
+        test_user = User.query.filter_by(username=base_user['username']).first()
+        alt_user = User.query.get(1)
+        with mail.record_messages() as outbox:
+                # test matched tokens
+                t = test_user._get_reset_password_token()
+                u = User.verify_password_reset_token(t)
+                assert u == test_user
+                # test mismatched tokens
+                t2 = alt_user._get_reset_password_token()
+                u = User.verify_password_reset_token(t2)
+                assert u == alt_user
+                assert u != test_user
+
+    def test_sendPasswordResetEmail(self, testUser):
+        """Test sending of password reset emails."""
+        with mail.record_messages() as outbox:
+                testUser.send_password_reset_email()
+                assert len(outbox) == 1
+                msg = outbox[0]
+                assert "jjones@yahoo.com" in msg.recipients
+                assert msg.subject == 'Ask a Neighbor: Password Reset'
+                assert 'To reset your password, please paste the below link into your browser' in msg.body
 
 
+@pytest.mark.usefixtures("session")
+class TestAddress(object):
+    """Test address class in model"""
+    def test_attributes(self, testUser):
+        address = testUser.address
+        assert address.line1 == "7708 Covey Chase Dr"
+        assert address.city == "Charlotte"
+        assert address.city != "charlotte"
+        assert address.state.name == "North Carolina"
+        assert address.zip == "28210"
+        assert address.unknown == False
+        assert address.user_id == 2
+        assert address.longitude == -80.864783
+        assert address.latitude == 35.123949
+        assert address.coordinates == (35.123949, -80.864783)
+
+    def test_newWithoutOwner(self, testAddress, mockGeoResponse):
+        new = Address(line1=testAddress.line1, city=testAddress.city,
+                    state_id=1, zip=testAddress.zip)
+        with pytest.raises(IntegrityError):
+            new.save()
+
+#TODO add mock
+    @pytest.mark.parametrize('key', ['city', 'state_id', 'line1', 'zip'])
+    def test_newMissingRequired(self, key, newAddressDict, mockGeoResponse):
+        newAddressDict[key] = None
+        with pytest.raises(IntegrityError):
+            Address.create(**newAddressDict)
+
+    def test_unknown(self, newAddressDict, mockGeoResponse):
+        newAddressDict.update({'unknown': True, 'line1': None, 'zip': None})
+        address = Address.create(**newAddressDict)
+        assert address is not None
+        assert address.city == newAddressDict['city']
 
 
+    def test_getCoordinatesMock(self, testUser, mockGeoResponse):
+        address=testUser.address
+        assert address.line1 == "7708 Covey Chase Dr"
+        address.line1 = "8012 Covey Chase Dr"
+        address.get_coordinates()
+        assert address.latitude == 35.119714
+        assert address.longitude == -80.865332
+
+    def test_newInvalid(self, testUser, mockGeoResponse):
+        with pytest.raises(AddressError):
+            address = Address(line1="1 covey chase dr", city="Charlotte",
+                            state_id=1, user_id=1, zip="28210")
+
+    def test_updateValid(self, active_client, testUser, mockGeoResponse):
+        assert testUser.address.line1 == "7708 Covey Chase Dr"
+        assert testUser.address.longitude == -80.864783
+        assert testUser.address.latitude == 35.123949
+        testUser.address.update(line1="8012 Covey Chase Dr", city="Belmont", zip="28212")
+        assert testUser.address.line1 == "8012 Covey Chase Dr"
+        assert testUser.address.longitude == -80.865332
+        assert testUser.address.latitude == 35.119714
+
+    def test_updateInvalid(self, testUser,mockGeoResponse):
+        with pytest.raises(AddressError):
+            testUser.address.update(line1="1 covey chase dr")
+
+    def test_userDeleteCascade(self, testUser4):
+        address = testUser4.address
+        assert address.id == 4
+        assert address.user_id == 4
+        assert address.provider_id == None
+        testUser4.delete()
+        assert Address.query.get(4) is None
+
+    def test_providerDeleteCascade(self, testProvider1):
+        assert testProvider1.address.id == 5
+        testProvider1.delete()
+        assert Address.query.get(5) is None
 
 
+@pytest.mark.usefixtures("session")
+class TestFriendRequest(object):
+    def test_new(self, testUser, testUser4, testFriendrequest):
+        assert testFriendrequest in testUser4.sentfriendrequests
+        assert testFriendrequest in testUser.receivedfriendrequests
+        assert testFriendrequest.requestor == testUser4
+        assert testFriendrequest.requested_friend == testUser
+
+    def test_send(self, testUser, testUser4, testFriendrequest):
+        with mail.record_messages() as outbox:
+            testFriendrequest.send()
+            assert len(outbox) == 1
+            msg = outbox[0]
+            assert testUser.email in msg.recipients
+            assert msg.subject == 'Ask a Neighbor: Friend Verification'
+            assert f"{testUser4.full_name} would like to be friends with you on Ask a Neighbor" in msg.body
+
+    def test_verifyValid(self, testFriendrequest):
+        testToken = testFriendrequest._get_request_token()
+        check = testFriendrequest.verify_token(testToken)
+        assert check == testFriendrequest
+
+    def test_verifyInvalid(self, testFriendrequest):
+        payload = {"request": 2}
+        testToken = get_token(payload, None)
+        check = testFriendrequest.verify_token(testToken)
+        assert check is None
+
+
+@pytest.mark.usefixtures("session")
+class TestGroupRequest(object):
+    def test_new(self, testUser4, testGroup, testGroupRequest):
+        assert testGroupRequest in testUser4.sentgrouprequests
+        assert testGroupRequest in testGroup.join_requests
+        assert testGroupRequest.requestor == testUser4
+        assert testGroupRequest.group == testGroup
+
+    def test_send(self, testUser4, testGroup, testGroupRequest):
+        with mail.record_messages() as outbox:
+            assert len(outbox) == 0
+            testGroupRequest.send()
+            assert len(outbox) == 1
+            msg = outbox[0]
+            assert "jjones@yahoo.com" in msg.recipients
+            assert msg.subject == "Ask a Neighbor: Group Join Request"
+            assert f"{testUser4.full_name} would like to join {testGroup.name} on Ask a Neighbor" in msg.body
+
+    def test_getPending(self, testUser, testGroupRequest):
+        pending = GroupRequest.get_pending(testUser)
+        assert len(pending) == 1
+        assert testGroupRequest in pending
+
+
+@pytest.mark.usefixtures("session")
+class TestSector(object):
+    """Test sector model class."""
+    def test_attributes(self):
+        sector = Sector.query.get(1)
+        assert sector.name == 'Home Services'
+        assert sector.categories == Category.query.all()
+
+    def test_list(self):
+        testList = Sector.list()
+        assert testList == [(1, 'Home Services')]
+
+
+@pytest.mark.usefixtures("session")
+class TestCategory(object):
+    def test_attributes(self):
+        testCategory = Category.query.get(1)
+        assert testCategory.name == 'Electrician'
+        assert len(testCategory.reviews) == 4
+        assert len(testCategory.providers) == 3
+        assert testCategory.sector.name == 'Home Services'
+
+    def test_categoryList(self):
+        sector_id = 1
+        testList = Category.list(sector_id)
+        assert len(testList) == 2
+        assert (1, 'Electrician') in testList
+        assert (2, 'Plumber') in testList
+
+
+@pytest.mark.usefixtures("session")
+class TestProvider(object):
+    def test_attributes(self, testProvider):
+        assert testProvider.name == "Douthit Electrical"
+        assert testProvider.email == "douthit@gmail.com"
+        assert testProvider.telephone == "7047263329"
+        assert testProvider.address.line1 == "6000 Fairview Rd"
+
+    def test_newDuplicateEmail(self):
+        with pytest.raises(IntegrityError):
+            newProvider = Provider.create(name="Test Provider",
+                                        email = "douthit@gmail.com",
+                                        telephone="1234567891",
+                                        categories = [Category.query.get(1)]
+                                        )
+
+    def test_newDuplicateTelephone(self):
+        with pytest.raises(IntegrityError):
+            newProvider = Provider.create(name="Test Provider",
+                                        email = "testemail@test.com",
+                                        telephone="7047263329",
+                                        categories = [Category.query.get(1)]
+                                        )
+
+    def test_updateValid(self, testProvider):
+        assert testProvider.name == "Douthit Electrical"
+        assert testProvider.email == "douthit@gmail.com"
+        assert testProvider.telephone == "7047263329"
+        testProvider.update(name="Don's Electric", email="don@aol.com",
+                            telephone='7044103333')
+        assert testProvider.name == "Don's Electric"
+        assert testProvider.email == "don@aol.com"
+        assert testProvider.telephone == '7044103333'
+
+    def test_updateDuplicateEmail(self, testProvider):
+        assert testProvider.email == "douthit@gmail.com"
+        with pytest.raises(IntegrityError):
+            testProvider.update(email="preferred@gmail.com")
+
+    def test_updateDuplicateTelephone(self, testProvider):
+        assert testProvider.telephone == "7047263329"
+        with pytest.raises(IntegrityError):
+            testProvider.update(telephone="7043470446") 
+
+    def test_listTuple(self, testProvider):
+        categoryid = 1
+        providers = Provider.list(categoryid)
+        assert len(providers) == 3
+        assert (testProvider.id, testProvider.name) in providers
+
+    def test_providerListDict(self, testProvider):
+        categoryid = 1
+        providers = Provider.list(categoryid, 'dict')
+        assert len(providers) == 3
+        assert {"id": testProvider.id, "name": testProvider.name} in providers    
+
+    def test_searchNoRevFilter(self, active_client):
+        # create filters, location, category
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        providers = Provider.search(filters)
+        assert len(providers) == 3
+        # check order providers are returned
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[1].name == 'Evers Electric'
+        assert providers[2].name == 'Preferred Electric Co'
+        assert providers[0].reviewAverage == 3.0
+        assert providers[0].reviewCount == 3
+        assert providers[0].reviewCost == (13/3)
+        assert providers[0].categories == "Electrician,Plumber"
+
+    def test_searchNoRevName(self, active_client):
+        # create filters, location, category
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": 'Evers Electric',
+                "category": category,
+                "location": location}
+        providers = Provider.search(filters)
+        assert len(providers) == 1
+        # check order providers are returned
+        assert providers[0].name == 'Evers Electric'
+        assert providers[0].reviewAverage == None
+        assert providers[0].reviewCount == 0
+        assert providers[0].reviewCost == None
+
+    def test_searchNoRevFilterRatingSort(self, active_client):
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        sort = "rating"
+        providers = Provider.search(filters, sort)    
+        assert len(providers) == 3
+        assert providers[0].name == 'Preferred Electric Co'    
+        assert providers[1].name == 'Douthit Electrical'
+        assert providers[2].name == 'Evers Electric'
+
+    def test_searchNoRevFilterLimit(self, active_client):
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        limit = 1
+        providers = Provider.search(filters, limit=limit)    
+        assert len(providers) == 1
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[0].reviewAverage == 3.0
+        assert providers[0].reviewCount == 3
+        assert providers[0].reviewCost == (13/3)
+
+    def test_searchRevFilter(self, active_client):
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        reviewFilters = {"reviewed": True, "friends": False, "groups": False}
+        providers = Provider.search(filters, reviewFilters=reviewFilters)
+        assert len(providers) == 2
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[1].name == 'Preferred Electric Co'
+
+
+    def test_searchFriendsFilter(self, active_client):
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        reviewFilters = {"reviewed": False, "friends": True, "groups": False}
+        providers = Provider.search(filters, reviewFilters=reviewFilters)
+        assert len(providers) == 1
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[0].reviewAverage == 1
+        assert providers[0].reviewCount == 1
+        assert providers[0].reviewCost == 5
+
+    def test_searchGroupsFilter(self, active_client):
+        location = Location('home')
+        location.setRangeCoordinates()
+        category = Category.query.get(1)
+        filters = {"name": None,
+                "category": category,
+                "location": location}
+        reviewFilters = {"reviewed": False, "friends": False, "groups": True}
+        providers = Provider.search(filters, reviewFilters=reviewFilters)
+        assert len(providers) == 1
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[0].reviewAverage == 5
+        assert providers[0].reviewCount == 1
+        assert providers[0].reviewCost == 5
+
+    def test_profileNoFilter(self, testProvider):
+        reviewFilter = {"friends_filter": False, "groups_filter": False}
+        profile = testProvider.profile(reviewFilter)
+        assert profile[0] == testProvider
+        assert profile[1] == 3
+        assert profile[2] == (13/3)
+        assert profile[3] == 3
+
+    def test_profileFriends(self, testProvider, active_client):
+        reviewFilter = {"friends_filter": True, "groups_filter": False}
+        profile = testProvider.profile(reviewFilter)
+        assert profile[0] == testProvider
+        assert profile[1] == 1
+        assert profile[2] == 5
+        assert profile[3] == 1
+
+    def test_profileGroups(self, testProvider, active_client):
+        reviewFilter = {"friends_filter": False, "groups_filter": True}
+        profile = testProvider.profile(reviewFilter)
+        assert profile[0] == testProvider
+        assert profile[1] == 5
+        assert profile[2] == 5
+        assert profile[3] == 1
+
+
+@pytest.mark.usefixtures("session")
+class TestReview(object):
+    def test_attributes(self, testReview):
+        assert testReview.user_id == 2
+        assert testReview.provider.name == 'Douthit Electrical'
+        assert testReview.category.name == 'Electrician'
+        assert testReview.rating == 3
+        assert testReview.cost == 3
+        assert testReview.description == 'Fixed a light bulb'
+        assert testReview.comments == 'Satisfactory work.'
+
+    def test_search(self, testProvider):
+        reviewFilter = {"friends_filter": False, "groups_filter": False}
+        reviews = Review.search(testProvider.id, reviewFilter)
+        assert len(reviews) == 3
+        assert reviews[0].rating == 3
+        assert reviews[0].cost == 3
+        assert reviews[0].description == 'Fixed a light bulb'
+
+    def test_searchFriend(self, testProvider, active_client):
+        reviewFilter = {"friends_filter": True, "groups_filter": False}
+        reviews = Review.search(testProvider.id, reviewFilter)
+        assert len(reviews) == 1
+        assert reviews[0].rating == 1
+        assert reviews[0].cost == 5
+        assert reviews[0].description == 'Test'
+
+
+    def test_searchGroups(self, testProvider, active_client):
+        reviewFilter = {"friends_filter": False, "groups_filter": True}
+        reviews = Review.search(testProvider.id, reviewFilter)
+        assert len(reviews) == 1
+        assert reviews[0].rating == 5
+        assert reviews[0].cost == 5
+        assert reviews[0].description == 'Installed breaker box'
+
+
+@pytest.mark.usefixtures("session")
+class TestGroup(object):
+    def test_attributes(self, testGroup, testUser, testUser3):
+        assert testGroup.name == 'Qhiv Hoa'
+        assert testGroup.description == 'Hoa for the neighborhood'
+        assert testGroup.admin == testUser
+        assert testUser in testGroup.members
+        assert testUser3 in testGroup.members
+        assert len(testGroup.members) == 2
+
+    def test_newRepeatName(self):
+        with pytest.raises(IntegrityError):
+            Group.create(name="Qhiv Hoa", description="test", admin_id=2)
+
+    def test_update(self, testGroup):
+        testGroup.update(name='Quail Hollow Estates', description='Testdescription')
+        assert testGroup.name == 'Quail Hollow Estates'
+        assert testGroup.description == 'Testdescription'
+
+    def test_updateDuplicateName(self, testGroup):
+        with pytest.raises(IntegrityError):
+            testGroup.update(name="Shannon's Bees")
+        
+    def test_delete(self, testGroup, testUser, testUser3):
+        assert testUser in testGroup.members
+        id = testGroup.id
+        testGroup.delete()
+        assert Group.query.get(id) is None
+        assert User.query.get(testUser.id) is not None

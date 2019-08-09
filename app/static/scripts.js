@@ -213,34 +213,6 @@ function require_autocomplete(selector_id, submit_id, validation_message){
     });
 }
 
-
-// function toggle_fields(checkID, toBeHiddenIDs=null, msgID=null){
-//     if (msgID != null){
-//         msg = document.getElementById("toggle_message")
-//     }
-//     toBeVisible = document.getElementById(checkID)
-//     if(checkID.checked == true){
-//         msg.hidden = false;
-//         if (toBeHiddenIDs != null){
-//             for(var i = 0; i < toBeHiddenIDs.length; i++){
-//                 field = document.getElementById(toBeHiddenIDs[i]);
-//                 field.hidden = true;
-//                 field.parentNode.parentNode.hidden = true;
-//             }
-//         }
-
-//     }else if (checkID.checked == false){
-//         msg.hidden = true;
-//         if (toBeHiddenIDs != null){
-//             for(var i = 0; i < toBeHiddenIDs.length; i++){
-//                 field = document.getElementById(toBeHiddenIDs[i]);
-//                 field.hidden = false;
-//                 field.parentNode.parentNode.hidden = true;
-//             }          
-//         }
-//     }
-// }
-
 function show(element){
     element.hidden = false;
     for (let child of element.children){
@@ -365,17 +337,62 @@ function initReview (jquery) {
 
 }
 
-function initNetwork(jquery){
+function initFriends(jquery){
     //create function scope variables to be used for converting chosen name to user_id
     var friend_array = [];
     var friend_array_full = [];
-    var friend_array_detailed =[];
     var friend_array_values =[];
+    var friend_array_detailed =[];
+    //autocomplete friend name using jquery autocomplete ui: https://api.jqueryui.com/autocomplete/
+    $("#friend_name").autocomplete({
+        autoFocus: true,
+        minLength: 1,
+        delay: 200,
+        source: function(request, response){
+            friend_array=[];
+            friend_array_full = [];
+            friend_array_values = [];
+            friend_array_detailed = [];
+            $.getJSON(url, {"name":request.term}, function(data){
+                    $.each(data, function(key, value){
+                        var full_description = [];
+                        description = (value.first_name + " " + value.last_name + ", "+value.city +", "+ value.state);
+                        name = (value.first_name + " " + value.last_name);
+                        //label is what is shown in selector menu, value goes into input box
+                        friend_array.push({"label":description, "value":name});
+                        //used to check that values from list are selected in val check
+                        friend_array_values.push(name.toLowerCase());
+                        //used to find index of choice selected
+                        friend_array_full.push(description);
+                        //sets hidden input field to id
+                        friend_array_detailed.push({key:value});
+                    });
+                    response(friend_array);
+            });
+        },
+        //enter user_id into hidden input field
+        select: function(event, ui){
+            var i = friend_array_full.indexOf(ui.item.label);
+            $("#friend_value").val(friend_array_detailed[i].key.id);
+        }
+    });
+
+    //forces friend search input to use value from autocomplete dropdown
+    $("#submit-friend-add").on("click", function(event){
+        input = document.getElementById("friend_name")
+        valcheck(friend_array_values, input, "Please choose friend name from list");
+        $("#submit-friend-add").unbind("click");
+        $("#friend_name").on("blur", function(event){
+            valcheck(friend_array_values, input,"Please choose friend name from list");
+        });
+    });
+}
+
+function initGroups(jquery){
     var group_array = [];
     var group_array_full = [];
     var group_array_values = [];
     var group_array_detailed = [];
-
     //autcomplete group name using jquery autocomplete ui: https://api.jqueryui.com/autocomplete/
     $("#group_name").autocomplete({
         autoFocus: true,
@@ -386,7 +403,7 @@ function initNetwork(jquery){
             group_array_values = [];
             group_array_full = [];
             group_array_detailed = [];
-            $.getJSON("/groupsearch", {"name":request.term}, function(data){
+            $.getJSON(url, {"name":request.term}, function(data){
                     $.each(data, function(key, value){
                         group_array.push({"label":value.name, "value":value.name});
                         group_array_full.push(value.name);
@@ -424,51 +441,8 @@ function initNetwork(jquery){
             valcheck(group_array_values, input,"Please choose group name from list or add group below.");
         });
     });
-
-    //autocomplete friend name using jquery autocomplete ui: https://api.jqueryui.com/autocomplete/
-    $("#friend_name").autocomplete({
-        autoFocus: true,
-        minLength: 1,
-        delay: 200,
-        source: function(request, response){
-            friend_array=[];
-            friend_array_full = [];
-            friend_array_values = [];
-            friend_array_detailed = [];
-            $.getJSON("/friendsearch", {"name":request.term}, function(data){
-                    $.each(data, function(key, value){
-                        var full_description = [];
-                        description = (value.first_name + " " + value.last_name + ", "+value.city +", "+ value.state);
-                        name = (value.first_name + " " + value.last_name);
-                        //label is what is shown in selector menu, value goes into input box
-                        friend_array.push({"label":description, "value":name});
-                        //used to check that values from list are selected in val check
-                        friend_array_values.push(name.toLowerCase());
-                        //used to find index of choice selected
-                        friend_array_full.push(description);
-                        //sets hidden input field to id
-                        friend_array_detailed.push({key:value});
-                    });
-                    response(friend_array);
-            });
-        },
-        //enter user_id into hidden input field
-        select: function(event, ui){
-            var i = friend_array_full.indexOf(ui.item.label);
-            $("#friend_value").val(friend_array_detailed[i].key.id);
-        }
-    });
-
-    //forces friend search input to use value from autocomplete dropdown
-    $("#submit-friend-add").on("click", function(event){
-        input = document.getElementById("friend_name")
-        valcheck(friend_array_values, input, "Please choose friend name from list");
-        $("#submit-friend-add").unbind("click");
-        $("#friend_name").on("blur", function(event){
-            valcheck(friend_array_values, input,"Please choose friend name from list");
-        });
-    });
 }
+
 function initSearch(jquery){
     var name, groups, friends;
     $(".bizlink").on("click", function(event){
@@ -765,8 +739,10 @@ $(document).ready(function(){
     } else if ( $("#review_form").length){
         $(document).ready(initReview);
 
-    } else if ($("#network").length){
-        $(document).ready(initNetwork);
+    } else if ($("#groupadd").length){
+        $(document).ready(initGroups);
+    } else if ($("#friendadd").length){
+        $(document).ready(initFriends);
     } else if ($("#providersearch").length){
         $(document).ready(initSearch);
     } else if ($("#provideraddform").length){

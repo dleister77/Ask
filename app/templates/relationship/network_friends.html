@@ -4,7 +4,7 @@
     
 {% block content_narrow_form %}
     <h3>Search For Friends</h3>
-    <form action="/friendadd" method="post">
+    <form action="{{url_for('relationship.friendadd')}}" id="friendadd" method="post">
         {{form_render(FriendSearch)}}
     </form>
     <br>
@@ -26,6 +26,9 @@
                 {% endfor %}
     </ul>
     <br>
+    <!-- url for js file -->
+    <script> let url = "{{ url_for('relationship.friendsearch') }}" </script>
+
 {% endblock %}
 
             

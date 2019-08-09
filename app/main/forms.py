@@ -8,7 +8,7 @@ from magic import from_file, from_buffer
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
      MultipleFileField, HiddenField, FloatField)
-from wtforms.validators import (DataRequired, Email, ValidationError, Optional,
+from wtforms.validators import (DataRequired, InputRequired, Email, ValidationError, Optional,
  Regexp, InputRequired, StopValidation)
 from wtforms.widgets import HiddenInput
 from wtforms.ext.dateutil.fields import DateField
@@ -18,28 +18,49 @@ from app.models import Address, Category, Provider, Sector, State
 
 
 def Picture_Upload_Check(form, field):
-    """Verify that picture is image type and less than 7.5mb.
-       Stop validation if no file submitted."""
-    print("picture upload checking")
-    print(f"current user {current_user}")
+    """Validate picture upload.
+    
+    Verify that picture is image type and less than 7.5mb. Stop validation if 
+    no file submitted.
+    
+    Args:
+        form (wtf form): form that file upload field is in
+        field (form field): file upload field
+    
+    Returns:
+        None
+        
+    Raises:
+        Stop Validation: If no files are uploaded
+        ValidationError: If file is not image type or file size > 7.5mb
+    
+    """
     allowed = ['jpeg', 'png', 'gif', 'bmp', 'tiff']
-    print("picture content:" , field.data)
     if field.data is None or field.data == "" or not field.data[0]:
-        print("didn't find picture")
         field.errors[:] = []
         raise StopValidation
     for file in field.data:
-        print("checking picture file: ", file)
         file_type = from_buffer(file.read(), mime=True).split('/')[1]
         size = file.tell()
         if file_type not in allowed:
-            print("need image file")
             raise ValidationError("Please choose an image file.")
         if size > 7500000:
-            print("too big")
             raise ValidationError("Please reduce file size to less than 7.5mb.")
 
 def NotEqualTo(comparisonField):
+    """Factory function to compare field value to another field.
+
+    Args:
+        ComparisonField (Field): Field that current field value is being
+            compared to
+
+    Returns:
+        _not EqualTo (function): Callable function comparing calling field to
+            field passed into factor as argument
+    
+    Raises:
+        ValidationError: If both values are True
+    """
 
     def _notEqualTo(form, field):
         compare_field = getattr(form, comparisonField)
@@ -56,8 +77,6 @@ def unique_check(modelClass, columnName):
     """
 
     def _unique_check(form, field):
-        print(current_user)
-        print("unique checking ", field.name)
         key = {"email": "Email address",
                "telephone": "Telephone number",
                "name":"Name"}
@@ -66,37 +85,72 @@ def unique_check(modelClass, columnName):
             data = re.sub('\D+', '', field.data)
         else:
             data = field.data
-            print("data: ", data)
         entity = modelClass.query.filter(columnName == data).first()
-        print(f"Data: {data}")
-        print(f"entity: {entity}")
         if entity is not None:
-            print("raising error")
             raise ValidationError(message)
     return _unique_check
 
 def unknown_check(form, field):
     """Removes validation errors from field if address unknown is checked."""
-    if form.full_address_unknown.data is True:
-        field.errors[:] = []
+    print("unknown check called")
+    if form.unknown.data is True:
+        field.errors.clear()
         raise StopValidation()
 
+def gpsVal(form, field):
+    """checks that GPS data included if gps selected as location source.
+
+    Args:
+        form (wtf form): form that file upload field is in
+        field (form field): file upload field
+    
+    Returns:
+        None
+        
+    Raises:
+        ValidationError: If gps selected as source and gps lat/long removed from form.
+    """
+
+    if form.home.data == 'gps':
+        if field.data in ["", None]:
+            raise ValidationError("Must allow access to device location if gps selected as location source.")
+
+def floatCheck(form, field):
+    """checks that GPS data not altered to non-numeric type.
+
+    Args:
+        form (wtf form): form that file upload field is in
+        field (form field): file upload field
+    
+    Returns:
+        None
+        
+    Raises:
+        ValidationError: If gps lat/long altered to non numeric type.
+        
+    """    
+
+    if form.home.data == "gps" and field.data not in ["", None]:
+        try:
+            float(field.data)
+        except ValueError:
+            raise ValidationError("GPS location data must be numeric type.")
 
 class ProviderAddress(AddressField):
-    """Subclass of Address to allow address unknown checkbox."""
-    full_address_unknown = BooleanField("Check if full address unknown",
+    """Subclass of Address to add address unknown checkbox."""
+    unknown = BooleanField("Check if full address unknown",
                                         id="addressUnknown",
                                         validators=[Optional()])    
     line1 = StringField("Street Address",
-            validators=[DataRequired(message="Street address is required."),
-                                     unknown_check])    
+            validators=[unknown_check, 
+                InputRequired(message="Street address is required.")])    
     zip = StringField("Zip", 
-          validators=[DataRequired(message="Zip code is required."),
-                                   unknown_check])
+          validators=[unknown_check, 
+              InputRequired(message="Zip code is required.")])
 
 
 class NonValSelectField(SelectField):
-    """Select field with validation removed to allow for client side generated 
+    """Select field with pre-validation removed to allow for client side generated 
        choices.
        """
     def pre_validate(self, form):
@@ -104,16 +158,35 @@ class NonValSelectField(SelectField):
 
 
 class ReviewForm(FlaskForm):
-    """Form to submit review."""
+    """Form to submit review.
+    
+    Fields:
+        name (str): disabled (display only). Name of business being reviewed
+        id (int): hidden, id of business being reviewed
+        category (select): category for service/business being reviewed
+        rating (radio): Numeric rating of 1 to 5 for total quality
+        cost (radio): Numeric rating of 1 to 5 based on perceived cost
+        description (str): Optional, short description of service provided or 
+            business interraction
+        service_date (Date): Optional, date of service or interraction w/
+            business
+        comments (text): Optional, longer description/commentary of review
+        picture (File): Optional, add pictures to review
+    
+    Methods:
+        validate_name: checks that submitted id and name match
+        validate_category: checks that review category is category of the business
+        """
 
     name = StringField("Provider / Business Name",
-                        render_kw = {'disabled':True})
+                        render_kw = {'disabled':True},
+                        validators=[InputRequired(message="Business name is required.")])
     id = HiddenField("Provider Value", 
                      render_kw = {'readonly':True},
-                     validators=[DataRequired(message="Provider name is required")])
+                     validators=[InputRequired(message="Business id is required. Do not remove from form submission.")])
     category = SelectField("Category",
                       choices=[],
-                      validators=[DataRequired(message="Category is required.")],
+                      validators=[InputRequired(message="Category is required.")],
                       coerce=int, id="category")    
     rating = RadioField("Rating", choices=[
                         (5, "***** (Highest quality)"),
@@ -122,7 +195,7 @@ class ReviewForm(FlaskForm):
                         (2, "** (Below Average)"),
                         (1, "* (Stay away from!)")],
                         coerce=int,
-                        validators=[DataRequired(message="Rating is required.")] 
+                        validators=[InputRequired(message="Rating is required.")] 
                         )
     cost = RadioField("Cost", choices=[
                         (5, "$$$$$ (Much higher than competitors)"),
@@ -131,7 +204,7 @@ class ReviewForm(FlaskForm):
                         (2, "$$ (Below Average)"),
                         (1, "$ (Significantly less than competitors)")],
                         coerce=int,
-                        validators=[DataRequired(message="Cost is required.")] 
+                        validators=[InputRequired(message="Cost is required.")] 
                         )
     description = StringField("Service Description", validators=[Optional()])
     service_date = DateField("Service Date", validators=[Optional()])
@@ -140,45 +213,65 @@ class ReviewForm(FlaskForm):
                                 validators=[Picture_Upload_Check, Optional()])
     submit = SubmitField("Submit", id="review_submit")
 
-    def validate_value(self, name):
-        """Verify submitted name came from db."""
-        category = Category.query.filter_by(id=self.category.data).first()
-        if category is None:
+    def validate_name(form, field):
+        """Validates name field as well as id hidden field."""
+        provider = Provider.query.get(form.id.data)
+        if provider == None:
+            pass
+        elif provider.name != field.data:
+            raise ValidationError("Submitted name and id combination are invalid.")
+    
+    def validate_category(form, field):
+        """Checks that category is valid category for provider."""
+        id = form.id.data
+        if id is None or id == "":
             pass
         else:
-            provider_list = (Provider.query
-                            .filter(Provider.categories.contains(category))
-                            .order_by(Provider.name).all())
-            provider_list = [provider.id for provider in provider_list]
-            if name.data not in provider_list:
-                raise ValidationError("Please choose a provider from the list.")
+            bizCategories = [c.id for c in Provider.query.get(id).categories]
+            if field.data not in bizCategories:
+                raise ValidationError("Category not valid for business being reviewed.")
+
+
 
 class ProviderAddForm(FlaskForm):
-    """Form to add new provider."""
-    name = StringField("Provider / Business Name", validators=[DataRequired(message="Provider name is required.")])
+    """Form to add new provider.
+    
+    Fields:
+        name (str): name of business
+        sector (select): macro sector that business belongs to
+        category (select): categories (w/in sector) that business belongs to
+        email (str): optional, email address of business
+        telepohone (str): telephone number of business
+        address-unknown (bool): checked if street address (line1/line2) and zip
+            are unknown (i.e. service provider without phyiscal location).  If 
+            unchecked, line1 and zip are required. 
+        address-line1 (str): 1st address line
+        address-line2 (str): optional, 2nd address line
+        address-city (str): city name
+        address-state (select): address state, select is combination of id,name
+        address-zip (str): zip/postal code
+    
+    Methods:
+        validate_name: validator, checks that provider does not already exist by
+            checking to see if another provider exists with same name and address
+    
+    """
+    name = StringField("Provider / Business Name", validators=[InputRequired(message="Business name is required.")])
     sector = SelectField("Sector",
                                  choices=Sector.list(), 
-                                 validators=[DataRequired(message="Sector is required.")],
+                                 validators=[InputRequired(message="Sector is required.")],
                                  coerce=int,
                                  id="sector")   
     category = SelectMultipleField("Category",
-                                   choices=[],
-                                   validators=[DataRequired(message="Category is required.")],
+                                   choices=Category.list(1),
+                                   validators=[InputRequired(message="Category is required.")],
                                    coerce=int,
                                    id="category")
     address = FormField(ProviderAddress)
-    # service_state = SelectMultipleField("Service Area State",
-    #                                     choices=State.list(),
-    #                                     validators=[DataRequired(message="Service area state is required.")],
-    #                                     coerce=int, id="service_state")
-    # service_city = SelectMultipleField("Service Area City",
-    #                                     choices=[],
-    #                                     validators=[DataRequired(message="Service area city is required.")],
-    #                                     coerce=int, id="service_city")
     email = StringField("Email", validators=[Email(),
                          unique_check(Provider, Provider.email), Optional()])
     telephone = StringField("Telephone",
-                validators=[DataRequired(message="Telephone number is required."),
+                validators=[InputRequired(message="Telephone number is required."),
                 Regexp("[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"), 
                 unique_check(Provider, Provider.telephone)])
     submit = SubmitField("Submit", id="provider_submit")
@@ -196,56 +289,56 @@ class ProviderAddForm(FlaskForm):
                                    Address.zip == self.address.zip.data)\
                            .first()
         if p:
-            raise ValidationError("Provider already exists, please select a new name.")
-
-    # def _make_address_fields_optional(self):
-    #     """Update form to make physical address fields optional for service providers with a service area."""
-    #     for field in self.address:
-    #         field.validators.append(Optional())
-
-    # def _remove_service_area_fields(self):
-    #     """Update form to remove service area for business with physical locations."""
-    #     del(self.service_state)
-    #     del(self.service_city)
-
-
-    # def check_service_area_required(self):
-    #     """Determine whether service area or address field data required validators need to be removed."""
-    #     if self.category.service_area_required is True:
-    #         self._make_address_fields_optional()
-    #     elif not self.category.service_area_required:
-    #         self._remove_service_area_fields()
-    #     return self
+            raise ValidationError("Business already exists, please look up "
+                "business or use a different name/address.")
 
 
 class ProviderSearchForm(FlaskForm):
-    """Form to search for providers."""
+    """Form to search for providers.
+    
+    Fields:
+        home (select): location source for search
+        manual_location (str): manually type in new address
+        gpsLat (hidden): records latitude when gps selected as location source
+        gpsLong (hidden): record longitude when gps selected as location source
+        sector (select): macro sector user is searching (determines categories)
+        category (select): micro category that user is searching
+        name (str): name of business if searching for specific name
+        reviewed_filter(bool): filters out providers with no reviews
+        friends_filter (bool): only includes providers reviewed by your friends
+        groups_filter (bool): only includes providers reviewed by your groups
+        sort (select): choose sort criteria for search results
+    
+    Methods:
+        populate_choices: populates category and home choices prior to form
+            validation
+        initialize: adds manual existing to home choices if needed
+
+
+        """
     class Meta:
         csrf = False
     
     home = SelectField("Search Location",
                        choices = [],
-                       validators=[DataRequired(message="Home location is required.")],
+                       validators=[InputRequired(message="Home location is required.")],
                        id="home")  
     manual_location = StringField("Enter New Location", validators=[],
                              id="manual_location",
                              render_kw={"hidden":True, "placeholder":
                              "Street address, city, state"})
-
-    gpsLat = HiddenField("New latitude", id="gpsLat")
-    gpsLong = HiddenField("New longitude", id="gpsLong")
+    gpsLat = FloatField("New latitude", render_kw={"hidden":True}, id="gpsLat")
+    gpsLong = FloatField("New longitude", render_kw={"hidden":True}, id="gpsLong")
+    gpsLat = HiddenField("New latitude", validators=[gpsVal, floatCheck], id="gpsLat")
+    gpsLong = HiddenField("New longitude", validators=[gpsVal, floatCheck], id="gpsLong")
     sector = SelectField("Sector",
                                  choices=Sector.list(), 
                                  coerce=int,
                                  id="sector",
-                                 ) 
+                                 validators=[DataRequired("Sector is required.")]) 
     category = SelectField("Category", choices=[], 
-                           validators=[DataRequired(message="Category is required.")],
+                           validators=[InputRequired("Category is required.")],
                            coerce=int)
-    # city = StringField("City",
-    #                     validators=[DataRequired(message="City is required.")])
-    # state = SelectField("State", choices=State.list(),
-    #                      validators=[DataRequired(message="State is required.")], coerce=int)
     name = StringField("Provider / Business Name", validators=[Optional()],
                        id="provider_name")
     reviewed_filter = BooleanField("Reviewed - all")
@@ -253,11 +346,13 @@ class ProviderSearchForm(FlaskForm):
     groups_filter = BooleanField("Reviewed - groups")
     sort = SelectField("Sort By",
                         choices=[("rating", "Rating"), ("name", "Name"),
-                                ("distance", "Distance")]
+                                ("distance", "Distance")],
+                        validators=[InputRequired("Sort criteria is required.")]
                        )
     submit = SubmitField("Submit")
 
     def populate_choices(self):
+        """populates category and home choices prior to form validation."""
         if self.sector.data:
             self.category.choices = Category.list(self.sector.data)
         else:
@@ -275,22 +370,14 @@ class ProviderSearchForm(FlaskForm):
         return self
     
     def initialize(self):
-        """Update home choices and empty manual location input."""
+        """Update home choices and empty manual location input prior to rendering"""
         location = session.get('location')
         if location is not None and self.home.data=="manual":
             self.home.choices.insert(0, ("manualExisting", 
                                          f"{location['address']}"))
             self.home.data = self.home.choices[0]    
             self.manual_location.data = ""
-        return self
-
-    def remove_empty_fields(self):
-        """Removes empty fields to allow for validation for autocomplete."""
-        for field in self:
-            if field.data is None:
-                del(field)
-        return self
-    
+        return self 
 
 
 class ProviderFilterForm(FlaskForm):

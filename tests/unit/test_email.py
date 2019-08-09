@@ -1,5 +1,5 @@
 from app import mail
-from app.email import send_email
+from app.utilities.email import send_email
 import pytest
 
 

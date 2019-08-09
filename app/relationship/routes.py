@@ -155,13 +155,16 @@ def friend_remove():
     """Remove friend from user's list of friends."""
     form = FriendDeleteForm()
     form.name.choices = current_user.get_friend_list()
-    print(form.name.data)
     if form.validate_on_submit():
         removed = []
         for person in form.name.data:
             toBeRemoved = User.query.get(person)
-            current_user.remove(toBeRemoved)
-            removed.append(toBeRemoved.full_name)
+            try:
+                current_user.remove(toBeRemoved)
+                removed.append(toBeRemoved.full_name)
+            except ValueError:
+                flash("Invalid request. You can't remove someone that you aren't friends with.")
+                break
         current_user.save()
         if len(removed) == 1:
             flash(f"{removed[0]} has been removed from your friends")

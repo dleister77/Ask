@@ -14,7 +14,7 @@ def send_async_email(app, msg):
         mail.send(msg)
 
 
-def send_email(subject, sender, recipients, text_body, html_body):
+def send_email(subject, sender, recipients, cc, text_body, html_body):
     """Helper function to send email message."""
     msg = Message(subject, recipients=recipients, sender=sender)
     msg.body = text_body
@@ -26,13 +26,13 @@ def get_token(payload, expiration):
     """Generic function to get jwt token.
     Inputs:
     payload: dict of custom inputs
-    expiration: days until expiry
+    expiration: minutes until expiry
     """
     # convert expiration to seconds
     if expiration is None:
         msg = {}
     else:
-        expires_in = expiration * 24 * 60 * 60
+        expires_in = expiration * 60
         msg = {'exp': time() + expires_in}
     msg.update(payload)
     return jwt.encode(msg, current_app.config['SECRET_KEY'],

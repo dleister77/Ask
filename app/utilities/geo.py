@@ -1,20 +1,54 @@
+from collections import namedtuple
+import requests
+from threading import Thread
+
 from flask import current_app, g, session
 from flask_login import current_user
 from geocodio import GeocodioClient
+from geocodio.exceptions import GeocodioDataError, GeocodioAuthError
 from geopy import distance
-from threading import Thread
+import usaddress
+
+
+def geocode(address):
+    """Gets geocode(lat/long and address) from specified services
+
+    First tries GEOCODIO, then uses TAMU as fallback services
+
+    Args:
+        address (str): address string
+    
+    Returns:
+        tuple of coordinates and address
+    
+    Raises:
+        AddressError: If geocoding service can't match submitted address.
+        APIAuthorizationError: If API keys are not valid.
+    """
+
+    try:
+        location = _geocodeGEOCODIO(address)
+    except AddressError:
+        raise
+    except APIAuthorizationError:
+        addressTuple = parseAddress(address)
+        try:
+            location = _geocodeTamu(addressTuple)
+        except (APIAuthorizationError,AddressError):
+            raise
+    return location
 
 def _get_client():
     client = GeocodioClient(current_app.config['GEOCODIO_API_KEY'])
     return client
 
-def geocode(address):
+def _geocodeGEOCODIO(address):
     """Get coordinates from Geocodio based on input address.
     Args:
-        Address (str): lookup address in format: 'line1, city, state'.
+        address (str): lookup address in format: 'line1, city, state'.
     
     Returns:
-        tuple: lat/long coordintes and formatted address
+        tuple: lat/long coordinates and formatted address
 
     Raises:
 
@@ -22,12 +56,19 @@ def geocode(address):
     try:
         client = _get_client()
         location = client.geocode(address)
-    except Exception as e:
-        print(e)
-        raise
+    except GeocodioDataError:
+        raise AddressError("Invalid address submitted")
+    except GeocodioAuthError as e:
+        raise APIAuthorizationError("{e}: Check API Key")
+    if location.accuracy <= 0.8:
+        raise AddressError("Invalid address submitted")
     return location.coords, location.formatted_address
 
-def get_distance(origin, endpoint):
+
+
+
+
+def getDistance(origin, endpoint):
     """Return geodesic distance between 2 points.
     Args:
         origin (tuple): starting point expressed as latitude/longitude
@@ -38,7 +79,7 @@ def get_distance(origin, endpoint):
     calculated_distance = distance.distance(origin, endpoint).miles
     return calculated_distance
     
-def get_geo_range(origin, range):
+def getGeoRange(origin, range):
     """Get lat and long max and min based on starting point and range."""
     range = distance.distance(miles=range)
     max_long = range.destination(origin, 90).longitude
@@ -59,10 +100,75 @@ def sortByDistance(searchOrigin, toBeSorted):
            list (list): sorted by distance
         """
 
-        toBeSorted.sort(key=lambda item: get_distance(searchOrigin,
+        toBeSorted.sort(key=lambda item: getDistance(searchOrigin,
                                          (item.latitude, item.longitude))
                        )
         return toBeSorted
+
+def _geocodeTamu(address):
+    params = {'apiKey': current_app.config['TAMU_API_KEY'], 'format': 'json',
+              'streetAddress':address.line1, 'city':address.city,
+              'state':address.state, 'zip': address.zip, 'version': 4.01}
+    url = 'https://geoservices.tamu.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsed_V04_01.aspx?'
+    response = requests.get(url, params=params).json()
+    status_code = response.get('QueryStatusCodeValue')
+    geoResponse = response.get('OutputGeocodes')[0].get('OutputGeocode')
+    latitude = round(float(geoResponse.get('Latitude')),6)
+    longitude = round(float(geoResponse.get('Longitude')),6)
+    matchScore = int(geoResponse.get('MatchScore'))
+    matchType = geoResponse.get('MatchType')
+    if int(status_code) in [400, 401, 402, 403, 470,471, 472]:
+        raise APIAuthorizationError
+    elif matchType not in ['Exact', 'Relaxed']:
+        raise AddressError
+    queriedAddress = f"{address.line1}, {address.city}, {address.state} {address.zip}"
+    return ((latitude, longitude), queriedAddress)
+
+def parseAddress(addressString):
+    """Parses address string return namedtuple of line1, city, state, zip
+
+    Args:
+        addressString (str): string of full address
+    Returns:
+        named tuple of address components(line1, city, state, zip)
+    """
+
+    tag_mapping={
+    'Recipient': 'recipient',
+    'AddressNumber': 'line1',
+    'AddressNumberPrefix': 'line1',
+    'AddressNumberSuffix': 'line1',
+    'StreetName': 'line1',
+    'StreetNamePreDirectional': 'line1',
+    'StreetNamePreModifier': 'line1',
+    'StreetNamePreType': 'line1',
+    'StreetNamePostDirectional': 'line1',
+    'StreetNamePostModifier': 'line1',
+    'StreetNamePostType': 'line1',
+    'CornerOf': 'line1',
+    'IntersectionSeparator': 'line1',
+    'LandmarkName': 'line1',
+    'USPSBoxGroupID': 'line1',
+    'USPSBoxGroupType': 'line1',
+    'USPSBoxID': 'line1',
+    'USPSBoxType': 'address1',
+    'BuildingName': 'line2',
+    'OccupancyType': 'line2',
+    'OccupancyIdentifier': 'line2',
+    'SubaddressIdentifier': 'line2',
+    'SubaddressType': 'line2',
+    'PlaceName': 'city',
+    'StateName': 'state',
+    'ZipCode': 'zip',
+    }
+    addressDict, addressType = usaddress.tag(addressString, tag_mapping=tag_mapping)
+    line1 = addressDict.get('line1')
+    city = addressDict.get('city')
+    state = addressDict.get('state')
+    zip = addressDict.get('zip')
+    addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
+    address = addressTuple(line1, city, state, zip)
+    return address
 
 
 class Location(object):
@@ -132,7 +238,7 @@ class Location(object):
         if self.source == "gps":
             self._address = ""
         if self.source == "manual":
-            self._address = g.geoQuery
+            self._address = address
         if self.source == "home":
             self._address = f"{current_user.address.line1}, "\
                            f"{current_user.address.city}, "\
@@ -161,13 +267,19 @@ class Location(object):
         Returns:
             self: 
         """
-        bounds = get_geo_range(self.coordinates, range)
+        bounds = getGeoRange(self.coordinates, range)
         self.minLat, self.maxLat, self.minLong, self.maxLong = bounds
         return self
 
     def __repr__(self):
         return f"<Location {self.latitude} {self.longitude}>"
-    
-    
+
+class AddressError(Exception):
+    """Exception class for invalid addresses"""
+    pass
+
+class APIAuthorizationError(Exception):
+    """Exception class for API authorization failures."""
+    pass    
 
 

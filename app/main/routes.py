@@ -204,7 +204,8 @@ def review():
 @login_required
 @email_verified
 def search():
-    form = ProviderSearchForm(request.args).populate_choices()
+    form = ProviderSearchForm(request.args)
+    form.populate_choices()
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
         searchLocation = Location(form.home.data, form.manual_location.data,

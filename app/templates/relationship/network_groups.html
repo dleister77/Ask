@@ -3,7 +3,7 @@
 
 {% block content_narrow_form %}
 
-        <form action="/groupadd" method="post">
+        <form action="{{url_for('relationship.groupadd')}}" id="groupadd" method="post">
             {{form_render(GroupSearch)}}
             <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
         </form>
@@ -28,6 +28,9 @@
             {% endfor %}
         </ul>
         <br>
+    <!-- url for js file -->
+    <script> let url = "{{ url_for('relationship.groupsearch') }}" </script>
+
 {% endblock content_narrow_form %}
 
 
