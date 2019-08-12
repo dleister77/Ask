@@ -3,7 +3,7 @@
 
 {% block content_narrow_form %}
 
-        <form action="{{url_for('relationship.groupadd')}}" id="groupadd" method="post">
+        <form action="{{url_for('relationship.groupSearch')}}" id="groupSearch" method="get">
             {{form_render(GroupSearch)}}
             <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
         </form>
@@ -17,7 +17,6 @@
                 GroupMemberApprove.choices | length %}
                 <a href="" class="nav-link" data-toggle="modal" data-target="#pending_groups">Pending<span>({{pending_count}})</span></a>
                 <a href="" class="nav-link" data-toggle="modal" data-target="#GroupDelete">Delete</a>
-            </li>
         </ul>
         </div>
         <ul>
@@ -29,7 +28,8 @@
         </ul>
         <br>
     <!-- url for js file -->
-    <script> let url = "{{ url_for('relationship.groupsearch') }}" </script>
+        </div>
+    <script> let url = "{{ url_for('relationship.groupSearchAutocomplete') }}" </script>
 
 {% endblock content_narrow_form %}
 

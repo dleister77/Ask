@@ -138,10 +138,12 @@ function auto_complete(selector_id, url,field_name, filter_ids){
         delay: 200,
         source: function(request, response){
             search_criteria = {name: request.term};
-            for (i=0; i < filter_ids.length; i++){
-                key_name = filter_ids[i];
-                value = document.getElementById(key_name).value;
-                search_criteria[key_name] = value;
+            if(filter_ids != null){
+                for (i=0; i < filter_ids.length; i++){
+                    key_name = filter_ids[i];
+                    value = document.getElementById(key_name).value;
+                    search_criteria[key_name] = value;
+                }
             }
             $.getJSON(url, search_criteria, function(data){
                     array = [];
@@ -389,58 +391,10 @@ function initFriends(jquery){
 }
 
 function initGroups(jquery){
-    var group_array = [];
-    var group_array_full = [];
-    var group_array_values = [];
-    var group_array_detailed = [];
-    //autcomplete group name using jquery autocomplete ui: https://api.jqueryui.com/autocomplete/
-    $("#group_name").autocomplete({
-        autoFocus: true,
-        minLength: 1,
-        delay: 200,
-        source: function(request, response){
-            group_array = [];
-            group_array_values = [];
-            group_array_full = [];
-            group_array_detailed = [];
-            $.getJSON(url, {"name":request.term}, function(data){
-                    $.each(data, function(key, value){
-                        group_array.push({"label":value.name, "value":value.name});
-                        group_array_full.push(value.name);
-                        group_array_values.push(value.name.toLowerCase());
-                        group_array_detailed.push({key:value});
-                    });
-                    response(group_array);
-            }); 
-        },
-        //enter group id into hidden input field
-        select: function(event, ui){
-            var i = group_array_full.indexOf(ui.item.label);
-            $("#group_value").val(group_array_detailed[i].key.id);
-        }       
-    });
-
-
-    //check submitted input vs autocomplete array
-    function valcheck(array,input,msg){
-        if (array.includes(input.value.toLowerCase()) == false){
-            input.setCustomValidity(msg);
-            check_validity(input);
-        }else{
-            input.setCustomValidity("");
-            check_validity(input);
-        }
-    }
-
-    //forces group search input to use value from autocomplete dropdown
-    $("#submit-group-add").on("click", function(event){
-        input = document.getElementById("group_name")
-        valcheck(group_array_values, input, "Please choose group name from list or add group below.");
-        $("#submit-group-add").unbind("click");
-        $("#group_name").on("blur", function(event){
-            valcheck(group_array_values, input,"Please choose group name from list or add group below.");
-        });
-    });
+    id = "#group_name"
+    displayField = 'name'
+    filter_ids = null
+    auto_complete(id, url, displayField, filter_ids);
 }
 
 function initSearch(jquery){
@@ -484,22 +438,19 @@ function initSearch(jquery){
     mapContainer = document.getElementById("viewDiv")
     mapLink.addEventListener("click", function(){
         // viewMap();
-        let params = ['sector', 'category', 'name', 'reviewed_filter',
-                      'friends_filter', 'groups_filter', 'sort', 'page'];
-        let query_args = {};
-        urlParams = new URLSearchParams(window.location.search);
-        for (let param of params){
-            query_args[param] = urlParams.get(param);
-        }
-        let url = "/provider/search/json";
+        // let params = ['sector', 'category', 'name', 'reviewed_filter',
+        //               'friends_filter', 'groups_filter', 'sort', 'page'];
+        // let query_args = {};
+        // urlParams = new URLSearchParams(window.location.search);
+        // for (let param of params){
+        //     query_args[param] = urlParams.get(param);
+        // }
+        // let url = "/provider/search/json";
         listView.hidden = true;
         mapView.hidden = false;
         if(mapContainer.childElementCount == 0){
-            $.get(url, query_args, function(data){
-                let searchResults = data[0];
-                let location = data[1];
-                viewMap(location, searchResults);
-            });
+            viewMap(searchHome, searchResults);
+
         }
     });
     listLink.addEventListener("click", function(){
@@ -739,7 +690,7 @@ $(document).ready(function(){
     } else if ( $("#review_form").length){
         $(document).ready(initReview);
 
-    } else if ($("#groupadd").length){
+    } else if ($("#groupSearch").length){
         $(document).ready(initGroups);
     } else if ($("#friendadd").length){
         $(document).ready(initFriends);

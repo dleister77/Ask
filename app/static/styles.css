@@ -5,10 +5,7 @@
 .container {
   padding: 100px;
 
-}.d-flex {
-  background-color: #003366;
 }
-
 .error {
   border: 2px solid red;
 }
@@ -58,9 +55,7 @@
 .card{
   background-color: #f2f2f2;
 }
-.card-body{
-  
-}
+
 .card-header{
   background-color: navy;
   color: white;
@@ -122,4 +117,7 @@
 #viewDiv {
   height: 600px;
   width: 100%;
+}
+.welcomemsg{
+  background-color: #003366;
 }

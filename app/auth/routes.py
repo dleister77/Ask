@@ -71,7 +71,8 @@ def logout():
     logout_user()
     keysToRemove = ['location', 'email_verification_sent']
     for key in keysToRemove:
-        session.pop(key)
+        if key in session:
+            session.pop(key)
     return redirect(url_for('auth.welcome'))
 
 

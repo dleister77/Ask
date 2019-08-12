@@ -65,22 +65,55 @@
                 {{render_provider_alt(provider, reviewFilter)}}
                 <br>
             {% endfor %}
-            {% if pag_urls %}
-                {{ pagination(pag_urls) }}
-            {% endif %}
         {% endif %}
     </div>
+    
+    <div hidden id="mapView">
+        <div class="row justify-content-end mx-2">
+            <button class="btn btn-link" id="viewList" type="button">View List</button>
+        </div>
+        <div id="viewDiv"> 
+            <!-- <p> where map should go</p>     -->
+        </div>
+    </div>    
+    
+    {% if pag_urls %}
+        {{ pagination(pag_urls) }}
+    {% endif %}    
+    
 {% endblock %} 
         
 {% block content_wide %}
-    <div hidden id="mapView">
+    <!-- <div hidden id="mapView">
         <div class="row justify-content-end mx-2">
                 <button class="btn btn-link" id="viewList" type="button">View List</button>
         </div>
-        <div id="viewDiv"> 
+        <div id="viewDiv">  -->
         <!-- <p> where map should go</p>     -->
-        </div>
-    </div>    
+        <!-- </div>
+    </div>     -->
+{% endblock %}
+
+{% block jsScripts %}
+
+
+{% if locationDict and providersDict %}
+
+<script> 
+
+    
+    let url = "{{ url_for('relationship.groupSearchAutocomplete') }}";
+    let searchHome = '{{ locationDict| tojson | safe }}';
+    searchHome = JSON.parse(searchHome);
+    var providersDict = '{{ providersDict | tojson | safe }}';
+    let searchResults = JSON.parse(providersDict);
+    
+
+
+</script>
+
+{% endif %}
+
 {% endblock %}
 
 

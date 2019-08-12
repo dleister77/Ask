@@ -3,17 +3,22 @@
 
 {% block content_medium %}
 
+{% set member = group in current_user.groups %}
+
 <div class="card pb-0" id="user_profile">
-    <div class="card-header p-2">
-        <h4 class="text-center">Profile Information
-        {% if current_user.id == group.admin_id %}    
-        <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
-        {% endif %}
-        </h4>
+    <div class="card-header p-3 clearfix">
+            <div class="d-flex justify-content-center">
+                <!-- filler for flexbox -->
+                <h4>Profile Information</h4>
+                {% if current_user.id == group.admin_id %}    
+                    <a href="" class='btn btn-md btn-light ml-auto' data-toggle="modal" data-target="#modal_id">Edit</a>
+                {% elif not member %}
+                    <a href="{{url_for('relationship.groupadd', id=group.id)}}" class='btn btn-md btn-light float-right' role='button'>Join</a>
+                {% endif %}
+            </div>
     </div>
     <div class="card-body">
         {# Only show group members if user is group member #} 
-        {% set member = group in current_user.groups %}
 
         
             <dl class="row">
@@ -65,8 +70,9 @@
         </script>
     {% endif %}
 
+    {% set url = url_for('relationship.groupUpdate') %}
     {% if modal_form %}
-        {{modal_render(modal_form, modal_title, action="/groupupdate")}}
+        {{modal_render(modal_form, modal_title, action=url)}}
     {% endif %}
 
 {% endblock%}

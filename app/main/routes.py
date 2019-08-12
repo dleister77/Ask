@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib import parse
 
 from flask import flash, redirect, render_template, request, url_for, jsonify,\
-                  send_from_directory, current_app, session
+                  send_from_directory, current_app, session, json
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
@@ -234,9 +234,17 @@ def search():
             if field.data is True:
                 reviewFilter[field.name] = 'y'
         form.initialize()
+        providersDict = [provider._asdict() for provider in providers]
+        providersDict = providersDict
+        if session.get('location'):
+            locationDict = session['location']
+        else:
+            locationDict = None
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
-                               reviewFilter=reviewFilter)      
+                               reviewFilter=reviewFilter,
+                               locationDict=locationDict,
+                               providersDict=providersDict)
     return render_template("index.html", form=form, title="Search"), 422
 
 @bp.route('/provider/search/json', methods=['GET'])

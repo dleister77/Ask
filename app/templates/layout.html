@@ -52,9 +52,8 @@
                     {% if current_user.is_authenticated %}
                         {{ Navlink('main.index', 'Search') }}
                         {{ Navlink('main.user', 'Profile', username=current_user.username)}}
-                        {% set dropdownname = 'Network' %}
-                        {% set dropdownlinks = [('relationship.network_friends','Friends'),('relationship.network_groups','Groups')] %}
-                        {{ Navdropdown(dropdownname, dropdownlinks )}}
+                        {{ Navlink('relationship.network_friends', 'Friends')}}
+                        {{ Navlink('relationship.network_groups', 'Groups')}}
                         {{ Navlink('auth.logout', 'Logout') }}
 
                     {% else %}
@@ -79,6 +78,8 @@
         {% block main %} {% endblock %}
 
         </main>
+
+        {%block jsScripts %} {% endblock %}
 
 
     </body>

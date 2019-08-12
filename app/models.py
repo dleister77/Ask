@@ -11,7 +11,7 @@ from sqlalchemy import CheckConstraint, func as saFunc
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref
-from sqlalchemy.sql import func
+from sqlalchemy.sql import exists, func
 from sqlalchemy.sql.expression import desc
 from threading import Thread
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -535,7 +535,7 @@ class FriendRequest(Model):
     requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                        ondelete="CASCADE"), 
                              nullable=False)
-    date_sent = db.Column(db.Date, index=True)
+    date_sent = db.Column(db.Date, index=True, nullable=True)
     token_key = 'request'
 
 
@@ -620,7 +620,7 @@ class GroupRequest(Model):
     requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                         ondelete="CASCADE"),
                              nullable=False)
-    date_sent = db.Column(db.Date, index=True)
+    date_sent = db.Column(db.Date, index=True, nullable=True)
     token_key = 'request'
 
     def _get_request_token(self):
@@ -1146,3 +1146,23 @@ class Group(Model):
 
     def __repr__(self):
         return f"<Group {self._name}>"
+    
+    @classmethod
+    def search(cls, filters):
+        """Search groups for groups match search query."""
+        memberCheck = exists().where(cls.members.contains(current_user)).label("membership")
+        query_args = [cls.id, cls.name, cls.description, memberCheck]
+        join_args = []
+        outerjoin_args = []
+        filter_args = [cls.name.ilike(f"%{filters['name']}%")]
+        sort_arg = [cls.name]
+        limit = None
+        groups = (db.session.query(*query_args)
+                                     .join(*join_args)
+                                     .outerjoin(*outerjoin_args)
+                                     .filter(*filter_args)
+                                     .group_by(cls.id)
+                                     .order_by(*sort_arg)
+                                     .limit(limit)
+                                     .all())      
+        return groups        

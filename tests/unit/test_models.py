@@ -616,3 +616,21 @@ class TestGroup(object):
         testGroup.delete()
         assert Group.query.get(id) is None
         assert User.query.get(testUser.id) is not None
+
+    def test_searchNotMember(self, testGroup2, active_client):
+        filters = {"name": "Shanno"}
+        groups = Group.search(filters)
+        assert len(groups) > 0
+        assert groups[0].name == testGroup2.name
+        assert groups[0].description == testGroup2.description
+        assert groups[0].id == testGroup2.id
+        assert groups[0].membership == False
+
+    def test_searchMember(self, testGroup, active_client):
+        filters = {"name": "Qhi"}
+        groups = Group.search(filters)
+        assert len(groups) > 0
+        assert groups[0].name == testGroup.name
+        assert groups[0].description == testGroup.description
+        assert groups[0].id == testGroup.id
+        assert groups[0].membership == True

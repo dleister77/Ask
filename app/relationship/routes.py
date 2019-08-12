@@ -7,57 +7,12 @@ from flask_login import current_user, login_required
 from app.relationship.forms import GroupSearchForm, FriendDeleteForm, \
                                    FriendSearchForm, GroupCreateForm,\
                                    GroupEditForm, FriendApproveForm,\
-                                   GroupDeleteForm, GroupMemberApproveForm
+                                   GroupDeleteForm, GroupMemberApproveForm,\
+                                   GroupAddForm
 from app.models import User, Group, FriendRequest, GroupRequest
 from app.utilities.helpers import disable_form, email_verified
 from app.relationship import bp
 
-
-def network_render(form=None, code=200):
-    """Populate necessary fields for network page and render template."""
-    modal = False
-
-    if form.__class__ == GroupSearchForm:
-        GroupSearch = form
-    else:
-        GroupSearch = GroupSearchForm()
-    if form.__class__ == FriendSearchForm:
-        FriendSearch = form
-    else:
-        FriendSearch = FriendSearchForm()
-    if form.__class__ == FriendDeleteForm:
-        FriendDelete = form
-        modal = "#FriendDelete"
-    else:
-        FriendDelete = FriendDeleteForm()
-        FriendDelete.name.choices = current_user.get_friend_list()
-    if form.__class__ == FriendApproveForm:
-        FriendApprove = form
-        modal = "#pending_friends"
-    else:
-        FriendApprove = FriendApproveForm()
-        FriendApprove.name.choices = current_user.get_friend_approval_choices()
-    if form.__class__ == GroupDeleteForm:
-        GroupDelete = form
-        modal = "#GroupDelete"
-    else:
-        GroupDelete = GroupDeleteForm()
-        GroupDelete.name.choices = current_user.get_group_list()
-    if form.__class__ == GroupMemberApproveForm:
-        GroupMemberApprove = form
-        modal = "#pending_groups"
-    else:
-        GroupMemberApprove = GroupMemberApproveForm()
-        GroupMemberApprove.request.choices = current_user.get_group_admin_choices()
-    
-    modal_open = {"modal": modal}
-    
-    return render_template("relationship/network.html", GroupSearch=GroupSearch,
-                           FriendSearch=FriendSearch, title="Network",
-                           FriendDelete=FriendDelete, FriendApprove=FriendApprove,
-                           GroupDelete=GroupDelete, modal_open=modal_open, 
-                           GroupMemberApprove=GroupMemberApprove,
-                           GroupRequest=GroupRequest), code
 
 def groups_render(form=None, code=200):
     """Populate necessary fields for groups network page and render template."""
@@ -241,9 +196,9 @@ def group(name, id):
 @login_required
 def groupadd():
     """Send group admin request to join group."""
-    form = GroupSearchForm()
+    form = GroupAddForm()
     if form.validate_on_submit():
-        group = Group.query.get(form.value.data)
+        group = Group.query.get(form.id.data)
         if current_user != group.admin:
             args = {"group_id": group.id, "requestor_id":current_user.id}
             request = GroupRequest.query.filter_by(**args).first()
@@ -256,10 +211,11 @@ def groupadd():
             current_user.add(group)
             msg = f"Successfully added to {group.name}."
         flash(msg)
-        return redirect(url_for('relationship.network'))
+        return groups_render()
     else:
-        form.name.errors = form.value.errors.pop()
-        return groups_render(form, 422)
+        for error in form.errors['id']:
+            flash(error)
+        return render_template("relationship.groupSearch.html", form=form),422
 
 @bp.route('/network/groups/approve', methods=['POST'])
 @login_required
@@ -308,7 +264,7 @@ def group_create():
 def group_remove():
     """Remove group from user's list of groups."""
     form = GroupDeleteForm()
-    form.name.choices = current_user.get_group_list()
+    form.populate_choices(current_user)
     if form.validate_on_submit():
         removed = []
         for group in form.name.data:
@@ -320,14 +276,14 @@ def group_remove():
             flash(f"{removed[0]} has been removed from your groups")
         else:
             flash(f"{', '.join(removed)} have been removed from your groups")
-        return redirect(url_for('relationship.network'))
+        return redirect(url_for('relationship.network_groups'))
     flash("Invalid request. Please select option from list and resubmit.")
     return groups_render(form, 422)
 
 
-@bp.route('/group/search')
+@bp.route('/group/search/autocomplete')
 @login_required
-def groupsearch():
+def groupSearchAutocomplete():
     """Searches db for groups to populate group search autocomplete"""
     name = parse.unquote_plus(request.args.get("name"))
     groups = Group.query.filter(Group.name.ilike(f"%{name}%")).order_by(Group.name).limit(10).all()
@@ -337,6 +293,20 @@ def groupsearch():
     groups = [{"id": group.id, "name": group.name} for group in groups]
     return jsonify(groups)
 
+@bp.route('/group/search')
+@login_required
+def groupSearch():
+    """Searches db for groups to populate group search autocomplete"""
+    form = GroupSearchForm(request.args)
+    if form.validate():
+        filters = {"name": form.name.data}
+        groups = Group.search(filters)
+        addForm = GroupAddForm()
+        return render_template("relationship/groupSearch.html", groups=groups,
+                               form=form, title="Group Search",
+                               addForm=addForm)
+    return render_template("relationship/groupSearch.html", form=form,
+                           title="Group Search"),422
 
 @bp.route('/group/update', methods=['POST'])
 @login_required
@@ -356,7 +326,6 @@ def groupUpdate():
             flash("Form disabled. Please verify email to unlock.")        
         modal_title = "Edit User Information"
         if current_user != g.admin:
-            print(f"user admin check: {current_user, g.admin}")
             modal_open = False
             flash("Group information update failed.  User not authorized to make changes.")
         else:
@@ -383,13 +352,6 @@ def group_verify(token):
     return redirect(url_for('auth.index'))
 
 
-@bp.route('/network', methods=['GET', 'POST'])
-@login_required
-@email_verified
-def network():
-    """Initial render of network page."""
-    # if form was submitted, populate with args
-    return network_render()
 
 @bp.route('/network/friends', methods=['GET', 'POST'])
 @login_required
