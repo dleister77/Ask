@@ -5,7 +5,11 @@ from pathlib import Path
 
 from flask import flash, Markup, session, url_for
 from flask_login import current_user
+from wtforms.widgets.core import RadioInput
 from PIL import Image
+
+from app.utilities.forms import RadioInputDisabled
+
 
 
 def thumbnail_from_buffer(buffer, size, name, path):
@@ -100,18 +104,35 @@ def kw_update(field, new_kw):
         field.render_kw = new_kw
 
 
-def disable_form(form):
+def disableForm(form):
     """Disable all fields in form."""
-    disabled = {"disabled": "disabled"}
+    disabled = {"disabled": True}
     for field in form:
         if field.type == "FormField":
-            disable_form(field)
+            disableForm(field)
         elif field.type == "RadioField":
-            for subfield in field:
-                kw_update(subfield, disabled)
+            field.option_widget = RadioInputDisabled()
         else:
             kw_update(field, disabled)
 
+def listToString(items):
+    """Converts list to string seperated by appropriate , and & .
+    
+    Args:
+        items (list): list of strings to be joined into a string
+    Returns:
+        string
+    """
+    if len(items) == 1:
+        return items[0]
+    elif len(items) == 2:
+        return f"{items[0]} & {items[1]}"
+    else:
+        return f'{", ".join(items[:-1])} & {items[-1]}'
+    
+    
+    
+        
 
 
 

@@ -1,13 +1,18 @@
-from app.models import Category, Provider, Review, User, State
 from datetime import date
-from flask import url_for, json
 import os
 from pathlib import Path
+import re
 from shutil import rmtree
+
+from flask import url_for, json
+from flask_login import current_user
+
+from app.models import Category, Provider, Review, User, State
 from .test_auth import login, logout
+from tests.conftest import FunctionalTest
 
 
-def add_review(client, form, test_app):
+def addPicsToForm(client, form, test_app):
     """Add review and return response."""
     #only do below if files exists
     if 'picture' in form and form['picture'] != "":
@@ -29,214 +34,339 @@ def add_review(client, form, test_app):
     return client.post(url_for('main.review', _external=False), data=form,
                        follow_redirects=True, buffered=True, content_type='multipart/form-data')
 
-def provider_profile(client, args, page):
-    """Test provider profile route."""
-    return client.get(url_for('main.provider', name=args['name'],
-                      id=args['id'], _external=False),
-                      query_string={"page": page}, follow_redirects=True)
+class TestUser(FunctionalTest):
 
-def provider_add(client, form):
-    """Add new provider to db."""
-    return client.post(url_for('main.providerAdd', _external=False),
-                                data=form, follow_redirects=True)    
-def providerList(client, form):
-    """Test generation of provider lists based on category"""
-    return client.post(url_for('main.providerList', _external=False),
-                                data=form)
-def search(client, form):
-    """Test provider search route, returning search results."""
-    return client.get(url_for('main.search', _external=False), query_string=form,
-                      follow_redirects=True)
-
-def user_profile(client, username, page=None):
-    """Get user profile based on username"""
-    return client.get(url_for('main.user', username=username, _external=False), 
-                      follow_redirects=True, query_string=page)
-
-
-def test_user(test_client, test_db):
-    # test existing user
-    login(test_client, "jjones", "password")
-    response = user_profile(test_client, "jjones")
-    print(response.data.decode())
-    assert response.status_code == 200
-    name = '<dd class="col-8 text-right">John Jones</dd>'
-    assert name in response.data.decode()
-    address = '<li class="list-group-item border-0 card-item py-1 px-0">Charlotte, NC, 28210</li>'
-    assert address in response.data.decode()
-    num_reviews = '<dt class="col-4 text-left"># Reviews:</dt>'
-    num_reviews2 = '<dd class="col-8 text-right">2</dd>'
-    assert num_reviews in response.data.decode()
-    assert num_reviews2 in response.data.decode()
-    avg_reviews = '<dd class="col-8 text-right">3.0</dd>'
-    assert avg_reviews in response.data.decode()
-    pag_link1 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=1">1</a></li>'
-    pag_link2 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=2">Next</a></li>'
-    assert pag_link1 in response.data.decode()
-    assert pag_link2 in response.data.decode()
+    routeFunction = 'main.user'
     pwordmodal = '<form id = "modal_form_group" action="/passwordupdate" method="POST">'
     userupdatemodal = '<form id = "modal_form_group" action="/userupdate" method="POST">'
-    assert pwordmodal in response.data.decode()
-    assert userupdatemodal in response.data.decode()
-    # test page2 of pagination
-    page = {"page": 2}
-    response = user_profile(test_client, 'jjones', page)
-    assert b'Preferred Electric Co' in response.data
-    # test user different than logged in
-    response = user_profile(test_client, "sarahsmith")
-    assert pwordmodal not in response.data.decode()
-    assert userupdatemodal not in response.data.decode()
-    assert '<dd class="col-8 text-right">sarahsmith@yahoo.com</dd>' in response.data.decode()
-    address = '<li class="list-group-item border-0 card-item py-1 px-0">Lakewood, NY, 14750</li>'
-    assert address in response.data.decode()
-    # test user not related to via group or friendship
-    response = user_profile(test_client, 'nukepower4ever')
-    assert '<dd class="col-8 text-right">hyman@navy.mil</dd>' not in response.data.decode()
+    edituserinfo = '<a href="" data-toggle="modal" data-target="#modal_id">(edit)</a>'
+    changepassword = '<a href="" data-toggle="modal" data-target="#modal_password">Click to update password</a>'
+
+    def test_get(self, activeClient, testUser):
+        # test existing user
+        response = self.getRequest(activeClient, username=testUser.username)
+        responseDecoded = response.data.decode()
+        assert response.status_code == 200
+        name = '<dd class="col-8 text-right">John Jones</dd>'
+        assert name in responseDecoded
+        address = '<li class="list-group-item border-0 card-item py-1 px-0">Charlotte, NC, 28210</li>'
+        assert address in responseDecoded
+        num_reviews = '<dt class="col-4 text-left"># Reviews:</dt>'
+        num_reviews2 = '<dd class="col-8 text-right">3</dd>'
+        assert num_reviews in responseDecoded
+        assert num_reviews2 in responseDecoded
+        avg_reviews = '<dd class="col-8 text-right">4.0</dd>'
+        assert avg_reviews in responseDecoded
+        pag_link1 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=1">1</a></li>'
+        pag_link2 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=2">Next</a></li>'
+        assert pag_link1 in responseDecoded
+        assert pag_link2 in responseDecoded
+        assert self.pwordmodal in responseDecoded
+        assert self.userupdatemodal in responseDecoded
+        assert self.edituserinfo in responseDecoded
+        assert self.changepassword in responseDecoded
+
+    def test_getPage2(self, activeClient, testUser):
+        # test page2 of pagination
+        response = self.getRequest(activeClient, username=testUser.username,
+                                   page=2)
+        assert b'Preferred Electric Co' in response.data
+        
+    def test_differentUser(self, activeClient, testUser2):
+        response = self.getRequest(activeClient, username=testUser2.username)
+        responseDecoded = response.data.decode()
+        assert self.pwordmodal not in responseDecoded
+        assert self.userupdatemodal not in responseDecoded
+        assert self.changepassword not in responseDecoded
+        assert self.edituserinfo not in responseDecoded
+        assert '<dd class="col-8 text-right">sarahsmith@yahoo.com</dd>' in response.data.decode()
+        address = '<li class="list-group-item border-0 card-item py-1 px-0">Lakewood, NY, 14750</li>'
+        assert address in responseDecoded
+    
+    def test_userNotRelated(self, activeClient, testUser4):
+        response = self.getRequest(activeClient, username=testUser4.username)
+        assert '<dd class="col-8 text-right">hyman@navy.mil</dd>' not in response.data.decode()
 
     
+class TestReview(FunctionalTest):
 
-def test_review(active_client, test_db, test_app, base_review):
-    #add review with required information
-    user = User.query.filter_by(username="jjones").first()
-    test_case = base_review
-    response = add_review(active_client, test_case, test_app)
-    assert response.status_code == 200
-    assert b'review added' in response.data
-    # confirm correct information in db
-    filter = {"friends_only": False, "groups_only": False}
-    p = Provider.query.filter_by(name="Evers Electric").first()
-    assert p.profile(filter)[1] == 3
-    assert p.profile(filter)[2] == 3
-    assert p.profile(filter)[3] == 1
-    # test case without required information
-    test_case.update({"rating": ""})
-    response = add_review(active_client, test_case, test_app)
-    assert b"Rating is required" in response.data
-    assert response.status_code == 422
-    # test case with all fields
-    test_case.update({"category": "1", "name": "2", "rating": "5",
-                 "picture": ["test.jpg", "eggs.jpg"]})
-    response = add_review(active_client, test_case, test_app)
-    assert b'review added' in response.data
-    assert response.status_code == 200
-    path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(user.id), 'test.jpg'))
-    path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(user.id), 'eggs.jpg'))
-    assert path.is_file()
-    assert path2.is_file()
-    review = Review.query.filter_by(provider_id=2).all()[1]
-    assert review.service_date == date(2019, 4, 15)
-    assert review.description == 'Test'
-    assert review.comments == 'Testcomments'
-    path = os.path.join(test_app.config['MEDIA_FOLDER'], str(user.id))
-    rmtree(path)
-    #test get request
-    response = active_client.get(url_for('main.review', _external=False),
-                                 follow_redirects=True)
-    assert response.status_code == 200
-    assert b"Form disabled. Please verify email to unlock." in response.data
-    var = 'disabled="disabled"'
-    assert response.data.decode().count(var) == 7
+    routeFunction = 'main.review'
 
+    def postRequest(self, client, test_app=None, **kwargs):
+        """Add review and return response."""
+        #only do below if files exists
+        if 'picture' in self.form and self.form['picture'] != "":
+        # list of files to upload
+            files = self.form['picture'][:]
+            self.form['picture'] = []
+            try:
+                for file in files:
+                    path = os.path.join(test_app.config['MEDIA_FOLDER'], 'source', file)
+                    f = open(path, 'rb')
+                    self.form['picture'].append((f, file))
+                return client.post(url_for(self.routeFunction, _external=False), data=self.form,
+                follow_redirects=True, buffered=True, content_type='multipart/form-data')
+            finally:
+                for file in self.form['picture']:
+                    file[0].close()                
+        else:
+            return super().postRequest(client, **kwargs)
 
-def test_search(active_client, test_db):
-    id = State.query.filter_by(name="North Carolina").first().id
-    test_case = {"category": 1, "city": "Charlotte", "state": id}
-    response = search(active_client, test_case)
-    assert response.status_code == 200
-    assert b"Douthit Electrical" in response.data
-    assert '<h4><a href="/provider/Douthit%20Electrical/1">Douthit Electrical</a></h4>' in response.data.decode()
-    # test correct stars rendered
-    var = '<i class="fas fa-star star-full"></i>'
-    assert response.data.decode().count(var) == 3
-    # test average rating
-    assert '<li class="list-inline-item">3.0</li>' in response.data.decode()
-    # test num reviews
-    assert '<li class="list-inline-item">(3)</li>' in response.data.decode()
-    print(response.data.decode())
-    #test pagination links
-    assert '<li class="page-item"><a class="page-link" href="/search?page=2&amp;category=1&amp;city=Charlotte&amp;state=1">Next</a></li>' in response.data.decode()
-    test_case = {"category": 1, "city": "Charlotte", "state": id, "page": 2}
-    response = search(active_client, test_case)
-    assert response.status_code == 200
-    assert b'Preferred Electric Co' in response.data
-    # test without all required information submitted
-    test_case = {"category": 1, "state": id}
-    response = search(active_client, test_case)
-    assert b"Douthit Electrical" not in response.data
-    assert b"City is required" in response.data
-    assert response.status_code == 422
-    # test friends only
-    test_case = {"category": 1, "city": "Charlotte", "state": id, "friends_only":True}
-    response = search(active_client, test_case)
-    assert b"Douthit Electrical" in response.data
-    assert '<li class="list-inline-item">(1)</li>' in response.data.decode()
-    assert '<li class="list-inline-item">1.0</li>' in response.data.decode()
-    assert '<h4><a href="/provider/Douthit%20Electrical/1?friends_only=y">Douthit Electrical</a></h4>' in response.data.decode()
-    # test groups only
-    test_case = {"category": 1, "city": "Charlotte", "state": id, "groups_only":True}
-    response = search(active_client, test_case)
-    assert '<h4><a href="/provider/Douthit%20Electrical/1?groups_only=y">Douthit Electrical</a></h4>' in response.data.decode()
-    assert b"Douthit Electrical" in response.data
-    assert '<li class="list-inline-item">(1)</li>' in response.data.decode()
-    assert '<li class="list-inline-item">5.0</li>' in response.data.decode()
+    def test_postNew(self, activeClient, testUser, baseReview):
+        #add review with required information
+        testUser.emailVerified = True
+        self.form = baseReview
+        response = self.postRequest(activeClient)
+        assert response.status_code == 200
+        assert b'review added' in response.data
+        newPageHeader = b'<h3>Search for Business</h3>'
+        assert newPageHeader in response.data
+        # confirm correct information in db
+        filter = {"friends_filter": False, "groups_filter": False}
+        p = Provider.query.filter_by(name="Evers Electric").first()
+        assert p.profile(filter)[1] == 3
+        assert p.profile(filter)[2] == 3
+        assert p.profile(filter)[3] == 1
+    
+    
+    def test_postInvalidForm(self, activeClient, testUser, baseReview):
+        # test case without required information
+        baseReview.update({"rating": ""})
+        self.form = baseReview
+        response = self.postRequest(activeClient)
+        assert b"Rating is required" in response.data
+        newPageHeader = b'<h3>Add Review</h3>'
+        assert newPageHeader in response.data
+        assert response.status_code == 422
 
+    def test_postWithPicture(self, activeClient, testUser, baseReview, test_app):
+        baseReview.update({"picture": ["test.jpg", "nyc.jpg"]})
+        self.form = baseReview
+        response = self.postRequest(activeClient, test_app)
+        try:
+            assert b'review added' in response.data
+            assert response.status_code == 200
+            path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'test.jpg'))
+            path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc.jpg'))
+            assert path.is_file()
+            assert path2.is_file()
+            review = Review.query.filter_by(provider_id=baseReview['id']).all()
+            review = review[0]
+            assert review.service_date == date(2019, 4, 15)
+            assert review.description == baseReview['description'].capitalize()
+            assert review.comments == baseReview['comments'].capitalize()
+        finally:
+            path = os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id))
+            rmtree(path)
 
-def test_providerList(active_client, test_db):
-    test_case = {"category": 1}
-    response = providerList(active_client, test_case)
-    assert response.status_code == 200
-    assert {"id": 1,"name": "Douthit Electrical"} in json.loads(response.data.decode())
-    assert {"id": 2,"name": "Evers Electric"} in json.loads(response.data.decode())
-    assert {"id": 3,"name": "Preferred Electric Co"} in json.loads(response.data.decode())
+    def test_getEmailVerified(self, activeClient, testUser, testProvider1):
+        testUser.update(email_verified=True)
+        assert testUser.email_verified is True
+        response = self.getRequest(activeClient, name=testProvider1.name,
+                                   id=testProvider1.id)
+        assert response.status_code == 200
+        newPageHeader = b'<h3>Add Review</h3>'
+        assert newPageHeader in response.data
+        var = 'disabled'
+        assert response.data.decode().count(var) == 1 # 1 field and 1 comments
+        var2 = 'readonly'
+        assert response.data.decode().count(var2) == 1
+    
+    def test_getEmailNotVerified(self, activeClient, testUser, testProvider1):
+        assert testUser.email_verified is False
+        response = self.getRequest(activeClient, name=testProvider1.name,
+                                   id=testProvider1.id)
+        assert response.status_code == 200
+        newPageHeader = b'<h3>Add Review</h3>'
+        assert newPageHeader in response.data
+        assert b"Form disabled. Please verify email to unlock." in response.data
+        var = 'disabled'
+        print(response.data.decode())
 
+        assert response.data.decode().count(var) == 19
+        var2 = 'readonly'
+        assert response.data.decode().count(var2) == 1
+    
+    
+    def test_getNoArgs(self, activeClient):
+        response = self.getRequest(activeClient)
+        flash = b'Invalid request. Please search for provider first and then add review.'
+        assert flash in response.data
+        newPageHeader = b'<h3>Search for Business</h3>'
+        assert newPageHeader in response.data
 
-def test_providerAdd(active_client, test_db):
-    # test provider with multiple categories
-    test_case = {"name": "Jims Electric", "category": [1, 2],
-                 "address-line1": "2318 Arty Ave", "address-city": "Charlotte",
-                 "address-zip": "28208", "address-state": 1,
-                 "telephone": "7043346449", "email": "jim@jimselectric.com"}
-    response = provider_add(active_client, test_case)
-    assert response.status_code == 200
-    assert b'Jims Electric added' in response.data
-    p = Provider.query.filter_by(name="Jims Electric").first()
-    c = Category.query.filter_by(id=1).first()
-    c2 = Category.query.filter_by(id=2).first()
-    assert c in p.categories
-    assert c2 in p.categories
-    # test provider with invalid email
-    test_case = {"name": "Bobs Electric", "category": [1, 2],
-                 "address-line1": "2318 Arty Ave", "address-city": "Charlotte",
-                 "address-zip": "28208", "address-state": 1,
-                 "telephone": "7043346448", "email": "bobbobselectric.com"}
-    response = provider_add(active_client, test_case)
-    assert response.status_code == 422
-    assert b'Failed to add provider' in response.data
-    assert b'Invalid email address' in response.data
-    # test provider on GET request
-    response = active_client.get(url_for('main.providerAdd', _external=False),
-                      follow_redirects=True)
-    assert response.status_code == 200
-    assert b'id="provideraddform"' in response.data
-    assert b"Form disabled. Please verify email to unlock." in response.data
-    var = 'disabled="disabled"'
-    assert response.data.decode().count(var) == 10
+class TestIndex(FunctionalTest):
+
+    routeFunction = 'main.index'
+
+    def test_get(self, activeClient):
+        response = self.getRequest(activeClient)
+        assert response.status_code == 200
+        pageHeader = b'<h3>Search for Business</h3>'
+        assert pageHeader in response.data
+        resultsDiv = b'<div id="businessList">'
+        assert resultsDiv not in response.data #no results rendered
 
 
-def test_provider_profile(active_client, test_db):
-    test_case = {"name": "Douthit Electrical", "id": 1}
-    response = provider_profile(active_client, test_case, 1)
-    assert b'Reviewer' in response.data
-    assert b'Category: Electrician' in response.data
-    assert b'Relationship: Self' in response.data
-    assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=2">2</a></li>' in response.data
-    response = provider_profile(active_client, test_case, 2)
-    assert b'Common Groups:' in response.data
-    assert b'Qhiv Hoa' in response.data
-    response = provider_profile(active_client, test_case, 3)
-    assert b'Friends:  Yes' in response.data
-    test_case = test_case = {"name": "Douthit Electrical", "id": 35}
-    response = provider_profile(active_client, test_case, 1)
-    assert response.status_code == 404
+class TestProviderSearch(FunctionalTest):
+
+    routeFunction = 'main.search'
+
+    def test_search(self, activeClient, baseProviderSearch):
+        test_case = baseProviderSearch
+        response = self.getRequest(activeClient, **test_case)
+        assert response.status_code == 200
+        pageHeader = b'<h3>Search for Business</h3>'
+        assert pageHeader in response.data
+        resultsDiv = b'<div id="businessList">'
+        assert resultsDiv in response.data
+        autocompleteURL = b'/provider/list/autocomplete'
+        assert autocompleteURL in response.data
+        providerCard = b'<div class="card">'
+        assert response.data.count(providerCard) == 2
+        searchHome = b'{"address": "", "coordinates": [35.123949, -80.864783], "latitude": 35.123949, "longitude": -80.864783, "source": "home"}';
+        assert searchHome in response.data
+        # test correct stars rendered
+        full = b'<i class="fas fa-star star-full"></i>'
+        assert response.data.count(full) == 2
+        half = b'<i class="fas fa-star-half-alt star-half"></i>'
+        assert response.data.count(half) == 1
+    
+    def test_searchNoResults(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"name": "Test Electrician"})
+        test_case = baseProviderSearch
+        response = self.getRequest(activeClient, **test_case)
+        flash = b'No results found. Please try a different search.'
+        assert flash in response.data
+        resultsDiv = b'<div id="businessList">'
+        assert resultsDiv not in response.data
+        autocompleteURL = b'/provider/list/autocomplete'
+        assert autocompleteURL in response.data
+
+    def test_badAddress(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"location": "manual",
+        "manual_location": "7000 covey chase dr charlotte nc"
+        })
+        test_case = baseProviderSearch
+        response = self.getRequest(activeClient, **test_case)
+        flash = b'Invalid address submitted. Please re-enter and try again.'
+        assert flash in response.data
+        assert response.status_code == 422
+
+class TestProviderList(FunctionalTest):
+
+    routeFunction = 'main.provider_list'
+
+    def test_providerList(self, activeClient):
+        test_case = {"category": 1}
+        response = self.getRequest(activeClient, **test_case)
+        assert response.status_code == 200
+        assert {"id": 1,"name": "Douthit Electrical"} in json.loads(response.data.decode())
+        assert {"id": 2,"name": "Evers Electric"} in json.loads(response.data.decode())
+        assert {"id": 3,"name": "Preferred Electric Co"} in json.loads(response.data.decode())
+
+class TestProviderAutocomplete(FunctionalTest):
+
+    routeFunction = 'main.providerAutocomplete'
+
+    def test_search(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"name":"Dou"})
+        test_case = baseProviderSearch
+        response = self.getRequest(activeClient, **test_case)
+        assert response.status_code == 200
+        check = {"name": "Douthit Electrical", "line1": "6000 Fairview Rd",\
+                "city": "Charlotte", "state": "NC"}
+        assert check in json.loads(response.data.decode())
+
+
+    def test_searchMultiple(self, activeClient, baseProviderSearch):
+            baseProviderSearch.update({"name":"er"})
+            test_case = baseProviderSearch
+            response = self.getRequest(activeClient, **test_case)
+            assert response.status_code == 200
+            check1 = {"name": "Evers Electric", "line1": "3924 Cassidy Drive",\
+                    "city": "Waxhaw", "state": "NC"}
+            check2 = {"name": "Preferred Electric Co", "line1": "4113 Yancey Rd",\
+                    "city": "Charlotte", "state": "NC"}
+            assert check1 in json.loads(response.data.decode())
+            assert check2 in json.loads(response.data.decode())
+
+    def test_invalidAddress(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"name":"Dou", "location": "manual",
+        "manual_location": "7000 covey chase dr charlotte nc" })
+        test_case = baseProviderSearch
+        response = self.getRequest(activeClient, **test_case)
+        assert response.status_code == 422
+        check = {"status": "failed", "reason": "invalid address"}
+        for k,v in check.items():
+            assert k,v in response.json.items()
+        # 
+
+class TestProviderAdd(FunctionalTest):
+
+    routeFunction = 'main.provider_add'
+
+    def test_success(self, activeClient, baseProviderNew):
+        self.form = baseProviderNew
+        response = self.postRequest(activeClient)
+        assert response.status_code == 200
+        assert b'Smith Electric added' in response.data
+        p = Provider.query.filter_by(name="Smith Electric").first()
+        c = Category.query.filter_by(id=1).first()
+        c2 = Category.query.filter_by(id=2).first()
+        assert c in p.categories
+        assert c2 in p.categories
+
+
+    def test_invalidFormData(self, activeClient, baseProviderNew):
+        baseProviderNew.update({"email": "testtest.com"})
+        self.form = baseProviderNew
+        response = self.postRequest(activeClient)
+        assert response.status_code == 422
+        print(response.data.decode())
+        assert b'Failed to add provider' in response.data
+        assert 'Invalid email address' in response.data.decode()
+       
+    def test_emailNotVerified(self, activeClient):
+        response = self.getRequest(activeClient)
+        assert b"Form disabled. Please verify email to unlock." in response.data
+        var = 'disabled'
+        assert response.data.decode().count(var) == 13
+
+    def test_getRequest(self, activeClient):
+        current_user.email_verified = True
+        response = self.getRequest(activeClient)
+        assert b"Form disabled. Please verify email to unlock." not in response.data
+        assert response.status_code == 200
+        assert b'id="provideraddform"' in response.data
+
+
+class TestProviderProfile(FunctionalTest):
+
+    routeFunction = 'main.provider'
+
+
+    def test_page1(self, activeClient, testProvider1):
+        test_case = {"name": testProvider1.name, "id": testProvider1.id}
+        response = self.getRequest(activeClient, **test_case)
+        assert b'Reviewer' in response.data
+        assert b'Category: Electrician, Plumber' in response.data
+        assert b'Qhiv Hoa' in response.data
+        assert b'Relationship: Self' in response.data
+        assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=2">2</a></li>' in response.data
+        
+    def test_page2(self, activeClient, testProvider1):
+        test_case = {"name": testProvider1.name, "id": testProvider1.id, "page": 2}
+        response = self.getRequest(activeClient, **test_case)
+        assert b'Friends:  Yes' in response.data
+        assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=1">1</a></li>' in response.data
+
+    def test_invalidID(self, activeClient, testProvider1):
+        test_case = {"name": "Douthit Electrical", "id": 35}
+        response = self.getRequest(activeClient, **test_case)
+        assert response.status_code == 404
+        flash = b'Provider not found.  Please try a different search.'
+        assert flash in response.data
+
     
 

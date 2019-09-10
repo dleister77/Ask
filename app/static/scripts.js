@@ -420,7 +420,7 @@ function initSearch(jquery){
     filter_ids = ['sector', 'category', 'home', 'manual_location']
     auto_complete(id, url, 'name', filter_ids);
     //add location field toggles 
-    toCheck = document.getElementById("home")
+    toCheck = document.getElementById("location")
     checkValue = "manual"
     toBeVisibleID = "manual_location_div"
     toCheck.addEventListener("input", function(){

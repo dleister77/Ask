@@ -3,7 +3,25 @@ import math
 from flask import current_app, url_for
 
 class Pagination:
-    """Basic pagination function"""
+    """Basic pagination function
+    
+    Attributes:
+        data (iterable): iterable data that will be divided into pages
+        page (int): page to be displayed (i.e. p.1 out of 3)
+        per_page (int): how many items of iterable data to display on each page
+            defaults to setting in current_app configuration
+        pages: number of pages in data
+        has_next (bool): property, True if not on last page
+        has_prev (bool): property, True if not on first page
+        next_num (int): property, next page number
+        prev_num (int): property, previous page number
+        paginatedData (iterable): slice of data that corresponds to page
+
+    Methods:
+        get_urls: generates urls for next, previous and each page of paginated
+            data
+               
+    """
     def __init__(self, data, page, per_page=current_app.config.get('PER_PAGE')):
         self.data = data
         self.page = page
@@ -45,9 +63,13 @@ class Pagination:
 
     def get_urls(self, endpoint, pag_args):
         """Generates pagination urls for paginated information.
-        Inputs:
-        endpoint: endpoint to include in url
-        pag_args: args to include in pag_url query string.
+        Args:
+             endpoint (str): route function name to be used in all generated urls
+             pag_args (dict): dict of args and values to include in pag_url query string.
+                 (i.e. request.args)
+        
+        Returns:
+            Dict of urls
         """
 
         pag_args = dict(pag_args)

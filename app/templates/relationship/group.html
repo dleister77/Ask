@@ -11,7 +11,7 @@
                 <!-- filler for flexbox -->
                 <h4>Profile Information</h4>
                 {% if current_user.id == group.admin_id %}    
-                    <a href="" class='btn btn-md btn-light ml-auto' data-toggle="modal" data-target="#modal_id">Edit</a>
+                    <a href="" class="btn btn-md btn-light ml-auto" data-toggle="modal" data-target="#groupUpdateForm">Edit</a>
                 {% elif not member %}
                     <a href="{{url_for('relationship.groupadd', id=group.id)}}" class='btn btn-md btn-light float-right' role='button'>Join</a>
                 {% endif %}
@@ -48,7 +48,7 @@
             <ul>
                 {% for member in group.members %}
                 <li> <a href="{{url_for('main.user', username=member.username)}}">
-                    {{ member.first_name + " " + member.last_name}} </a></li>
+                    {{ member.full_name}} </a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -72,7 +72,7 @@
 
     {% set url = url_for('relationship.groupUpdate') %}
     {% if modal_form %}
-        {{modal_render(modal_form, modal_title, action=url)}}
+        {{modal_render(modal_form, modal_title, action=url, modalID="groupUpdateForm")}}
     {% endif %}
 
 {% endblock%}

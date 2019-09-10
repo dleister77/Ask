@@ -3,26 +3,26 @@
 
 {% block content_narrow_form %}
 
-        <form action="{{url_for('relationship.groupSearch')}}" id="groupSearch" method="get">
-            {{form_render(form)}}
-            <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
-        </form>
-        <br>
-        <div id="groupSearch"></div>
-        <!-- list of groups user belongs to -->
-        <div class="row justify-content-center">
-            <h3>Group Search Results</h3>
-        </div>
-        <div class="list-group">
-            {% set joinUrl = url_for('relationship.groupadd') %}
-            {% for group in groups %}
-                {{renderGroupShort(group, current_user, joinUrl, addForm)}}
+<div id="groupSearch"></div>
+    <form action="{{url_for('relationship.groupSearch')}}" id="groupSearchForm" method="get">
+        {{form_render(form)}}
+        <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
+    </form>
+    <br>
+    <!-- list of groups user belongs to -->
+    <div class="row justify-content-center">
+        <h3>Group Search Results</h3>
+    </div>
+    <div class="list-group">
+        {% set joinUrl = url_for('relationship.groupadd') %}
+        {% for group in groups %}
+            {{renderGroupShort(group, current_user, joinUrl, addForm)}}
 
-            {% endfor %}
-        </div>
-        <br>
+        {% endfor %}
+    </div>
+    <br>
     <!-- url for js file -->
-    <script> let url = "{{ url_for('relationship.groupSearchAutocomplete') }}" </script>
+<script> let url = "{{ url_for('relationship.groupSearchAutocomplete') }}" </script>
 
 {% endblock content_narrow_form %}
 

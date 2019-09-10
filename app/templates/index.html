@@ -7,14 +7,14 @@
   
 {% block content_narrow_form %}
     <div class="row">
-    <h3>Search for Provider</h3>
+    <h3>Search for Business</h3>
         <ul class="nav">
             <a class="nav-link" href="{{url_for('main.provider_add')}}">(Add new provider)</a>
         </ul>
     </div>
 
     <form action="{{url_for('main.search')}}" method="get", id="providersearch">
-        {{field_render(form.home)}}
+        {{field_render(form.location)}}
         <div hidden="true" class = "form-group row" id="manual_location_div">
             <div class = "col">
                 {{ form.manual_location.label(hidden=true, class_="col-form-label") }}
@@ -56,26 +56,29 @@
 {% endblock %}  
 
 {% block content_medium %}
-    <div id="businessList">
-        <div class="row justify-content-end mx-2">
-            <button class="btn btn-link" id="viewOnMap" type="button">View on Map</button>
-        </div>
-        {% if providers and providers != none %}
+
+    {% if providers and providers != none %}
+        <div id="businessList">
+            <div class="row justify-content-end mx-2">
+                <button class="btn btn-link" id="viewOnMap" type="button">View on Map</button>
+            </div>
             {%for provider in providers %}
                 {{render_provider_alt(provider, reviewFilter)}}
                 <br>
             {% endfor %}
-        {% endif %}
-    </div>
+        </div>
+
+        <div hidden id="mapView">
+            <div class="row justify-content-end mx-2">
+                <button class="btn btn-link" id="viewList" type="button">View List</button>
+            </div>
+            <div id="viewDiv"> 
+                <!-- <p> where map should go</p>     -->
+            </div>
+        </div>   
+
+    {% endif %}
     
-    <div hidden id="mapView">
-        <div class="row justify-content-end mx-2">
-            <button class="btn btn-link" id="viewList" type="button">View List</button>
-        </div>
-        <div id="viewDiv"> 
-            <!-- <p> where map should go</p>     -->
-        </div>
-    </div>    
     
     {% if pag_urls %}
         {{ pagination(pag_urls) }}
@@ -84,35 +87,30 @@
 {% endblock %} 
         
 {% block content_wide %}
-    <!-- <div hidden id="mapView">
-        <div class="row justify-content-end mx-2">
-                <button class="btn btn-link" id="viewList" type="button">View List</button>
-        </div>
-        <div id="viewDiv">  -->
-        <!-- <p> where map should go</p>     -->
-        <!-- </div>
-    </div>     -->
+
 {% endblock %}
 
 {% block jsScripts %}
 
 
-{% if locationDict and providersDict %}
 
 <script> 
 
-    
-    let url = "{{ url_for('relationship.groupSearchAutocomplete') }}";
+
+    let url = "{{ url_for('main.providerAutocomplete') }}";
+
+    {% if locationDict and providersDict %}
+
     let searchHome = '{{ locationDict| tojson | safe }}';
     searchHome = JSON.parse(searchHome);
     var providersDict = '{{ providersDict | tojson | safe }}';
     let searchResults = JSON.parse(providersDict);
     
+    {% endif %}
 
 
 </script>
 
-{% endif %}
 
 {% endblock %}
 

@@ -14,7 +14,7 @@
         <h3>Your Groups</h3>
         <ul class="nav">
                 {% set pending_count = current_user.sentgrouprequests | count + 
-                GroupMemberApprove.choices | length %}
+                GroupMemberApprove.request.choices | count %}
                 <a href="" class="nav-link" data-toggle="modal" data-target="#pending_groups">Pending<span>({{pending_count}})</span></a>
                 <a href="" class="nav-link" data-toggle="modal" data-target="#GroupDelete">Delete</a>
         </ul>

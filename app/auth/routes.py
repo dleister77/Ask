@@ -9,7 +9,8 @@ from app.auth.forms import LoginForm, RegistrationForm, PasswordChangeForm, \
                            UserUpdateForm
 from app.extensions import db
 from app.models import User, Address
-from app.utilities.helpers import pagination_urls, email_verified
+from app.utilities.helpers import email_verified
+from app.utilities.pagination import Pagination
 
 @bp.route('/')
 @bp.route('/welcome')
@@ -104,6 +105,8 @@ def passwordreset(token):
         user.save()
         flash("Your password has been reset.")
         return redirect(url_for('auth.welcome'))
+    if not form.validate():
+        flash("Password reset failed.  Please correct errors.")
     return render_template('auth/reset_password.html', form=form)
 
 
@@ -124,14 +127,14 @@ def passwordupdate():
     flash("Password update failed, please correct errors")
     page = request.args.get('page', 1, int)
     user = current_user
-    reviews = user.profile_reviews().paginate(page,
-                                              current_app.config["REVIEWS_PER_PAGE"],
-                                              False)
+    reviews = user.reviews
     summary = user.summary()
-    pag_args = {"username": user.username}
-    pag_urls = pagination_urls(reviews, 'main.user', pag_args)
+    pag_args = {"username": user.username}    
+    pagination = Pagination(reviews,page)
+    pag_urls = pagination.get_urls('main.user', pag_args)
+    reviews = pagination.paginatedData
     return render_template("user.html", title="User Profile", user=user,
-                           reviews=reviews.items, form=form,
+                           reviews=reviews, form=form,
                            modal_title=modal_title, pform=pform, 
                            modal_title_2=modal_title_2, pword_open=pword_open,
                            pag_urls=pag_urls, summary=summary)
@@ -141,7 +144,8 @@ def passwordupdate():
 @bp.route('/register', methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
+        flash("You are already registered.")
+        return redirect(url_for("main.index"))
     form = RegistrationForm()
     if form.validate_on_submit():
         address = Address(line1=form.address.line1.data, 
@@ -158,7 +162,7 @@ def register():
         flash("Congratulations! You've successfully registered.")
         flash("Please check your email for an email verification message.")
         return redirect(url_for('auth.welcome'))
-    return render_template("auth/register.html", title='Register', form=form)
+    return render_template("auth/register.html", title='Register', form=form), 422
 
     
 @bp.route('/userupdate', methods=["POST"])
@@ -182,17 +186,17 @@ def userupdate():
         current_user.send_email_verification()
         flash("User information updated")
         return redirect(url_for('main.user', username=current_user.username))
-    # re-render page if form not validated
     modal_title = "Edit User Information"
     modal_open = True
     flash("User information update failed.  Please correct errors.")
     page = request.args.get('page', 1, int)
-    user = current_user
-    reviews = user.profile_reviews().paginate(page, current_app.config["REVIEWS_PER_PAGE"], False)
-    summary = user.summary()
-    pag_args = {"username": user.username}
-    pag_urls = pagination_urls(reviews, 'main.user', pag_args)
-    return render_template("user.html", form=form, reviews=reviews.items,
+    reviews = current_user.reviews
+    summary = current_user.summary()
+    pag_args = {"username": current_user.username}
+    pagination = Pagination(reviews,page)
+    pag_urls = pagination.get_urls('main.user', pag_args)
+    reviews = pagination.paginatedData
+    return render_template("user.html", form=form, reviews=reviews,
                            title="User Profile", modal_title=modal_title, 
-                           user=user, modal_open=modal_open, pag_urls=pag_urls,
-                           summary=summary)
+                           user=current_user, modal_open=modal_open, pag_urls=pag_urls,
+                           summary=summary),422

@@ -1,6 +1,7 @@
 from datetime import date
 import os
 
+from flask import url_for
 from geocodio import GeocodioClient
 from geocodio.exceptions import GeocodioAuthError
 import pytest
@@ -44,6 +45,33 @@ def scenarioUpdate(testCase, parameters, values, assertions):
     else:
         testCase[parameters] = (values, assertions)
 
+@pytest.mark.usefixtures("dbSession")
+class FunctionalTest(object):
+    """Functional test base class.
+    
+    Attributes:
+        routeFunction (str): Flask route function name (input to url_for)
+        form (dict): test_case form arguments
+    
+    Methods:
+        getRequest: helper method for test_client get requests
+        postRequest: helper function for test_client post requests
+    """
+
+    routeFunction = None
+    form = None
+
+    def getRequest(self, client, *args, **kwargs):
+        """Return response from password reset request"""
+        return client.get(url_for(self.routeFunction, *args, **kwargs, _external=False), 
+                            follow_redirects=True)
+    
+    
+    def postRequest(self, client, **kwargs):
+        """Return response from password reset request"""
+        return client.post(url_for(self.routeFunction, **kwargs,
+                                            _external=False), 
+                            data=self.form, follow_redirects=True)    
 
 @pytest.fixture(scope='session')
 def test_app():
@@ -55,18 +83,19 @@ def test_app():
 
 
 @pytest.fixture(scope='session')
-def test_client(test_app):
+def testClient(test_app):
     client = test_app.test_client()
     yield client
 
 
 @pytest.fixture(scope='function')
-def active_client(test_client, test_db):
-    with test_client:
-        login(test_client, TestConfig.TEST_USER['username'],
+def activeClient(testClient, test_db):
+    with testClient:
+        login(testClient, TestConfig.TEST_USER['username'],
               TestConfig.TEST_USER['password']
               )
-        yield test_client
+        yield testClient
+        logout(testClient)
 
 
 @pytest.fixture(scope='session')
@@ -131,7 +160,9 @@ def test_db(test_app):
     r2 = Review.create(id=2, user=u3, provider=p1, category=c1, rating=5, cost=5, description="installed breaker Box", comments="very clean")
     r3 = Review.create(id=3, user=u1, provider=p1, category=c1, rating=1, cost=5, description="test", comments="Test")
     r4 = Review.create(id=4, user=u2, provider=p3, category=c1, rating=5, cost=2, description="test", comments="Test123", service_date=date(2019, 5, 1))
-    
+    r5 = Review.create(id=5, user=u2, provider=p3, category=c1, rating=4, cost=3, description="moretest", comments="Test123456", service_date=date(2019, 5, 1))
+    r6 = Review.create(id=6, user=u1, provider=p1, category=c1, rating=1, cost=5, description="yetanothertest", comments="Testing")
+
     # add test relationships
     u2.add(u1)
     u2.add(g1)
@@ -148,7 +179,7 @@ def test_db(test_app):
     db.drop_all()
 
 @pytest.fixture(scope='function')
-def session(test_db):
+def dbSession(test_db):
     connection = db.engine.connect()
     transaction = connection.begin()
     options = dict(bind=connection, binds={})
@@ -161,60 +192,66 @@ def session(test_db):
 
 
 @pytest.fixture()
-def testUser(session):
+def testUser(dbSession):
     u1 = User.query.get(2)
     return u1
 
 @pytest.fixture()
-def testUser2(session):
+def testUser2(dbSession):
     u2 = User.query.get(1)
     return u2
 
 @pytest.fixture()
-def testUser3(session):
+def testUser3(dbSession):
     u3 = User.query.get(3)
     return u3
 
 @pytest.fixture()
-def testUser4(session):
+def testUser4(dbSession):
     u4 = User.query.get(4)
     return u4
 
 @pytest.fixture()
-def testProvider1(session):
+def testProvider1(dbSession):
     p = Provider.query.get(1)
     return p
 
 @pytest.fixture()
-def testFriendrequest(session, testUser, testUser4):
+def testFriendrequest(dbSession, testUser, testUser4):
     request = FriendRequest.create(friend_id=testUser.id,
                                    requestor_id=testUser4.id)
     return request
 
 @pytest.fixture()
-def testGroup(session):
+def testFriendrequest2(dbSession, testUser, testUser3):
+    request = FriendRequest.create(friend_id=testUser.id,
+                                   requestor_id=testUser3.id)
+    return request
+
+@pytest.fixture()
+def testGroup(dbSession):
     return Group.query.get(1)
 
 @pytest.fixture()
-def testGroup2(session):
+def testGroup2(dbSession):
     return Group.query.get(2)
 
 @pytest.fixture()
-def testGroup3(session):
+def testGroup3(dbSession):
     return Group.query.get(3)
 
 @pytest.fixture()
-def testGroupRequest(session, testUser4, testGroup):
+def testGroupRequest(dbSession, testUser4, testGroup):
     request = GroupRequest.create(group_id=testGroup.id, requestor_id=testUser4.id)
     return request
 
 @pytest.fixture()
-def testGroupRequest2(session, testUser4, testGroup3):
+def testGroupRequest2(dbSession, testUser4, testGroup3):
     request = GroupRequest.create(group_id=testGroup3.id, requestor_id=testUser4.id)
     return request
 
 @pytest.fixture()
-def testProvider(session):
+def testProvider(dbSession):
     return Provider.query.get(1)
 
 @pytest.fixture()
@@ -228,7 +265,7 @@ def testReview():
     return Review.query.get(1)
 
 @pytest.fixture()
-def search_form(test_app, session):
+def search_form(test_app, dbSession):
     with test_app.app_context():
         from app.main.forms import ProviderSearchForm
         form = ProviderSearchForm()
@@ -293,10 +330,9 @@ def base_user():
     return testCase
 
 @pytest.fixture()
-def baseUserForm():
+def baseUser():
     testCase = {"first_name": "John", "last_name": "Jones",
                  "email": "jjones@yahoo.com", "username": "jjones",
-                 "password": "password", "confirmation": "password",
                  "address-line1": "7708 Covey Chase Dr", 
                  "address-city": "Charlotte", "address-state": "1",
                  "address-zip": "28210"}
@@ -316,7 +352,7 @@ def basePwUpdate():
 
 @pytest.fixture()
 def baseReview():
-    testCase = {"category": "1", "id": "2", "name": "Evers Electric",
+    testCase = {"home": "home", "category": "1", "id": "2", "name": "Evers Electric",
                  "rating": "3", "cost": "3", "description": "test",
                  "service_date": "4/15/2019", "comments": "testcomments",
                  "picture": ""}
@@ -336,10 +372,10 @@ def baseProviderNew():
 @pytest.fixture()
 def baseProviderSearch():
     testCase = {
-        "home": 'home', "manual_location": "", "gpsLat": "",
+        "location": 'home', "manual_location": "", "gpsLat": "",
         "gpsLong": "", "sector": 1,  "category": 1, "name": None,
-        "reviewed_filter": False, "friends_filter": False,
-        "groups_filter": False, "sort": "rating"
+        "reviewed_filter": None, "friends_filter": None,
+        "groups_filter": None, "sort": "name"
     }
     return testCase
  
@@ -366,10 +402,11 @@ def baseGroupSearch():
     return testCase
 
 @pytest.fixture()
-def base_mail():
+def baseMail():
     testCase = {"subject": "Test", 
                  "sender": TestConfig.ADMINS[0],
-                 "recipients": "test@test.com",
+                 "recipients": ["test@test.com"],
+                 "cc": ["test2@test.com"],
                  "text_body":"hello world!",
                  "html_body": "<p>hello world!<p>"}
     return testCase
@@ -401,7 +438,7 @@ def mockGeoApiBad(monkeypatch):
 
 @pytest.fixture
 def mockGeocodioApiBad(monkeypatch):
-    def mockGeoCode(address):
+    def mockGeoCode():
         raise GeocodioAuthError
     
-    monkeypatch.setattr('app.utilities.geo.client', 'geocode',mockGeoCode)
+    monkeypatch.setattr('app.utilities.geo._get_client', mockGeoCode)

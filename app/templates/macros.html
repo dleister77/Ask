@@ -11,7 +11,6 @@
                 {{form_render(field, classAdjust)}}
             {% elif field.type == "SubmitField" %}
                 {{field(class_=(buttonClass))}}
-                <!-- {{field.render_kw}} -->
             {% elif field.type == "RadioField" %}
                 <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
                 {% if field.flags.optional %}
@@ -20,7 +19,6 @@
                 {% for subfield in field %}
                     <div class={{radioClass}}>
                         {{subfield(class_=radioInputClass + " " + classAdjust)}}
-                        <!-- {{subfield.render_kw}} -->
                         {{subfield.label(class_=radioLabelClass)}}
                     </div>
                 {% endfor %}
@@ -30,10 +28,8 @@
                     <span class = "small italic"> optional</span>
                 {%endif %}
                 {{field(class_=fileClass + " " + classAdjust)}}
-                <!-- {{field.render_kw}} -->
             {% elif field.type == "BooleanField" %}
                     {{field(class_=boolClass + " " + classAdjust)}}
-                    <!-- {{field.render_kw}} -->
                     {{field.label(class_=boolLabel)}}
                     {% if field.flags.optional %}
                         <span class = "small italic"> optional</span>
@@ -44,7 +40,6 @@
                     <span class = "small italic"> optional</span>
                 {%endif %}
                 {{field(class_=fieldClass + " " + classAdjust)}}
-                <!-- {{field.render_kw}} -->
             {% endif %}
             {{render_errors(field)}}
         </div>
@@ -530,7 +525,7 @@
                 </a>
             {% if group.membership == false %}
                 <form action="{{url}}" method=post>
-                    {{ form.csrf_token() }}
+                    {{ form.hidden_tag() }}
                     {{ form.id(value=group.id)}}
                     <button class="btn btn-secondary align-self-stretch">Join</button>
                 </form>

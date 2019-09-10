@@ -12,8 +12,8 @@ from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
                         User
-from app.utilities.geo import Location, sortByDistance
-from app.utilities.helpers import disable_form, email_verified, name_check,\
+from app.utilities.geo import AddressError, Location, sortByDistance
+from app.utilities.helpers import disableForm, email_verified, name_check,\
                                   thumbnail_from_buffer
 from app.utilities.pagination import Pagination
 from app.main import bp
@@ -96,7 +96,7 @@ def provider_add():
     if request.method == 'POST':
         form.category.choices = Category.list(form.sector.data)
     if form.validate_on_submit():
-        address = Address(unknown=form.address.full_address_unknown.data,
+        address = Address(unknown=form.address.unknown.data,
                           line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
                           city=form.address.city.data, 
@@ -114,7 +114,7 @@ def provider_add():
         return render_template("provideradd.html", title="Add Provider",
                                form=form), 422
     if not current_user.email_verified:
-        disable_form(form)
+        disableForm(form)
         flash("Form disabled. Please verify email to unlock.")    
     return render_template("provideradd.html", title="Add Provider", form=form)
 
@@ -133,14 +133,18 @@ def provider_list():
 
 @bp.route('/provider/list/autocomplete', methods=['GET'])
 @login_required
-def provider_autocomplete():
+def providerAutocomplete():
     """Pulls list of providers matching input text."""
     form = ProviderSearchForm(request.args)
     form.populate_choices()
     del form.sort
     if form.validate():
-        searchLocation = Location(form.home.data, form.manual_location.data,
-                            (form.gpsLat.data, form.gpsLong.data))
+        try:
+            searchLocation = Location(form.location.data, form.manual_location.data,
+                                (form.gpsLat.data, form.gpsLong.data))
+        except AddressError:
+                msg = {"status": "failed", "reason": "invalid address"}
+                return jsonify(msg),422
         searchLocation.setRangeCoordinates()   
         filters = {"name": form.name.data,
                    "category": Category.query.get(form.category.data),
@@ -158,12 +162,15 @@ def provider_autocomplete():
 @login_required
 @email_verified
 def review():
-    if request.method == 'GET' and len(request.args) != 0:
-        form = ReviewForm(request.args)
-        provider = Provider.query.get(request.args.get('id'))
-    if request.method == 'POST':
+    if request.method == 'GET':
+        if len(request.args) != 0:
+            form = ReviewForm(request.args)
+        else:
+            flash("Invalid request. Please search for provider first and then add review.")
+            return redirect(url_for('main.index'))
+    elif request.method == 'POST':
         form = ReviewForm()
-        provider = Provider.query.get(form.id.data)
+    provider = Provider.query.get(form.id.data)
     form.category.choices = [(c.id, c.name) for c in provider.categories]
     if form.validate_on_submit():
         pictures = []
@@ -196,7 +203,7 @@ def review():
     elif request.method == "POST" and not form.validate():
         return render_template("review.html", title="Review", form=form), 422
     if not current_user.email_verified:
-        disable_form(form)
+        disableForm(form)
         flash("Form disabled. Please verify email to unlock.")
     return render_template("review.html", title="Review", form=form)
 
@@ -208,17 +215,24 @@ def search():
     form.populate_choices()
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
-        searchLocation = Location(form.home.data, form.manual_location.data,
-                            (form.gpsLat.data, form.gpsLong.data))
+        try:
+            searchLocation = Location(form.location.data, form.manual_location.data,
+                                (form.gpsLat.data, form.gpsLong.data))
+        except AddressError:
+            flash("Invalid address submitted. Please re-enter and try again.")
+            if form.manual_location.data not in [None, ""]:
+                form.manual_location.errors.append("Invalid Address. Please updated.")
+            return render_template("index.html", form=form, title="Search"),422
+
         searchLocation.setRangeCoordinates()     
-        reviewFilters = {"friends": form.friends_filter.data,
-                   "groups": form.groups_filter.data,
-                   "reviewed": form.reviewed_filter.data}
         filters = {"name": form.name.data,
                    "category": Category.query.get(form.category.data),
-                   "location": searchLocation}
+                   "location": searchLocation,
+                   "friends": form.friends_filter.data,
+                   "groups": form.groups_filter.data,
+                   "reviewed": form.reviewed_filter.data}
         sortCriteria = form.sort.data
-        providers = Provider.search(filters, sortCriteria,reviewFilters)
+        providers = Provider.search(filters, sortCriteria)
         if sortCriteria == "distance":
             providers = sortByDistance(searchLocation.coordinates, providers)
         if providers == []:
@@ -252,7 +266,7 @@ def search():
 @email_verified
 def searchJSON():
     form = ProviderSearchForm(request.args).populate_choices()
-    del form.home
+    del form.location
     page = request.args.get('page', 1, int)
     if form.validate() or request.args.get('page') is not None:
         location = session['location']

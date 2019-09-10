@@ -1,10 +1,13 @@
+import pytest
+
+from flask_login import current_user
+from sqlalchemy.exc import IntegrityError
+
 from app import db, mail
 from app.models import User, Address, Group, Category, Review, Provider,\
                        FriendRequest, GroupRequest, Sector
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
-from sqlalchemy.exc import IntegrityError
-import pytest
 
 
 def null_test(test_db, model_class, test_case, key):
@@ -16,7 +19,7 @@ def null_test(test_db, model_class, test_case, key):
     with pytest.raises(IntegrityError):
         m = model_class.create(**test_case)
 
-@pytest.mark.usefixtures('session')
+@pytest.mark.usefixtures('dbSession')
 class TestUser(object):
     """Tests for User model class."""
 
@@ -29,7 +32,7 @@ class TestUser(object):
         u = User.query.filter_by(username="jjones").first()
         assert u.username == "jjones"
         assert u.email == "jjones@yahoo.com"
-        assert len(u.reviews) == 2
+        assert len(u.reviews) == 3
         assert u.email_verified is False
         assert u._email_token_key == 'verify_email'
         assert u._password_token_key == 'reset_password'
@@ -85,8 +88,8 @@ class TestUser(object):
         GroupRequest.create(requestor_id=testUser.id, group_id=2)
         assert testUser.address.user_id == 2
         assert len(User.query.all()) == 4
-        assert len(testUser.reviews) == 2
-        assert len(Review.query.all()) == 4
+        assert len(testUser.reviews) == 3
+        assert len(Review.query.all()) == 6
         assert len(FriendRequest.query.all()) == 1
         assert len(GroupRequest.query.all()) == 1
         testUser.delete()
@@ -107,8 +110,8 @@ class TestUser(object):
 
     def test_summary(self, testUser):
         assert testUser.summary().average == 4
-        assert testUser.summary().count == 2
-        assert testUser.summary().cost == 2.5
+        assert testUser.summary().count == 3
+        assert testUser.summary().cost == (8/3)
 
     def test_addFriend(self, testUser, testUser4):
         assert len(testUser.receivedfriendrequests)==0
@@ -202,7 +205,7 @@ class TestUser(object):
                 assert 'To reset your password, please paste the below link into your browser' in msg.body
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestAddress(object):
     """Test address class in model"""
     def test_attributes(self, testUser):
@@ -224,7 +227,6 @@ class TestAddress(object):
         with pytest.raises(IntegrityError):
             new.save()
 
-#TODO add mock
     @pytest.mark.parametrize('key', ['city', 'state_id', 'line1', 'zip'])
     def test_newMissingRequired(self, key, newAddressDict, mockGeoResponse):
         newAddressDict[key] = None
@@ -251,7 +253,7 @@ class TestAddress(object):
             address = Address(line1="1 covey chase dr", city="Charlotte",
                             state_id=1, user_id=1, zip="28210")
 
-    def test_updateValid(self, active_client, testUser, mockGeoResponse):
+    def test_updateValid(self, activeClient, testUser, mockGeoResponse):
         assert testUser.address.line1 == "7708 Covey Chase Dr"
         assert testUser.address.longitude == -80.864783
         assert testUser.address.latitude == 35.123949
@@ -278,7 +280,7 @@ class TestAddress(object):
         assert Address.query.get(5) is None
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestFriendRequest(object):
     def test_new(self, testUser, testUser4, testFriendrequest):
         assert testFriendrequest in testUser4.sentfriendrequests
@@ -307,7 +309,7 @@ class TestFriendRequest(object):
         assert check is None
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestGroupRequest(object):
     def test_new(self, testUser4, testGroup, testGroupRequest):
         assert testGroupRequest in testUser4.sentgrouprequests
@@ -331,7 +333,7 @@ class TestGroupRequest(object):
         assert testGroupRequest in pending
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestSector(object):
     """Test sector model class."""
     def test_attributes(self):
@@ -344,12 +346,12 @@ class TestSector(object):
         assert testList == [(1, 'Home Services')]
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestCategory(object):
     def test_attributes(self):
         testCategory = Category.query.get(1)
         assert testCategory.name == 'Electrician'
-        assert len(testCategory.reviews) == 4
+        assert len(testCategory.reviews) == 6
         assert len(testCategory.providers) == 3
         assert testCategory.sector.name == 'Home Services'
 
@@ -361,8 +363,24 @@ class TestCategory(object):
         assert (2, 'Plumber') in testList
 
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestProvider(object):
+
+    def generateSearchFilters(self, searchDict):
+        """From dict, populate filters used in call to Provider.search"""
+
+        location = Location(searchDict['location'])
+        location.setRangeCoordinates()
+        category = Category.query.get(searchDict['category'])
+        filters = {"name": searchDict['name'],
+                "category": category,
+                "location": location,
+                "reviewed": bool(searchDict['reviewed_filter']),
+                "friends": bool(searchDict['friends_filter']),
+                "groups": bool(searchDict['groups_filter'])}
+        sort = searchDict['sort']
+        return filters, sort
+
     def test_attributes(self, testProvider):
         assert testProvider.name == "Douthit Electrical"
         assert testProvider.email == "douthit@gmail.com"
@@ -417,131 +435,110 @@ class TestProvider(object):
         assert len(providers) == 3
         assert {"id": testProvider.id, "name": testProvider.name} in providers    
 
-    def test_searchNoRevFilter(self, active_client):
+    def test_searchNoName(self, activeClient, baseProviderSearch):
         # create filters, location, category
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        providers = Provider.search(filters)
+
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort)
         assert len(providers) == 3
-        # check order providers are returned
         assert providers[0].name == 'Douthit Electrical'
         assert providers[1].name == 'Evers Electric'
         assert providers[2].name == 'Preferred Electric Co'
-        assert providers[0].reviewAverage == 3.0
-        assert providers[0].reviewCount == 3
-        assert providers[0].reviewCost == (13/3)
+        assert providers[0].reviewAverage == (10/4)
+        assert providers[0].reviewCount == 4
+        assert providers[0].reviewCost == (18/4)
         assert providers[0].categories == "Electrician,Plumber"
 
-    def test_searchNoRevName(self, active_client):
-        # create filters, location, category
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": 'Evers Electric',
-                "category": category,
-                "location": location}
-        providers = Provider.search(filters)
-        assert len(providers) == 1
-        # check order providers are returned
+    def test_searchName(self, activeClient, baseProviderSearch):
+        baseProviderSearch['name'] = 'Evers Electric'
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort)
         assert providers[0].name == 'Evers Electric'
         assert providers[0].reviewAverage == None
         assert providers[0].reviewCount == 0
         assert providers[0].reviewCost == None
 
-    def test_searchNoRevFilterRatingSort(self, active_client):
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        sort = "rating"
+    def test_searchRatingSort(self, activeClient, baseProviderSearch):
+        baseProviderSearch['sort'] = 'rating'
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
         providers = Provider.search(filters, sort)    
         assert len(providers) == 3
         assert providers[0].name == 'Preferred Electric Co'    
         assert providers[1].name == 'Douthit Electrical'
         assert providers[2].name == 'Evers Electric'
+        assert providers[1].categories == "Electrician,Plumber"
 
-    def test_searchNoRevFilterLimit(self, active_client):
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        limit = 1
-        providers = Provider.search(filters, limit=limit)    
+    def test_searchLimit(self, activeClient, baseProviderSearch):
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        limit = 1   
+        providers = Provider.search(filters, sort=sort, limit=limit)
         assert len(providers) == 1
         assert providers[0].name == 'Douthit Electrical'
-        assert providers[0].reviewAverage == 3.0
-        assert providers[0].reviewCount == 3
-        assert providers[0].reviewCost == (13/3)
+        assert providers[0].reviewAverage == (10/4)
+        assert providers[0].reviewCount == 4
+        assert providers[0].reviewCost == (18/4)
 
-    def test_searchRevFilter(self, active_client):
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        reviewFilters = {"reviewed": True, "friends": False, "groups": False}
-        providers = Provider.search(filters, reviewFilters=reviewFilters)
+    def test_searchReviewed(self, activeClient, baseProviderSearch):
+        baseProviderSearch['reviewed_filter'] = True
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort=sort)
         assert len(providers) == 2
         assert providers[0].name == 'Douthit Electrical'
         assert providers[1].name == 'Preferred Electric Co'
 
 
-    def test_searchFriendsFilter(self, active_client):
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        reviewFilters = {"reviewed": False, "friends": True, "groups": False}
-        providers = Provider.search(filters, reviewFilters=reviewFilters)
+    def test_searchFriends(self, activeClient, baseProviderSearch):
+        baseProviderSearch['friends_filter'] = True
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort=sort)
         assert len(providers) == 1
         assert providers[0].name == 'Douthit Electrical'
         assert providers[0].reviewAverage == 1
-        assert providers[0].reviewCount == 1
+        assert providers[0].reviewCount == 2
         assert providers[0].reviewCost == 5
+        assert providers[0].categories == "Electrician,Plumber"
 
-    def test_searchGroupsFilter(self, active_client):
-        location = Location('home')
-        location.setRangeCoordinates()
-        category = Category.query.get(1)
-        filters = {"name": None,
-                "category": category,
-                "location": location}
-        reviewFilters = {"reviewed": False, "friends": False, "groups": True}
-        providers = Provider.search(filters, reviewFilters=reviewFilters)
+    def test_searchGroups(self, activeClient, baseProviderSearch):
+        baseProviderSearch['groups_filter'] = True
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort=sort)
         assert len(providers) == 1
         assert providers[0].name == 'Douthit Electrical'
         assert providers[0].reviewAverage == 5
         assert providers[0].reviewCount == 1
         assert providers[0].reviewCost == 5
+        assert providers[0].categories == "Electrician,Plumber"
+    
 
-    def test_profileNoFilter(self, testProvider):
+    def test_searchFriendsOrGroups(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"friends_filter": True, "groups_filter": True})
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort=sort)
+        assert len(providers) == 1
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[0].reviewAverage == (7/3)
+        assert providers[0].reviewCount == 3
+        assert providers[0].reviewCost == 5
+        assert providers[0].categories == "Electrician,Plumber"
+      
+
+    def test_profileNoFilter(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": False}
         profile = testProvider.profile(reviewFilter)
         assert profile[0] == testProvider
-        assert profile[1] == 3
-        assert profile[2] == (13/3)
-        assert profile[3] == 3
+        assert profile[1] == 2.5
+        assert profile[2] == (18/4)
+        assert profile[3] == 4
 
-    def test_profileFriends(self, testProvider, active_client):
+    def test_profileFriends(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": True, "groups_filter": False}
         profile = testProvider.profile(reviewFilter)
         assert profile[0] == testProvider
         assert profile[1] == 1
         assert profile[2] == 5
-        assert profile[3] == 1
+        assert profile[3] == 2
 
-    def test_profileGroups(self, testProvider, active_client):
+    def test_profileGroups(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": True}
         profile = testProvider.profile(reviewFilter)
         assert profile[0] == testProvider
@@ -549,8 +546,15 @@ class TestProvider(object):
         assert profile[2] == 5
         assert profile[3] == 1
 
+    def test_profileGroupsandFriends(self, testProvider, activeClient):
+        reviewFilter = {"friends_filter": True, "groups_filter": True}
+        profile = testProvider.profile(reviewFilter)
+        assert profile[0] == testProvider
+        assert profile[1] == (7/3)
+        assert profile[2] == 5
+        assert profile[3] == 3
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class TestReview(object):
     def test_attributes(self, testReview):
         assert testReview.user_id == 2
@@ -561,24 +565,24 @@ class TestReview(object):
         assert testReview.description == 'Fixed a light bulb'
         assert testReview.comments == 'Satisfactory work.'
 
-    def test_search(self, testProvider):
+    def test_search(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": False}
         reviews = Review.search(testProvider.id, reviewFilter)
-        assert len(reviews) == 3
+        assert len(reviews) == 4
         assert reviews[0].rating == 3
         assert reviews[0].cost == 3
         assert reviews[0].description == 'Fixed a light bulb'
 
-    def test_searchFriend(self, testProvider, active_client):
+    def test_searchFriend(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": True, "groups_filter": False}
         reviews = Review.search(testProvider.id, reviewFilter)
-        assert len(reviews) == 1
+        assert len(reviews) == 2
         assert reviews[0].rating == 1
         assert reviews[0].cost == 5
         assert reviews[0].description == 'Test'
 
 
-    def test_searchGroups(self, testProvider, active_client):
+    def test_searchGroups(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": True}
         reviews = Review.search(testProvider.id, reviewFilter)
         assert len(reviews) == 1
@@ -587,7 +591,15 @@ class TestReview(object):
         assert reviews[0].description == 'Installed breaker box'
 
 
-@pytest.mark.usefixtures("session")
+    def test_searchGroupsandFriends(self, testProvider, activeClient):
+        reviewFilter = {"friends_filter": True, "groups_filter": True}
+        reviews = Review.search(testProvider.id, reviewFilter)
+        assert len(reviews) == 3
+        assert reviews[0].rating == 5
+        assert reviews[0].cost == 5
+        assert reviews[0].description == 'Installed breaker box'        
+
+@pytest.mark.usefixtures("dbSession")
 class TestGroup(object):
     def test_attributes(self, testGroup, testUser, testUser3):
         assert testGroup.name == 'Qhiv Hoa'
@@ -617,7 +629,7 @@ class TestGroup(object):
         assert Group.query.get(id) is None
         assert User.query.get(testUser.id) is not None
 
-    def test_searchNotMember(self, testGroup2, active_client):
+    def test_searchNotMember(self, testGroup2, activeClient):
         filters = {"name": "Shanno"}
         groups = Group.search(filters)
         assert len(groups) > 0
@@ -626,7 +638,7 @@ class TestGroup(object):
         assert groups[0].id == testGroup2.id
         assert groups[0].membership == False
 
-    def test_searchMember(self, testGroup, active_client):
+    def test_searchMember(self, testGroup, activeClient):
         filters = {"name": "Qhi"}
         groups = Group.search(filters)
         assert len(groups) > 0

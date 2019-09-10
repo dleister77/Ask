@@ -16,7 +16,7 @@ def send_async_email(app, msg):
 
 def send_email(subject, sender, recipients, cc, text_body, html_body):
     """Helper function to send email message."""
-    msg = Message(subject, recipients=recipients, sender=sender)
+    msg = Message(subject, recipients=recipients, cc=cc, sender=sender)
     msg.body = text_body
     msg.html = html_body
     app = current_app._get_current_object()

@@ -7,7 +7,7 @@ from sqlite3 import Connection as SQLite3Connection
 from app.extensions import db, login
 
 
-# sets foreign keys to on for sqlite db connection
+# # sets foreign keys to on for sqlite db connection
 @event.listens_for(Engine, "connect")
 def _set_sqlite_pragma(dbapi_connection, connection_record):
     if isinstance(dbapi_connection, SQLite3Connection):

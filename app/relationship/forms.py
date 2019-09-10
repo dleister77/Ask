@@ -2,7 +2,7 @@ from flask import current_app, has_request_context, _request_ctx_stack
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import (StringField, SubmitField, TextAreaField, HiddenField,
-                     SelectMultipleField)
+                     SelectMultipleField, IntegerField)
 from wtforms.validators import InputRequired, ValidationError
 
 from app.models import FriendRequest, Group, GroupRequest, User
@@ -104,12 +104,26 @@ class GroupSearchForm(FlaskForm):
 
     Fields:
         name (str): name of group being searched
-        id (int): hidden, id of group being added.    
     """
+    class Meta:
+        csrf = False
+        
     name = StringField("Group Name", id="group_name", validators=[InputRequired(message="Group name is required.")])
-    id = HiddenField("Group ID", id="group_value", validators=
-                        [InputRequired(message="Group name is required."), exists_check(Group), relation_check("groups")])
-    submit = SubmitField("Add Group", id="submit-group-add")
+    submit = SubmitField("Search for Group", id="submit-group-add")
+
+class GroupAddForm(FlaskForm):
+    """Hidden form to add group.via join button
+
+    Fields:
+        id (int): id of group being searched
+    """
+        
+    id = HiddenField("Group Name",
+            validators=[InputRequired(message="Do not disable hidden fields."),
+                        exists_check(Group)]
+                    )
+    submit = SubmitField("Join")
+
 
 
 class FriendApproveForm(FlaskForm):
@@ -134,10 +148,10 @@ class FriendApproveForm(FlaskForm):
     def validate_name(self, name):
         """verify request being approved is valid and current user request recipient."""
         # verify request is valid
-        friendrequest = FriendRequest.query.get(self.name.data)
-        if friendrequest is None or friendrequest not in current_user.receivedfriendrequests:
-            raise ValidationError("Invalid request. Please select request from"
-                                  " the list.")
+        for id in self.name.data:
+            friendrequest = FriendRequest.query.get(id)
+            if friendrequest is None or friendrequest not in current_user.receivedfriendrequests:
+                raise ValidationError("Please select name from the list.")
 
     def populate_choices(self, user):
         """Populates name/value pairs for user's friend request approval list.
@@ -253,7 +267,6 @@ class GroupDeleteForm(FlaskForm):
         """verfiy name being deleted exists and is in user's group list."""
         for group_id in self.name.data:
             group = Group.query.get(group_id)
-            print(f"validating {group}")
             if group is None or group not in current_user.groups:
                 raise ValidationError("Please select a group from the list.")
 
@@ -317,13 +330,13 @@ class GroupMemberApproveForm(FlaskForm):
     def validate_request(self, request):
         """verify request exists and is in group's request list."""
         # verify that request exists
-        request = GroupRequest.query.get(self.request.data)
-        if request is None:
-            raise ValidationError("Invalid request. Please select request from the list.")
-        # verify that current user is group admin
-        request_admin = request.group.admin
-        if request_admin != current_user:
-            raise ValidationError("User not authorized to approve this request.")
+        for id in self.request.data:
+            request = GroupRequest.query.get(id)
+            if request is None:
+                raise ValidationError("Invalid request. Please select request from the list.")
+            # verify that current user is group admin
+            if request.group.admin != current_user:
+                raise ValidationError("User not authorized to approve this request.")
 
     def populate_choices(self, user):
         """Get group admin approval choices for approval form.

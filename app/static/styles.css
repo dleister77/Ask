@@ -13,9 +13,6 @@
  .italic{
    font-style: italic;
   }
-  .jumbotron {
-    background-color: #003366;
-  }
   
   .modal-table{
     width: 75%;
@@ -120,4 +117,5 @@
 }
 .welcomemsg{
   background-color: #003366;
+  color: white
 }

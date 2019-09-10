@@ -23,7 +23,7 @@ with app.app_context():
 							   RegistrationForm, LoginForm, AddressField,\
 							   PasswordResetForm, PasswordResetRequestForm
 
-@pytest.mark.usefixtures("session")
+@pytest.mark.usefixtures("dbSession")
 class FormTest(object):
 
 	formType = ProviderAddForm
@@ -82,7 +82,7 @@ def form_test(test_app, test_form, test_case):
 				assert test_errors[key] in form.errors[key]
 
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestGroupMemberApprove(FormTest):
 
 	formType = GroupMemberApproveForm
@@ -127,7 +127,7 @@ class TestGroupMemberApprove(FormTest):
 
 
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestGroupDelete(FormTest):
 
 	formType = GroupDeleteForm
@@ -166,7 +166,7 @@ class TestGroupDelete(FormTest):
 		self.form.populate_choices(current_user)
 		assert self.form.name.choices == [(1, 'Qhiv Hoa')]
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestFriendDelete(FormTest):
 
 	formType = FriendDeleteForm
@@ -199,7 +199,7 @@ class TestFriendDelete(FormTest):
 		self.form.populate_choices(current_user)
 		assert self.form.name.choices == [(1, 'Sarah Smith')]
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestFriendApprove(FormTest):
 
 	formType = FriendApproveForm
@@ -210,7 +210,11 @@ class TestFriendApprove(FormTest):
 		self.form.populate_choices(current_user)
 	
 	def test_new(self, testFriendrequest):
-		testCase = {"name": testFriendrequest.id}
+		testCase = {"name": [testFriendrequest.id]}
+		self.new(testCase)
+	
+	def test_newMultiple(self, testFriendrequest, testFriendrequest2):
+		testCase = {"name":[testFriendrequest.id, testFriendrequest2.id]}
 		self.new(testCase)
 		
 	def test_missingRequired(self, testFriendrequest):
@@ -223,7 +227,7 @@ class TestFriendApprove(FormTest):
 	def test_invalidName(self, testFriendrequest):
 		testCase = {"name": testFriendrequest.id + 1}
 		key = 'name'
-		errorMsg = "Invalid request. Please select request from the list."
+		errorMsg = "Please select name from the list."
 		self.make_form(testCase)
 		self.assertNot(key, errorMsg)	
 	
@@ -250,7 +254,7 @@ class TestGroupCreate(FormTest):
 		self.assertNot(key, errorMsg)
 
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestFriendSearch(FormTest):
     
     formType = FriendSearchForm
@@ -286,7 +290,7 @@ class TestFriendSearch(FormTest):
         self.make_form(search)
         self.assertNot(key, errorMsg)
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestGroupSearch(FormTest):
 	
     formType = GroupSearchForm
@@ -295,25 +299,11 @@ class TestGroupSearch(FormTest):
         self.new(baseGroupSearch)
         
     @pytest.mark.parametrize("key, errorMsg", [
-        ('id', "Group name is required."),
         ('name', 'Group name is required.')
     ])
     def test_missingRequired(self, baseGroupSearch, key, errorMsg):
         self.missingRequired(baseGroupSearch, key, errorMsg)
 
-    def test_addAlreadyMember(self, baseGroupSearch):
-        baseGroupSearch['id'] = 1
-        key = 'id'
-        errorMsg = 'You are already a member of this group.'
-        self.make_form(baseGroupSearch)
-        self.assertNot(key, errorMsg)
-    
-    def test_groupDoesNotExist(self, baseGroupSearch):
-        baseGroupSearch['id'] = 7
-        key = 'id'
-        errorMsg = 'Group does not exist, please choose a different group to add.'
-        self.make_form(baseGroupSearch)
-        self.assertNot(key, errorMsg)
 
 
 class TestGroupEdit(FormTest):
@@ -452,7 +442,7 @@ class TestRegister(FormTest):
 		self.make_form(baseUserNew)
 		self.assertNot('confirmation', errorMsg)		
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestPasswordUpdate(FormTest):
 	"""Test user password update form."""
 
@@ -487,14 +477,14 @@ class TestPasswordUpdate(FormTest):
 		errorMsg = "New password is same as old password.  Please choose a different password."
 		self.assertNot('new', errorMsg)		
 
-@pytest.mark.usefixtures("active_client")
+@pytest.mark.usefixtures("activeClient")
 class TestUserUpdate(FormTest):
 	"""Test user update form."""
 
 	formType = UserUpdateForm
 
-	def test_new(self, baseUserForm):
-		self.new(baseUserForm)
+	def test_new(self, baseUser):
+		self.new(baseUser)
 	
 	@pytest.mark.parametrize("key, errorMsg", [
 		('first_name', 'First name is required.'),
@@ -502,25 +492,25 @@ class TestUserUpdate(FormTest):
 		('email', 'Email address is required.'),
 		('username', 'Username is required.')
 	])
-	def test_missingrequire(self, baseUserForm, key, errorMsg):
-		self.missingRequired(baseUserForm, key, errorMsg)
+	def test_missingrequire(self, baseUser, key, errorMsg):
+		self.missingRequired(baseUser, key, errorMsg)
 
-	def test_duplicateEmail(self, baseUserForm):
-		baseUserForm['email'] = "sarahsmith@yahoo.com"
+	def test_duplicateEmail(self, baseUser):
+		baseUser['email'] = "sarahsmith@yahoo.com"
 		errorMsg = 'Email address is already registered, please choose a different email address.'
-		self.make_form(baseUserForm)
+		self.make_form(baseUser)
 		self.assertNot('email', errorMsg)
 	
-	def test_duplicateUsername(self, baseUserForm):
-		baseUserForm['username'] = "sarahsmith"
+	def test_duplicateUsername(self, baseUser):
+		baseUser['username'] = "sarahsmith"
 		errorMsg = 'Username is already registered, please choose a different username.'
-		self.make_form(baseUserForm)
+		self.make_form(baseUser)
 		self.assertNot('username', errorMsg)
 	
-	def test_invalidEmail(self, baseUserForm):
-		baseUserForm['email'] = "invalidemailyahoo.com"
+	def test_invalidEmail(self, baseUser):
+		baseUser['email'] = "invalidemailyahoo.com"
 		errorMsg = 'Invalid email address.'
-		self.make_form(baseUserForm)
+		self.make_form(baseUser)
 		self.assertNot('email', errorMsg)		
 
 class TestReview(FormTest):
@@ -601,6 +591,13 @@ class TestProviderAdd(FormTest):
 		self.make_form(baseProviderNew)
 		self.assertNot(key, errorMsg)
 	
+	def test_invalidEmail(self, baseProviderNew):
+		baseProviderNew['email'] = 'douthitgmail.com'
+		key = 'email'
+		errorMsg = 'Invalid email address.'
+		self.make_form(baseProviderNew)
+		self.assertNot(key, errorMsg)
+
 	def test_duplicateTelephone(self, baseProviderNew):
 		baseProviderNew['telephone'] = '704-843-1910'
 		key = 'telephone'
@@ -646,10 +643,10 @@ class TestProviderAddress(FormTest):
 		assert self.form.validate()
 
 
-@pytest.mark.usefixtures("test_app", "session", "active_client")
+@pytest.mark.usefixtures("test_app", "dbSession", "activeClient")
 class TestProviderSearch(object):
 	"""Test provider search form."""
-	def test_new(self, baseProviderSearch):
+	def test_new(self, baseProviderSearch, activeClient):
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
 		form.populate_choices()
@@ -657,7 +654,7 @@ class TestProviderSearch(object):
 		assert form.validate()
 
 	def test_newGPS(self, baseProviderSearch):
-		baseProviderSearch.update({"home": "gps", "gpsLat": 42.00,
+		baseProviderSearch.update({"location": "gps", "gpsLat": 42.00,
 								"gpsLong": -81.000})
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
@@ -665,7 +662,7 @@ class TestProviderSearch(object):
 		assert form.validate()
 
 	def test_newGPSInvalid(self, baseProviderSearch):
-		baseProviderSearch.update({"home": "gps", "gpsLat": "not_lat",
+		baseProviderSearch.update({"location": "gps", "gpsLat": "not_lat",
 								"gpsLong": "not_long"})
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
@@ -675,7 +672,7 @@ class TestProviderSearch(object):
 		assert msg in form.errors['gpsLat']
 
 	def test_newGPSNoLatLong(self, baseProviderSearch):
-		baseProviderSearch.update({"home": "gps"})
+		baseProviderSearch.update({"location": "gps"})
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
 		form.populate_choices()
@@ -685,7 +682,7 @@ class TestProviderSearch(object):
 		assert msg in form.errors['gpsLat']
 
 	def test_newManual(self, baseProviderSearch):
-		baseProviderSearch.update({"home": "manual",
+		baseProviderSearch.update({"location": "manual",
 								"manual_location": "7708 Covey Chase Dr, Charlotte NC 28210"})
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
@@ -697,35 +694,35 @@ class TestProviderSearch(object):
 		form = ProviderSearchForm(formdata=formdata)
 		form.populate_choices()
 		assert form.category.choices == [(1, 'Electrician'), (2, 'Plumber')]
-		assert form.home.choices[0] == ("home", 
+		assert form.location.choices[0] == ("home", 
 										"Home - 7708 Covey Chase Dr, Charlotte, NC")
-		assert form.home.choices[1] == ("gps", "New - Use GPS")
-		assert form.home.choices[2] == ("manual", "New - Manually Enter")									 
-		assert len(form.home.choices) == 3
+		assert form.location.choices[1] == ("gps", "New - Use GPS")
+		assert form.location.choices[2] == ("manual", "New - Manually Enter")									 
+		assert len(form.location.choices) == 3
 
 	def test_populateChoicesLocationSession(self, baseProviderSearch, mockGeoResponse):
 		searchLocation = Location("manual", "8012 Covey Chase Dr, Charlotte, NC",
 								("", ""))
-		baseProviderSearch['home'] = "manualExisting"
+		baseProviderSearch['location'] = "manualExisting"
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
 		form.populate_choices()
-		assert form.home.choices[0] == ("manualExisting", "8012 Covey Chase Dr, Charlotte, NC")
+		assert form.location.choices[0] == ("manualExisting", "8012 Covey Chase Dr, Charlotte, NC")
 
 	def test_initialize(self, baseProviderSearch, mockGeoResponse):
 		searchLocation = Location("manual", "8012 Covey Chase Dr, Charlotte, NC",
 								("", ""))
 		baseProviderSearch.update({
-			"home": "manual",
+			"location": "manual",
 			"manual_location": "8012 Covey Chase Dr, Charlotte, NC"
 		})
 		formdata = ImmutableMultiDict(baseProviderSearch)
 		form = ProviderSearchForm(formdata=formdata)
 		form.initialize()
-		assert form.home.choices[0] == ("manualExisting", "8012 Covey Chase Dr, Charlotte, NC")	
+		assert form.location.choices[0] == ("manualExisting", "8012 Covey Chase Dr, Charlotte, NC")	
 		assert form.manual_location.data == ""
 
-	@pytest.mark.parametrize('key, errorMsg', [('home', 'Home location is required.'),
+	@pytest.mark.parametrize('key, errorMsg', [('location', 'Search location is required.'),
 									('sector', 'Sector is required.'),
 									('category', 'Category is required.'),
 									('sort', 'Sort criteria is required.')
@@ -737,8 +734,6 @@ class TestProviderSearch(object):
 		form.populate_choices()
 		form.validate()
 		assert errorMsg in form.errors[key]
-
-
 
 class TestPasswordReset(FormTest):
 	"""Test password reset form."""

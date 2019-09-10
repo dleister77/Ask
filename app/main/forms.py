@@ -111,7 +111,7 @@ def gpsVal(form, field):
         ValidationError: If gps selected as source and gps lat/long removed from form.
     """
 
-    if form.home.data == 'gps':
+    if form.location.data == 'gps':
         if field.data in ["", None]:
             raise ValidationError("Must allow access to device location if gps selected as location source.")
 
@@ -130,7 +130,7 @@ def floatCheck(form, field):
         
     """    
 
-    if form.home.data == "gps" and field.data not in ["", None]:
+    if form.location.data == "gps" and field.data not in ["", None]:
         try:
             float(field.data)
         except ValueError:
@@ -297,7 +297,7 @@ class ProviderSearchForm(FlaskForm):
     """Form to search for providers.
     
     Fields:
-        home (select): location source for search
+        location (select): location source for search
         manual_location (str): manually type in new address
         gpsLat (hidden): records latitude when gps selected as location source
         gpsLong (hidden): record longitude when gps selected as location source
@@ -310,19 +310,19 @@ class ProviderSearchForm(FlaskForm):
         sort (select): choose sort criteria for search results
     
     Methods:
-        populate_choices: populates category and home choices prior to form
+        populate_choices: populates category and location choices prior to form
             validation
-        initialize: adds manual existing to home choices if needed
+        initialize: adds manual existing to location choices if needed
 
 
         """
     class Meta:
         csrf = False
     
-    home = SelectField("Search Location",
+    location = SelectField("Search Location",
                        choices = [],
-                       validators=[InputRequired(message="Home location is required.")],
-                       id="home")  
+                       validators=[InputRequired(message="Search location is required.")],
+                       id="location")  
     manual_location = StringField("Enter New Location", validators=[],
                              id="manual_location",
                              render_kw={"hidden":True, "placeholder":
@@ -352,30 +352,30 @@ class ProviderSearchForm(FlaskForm):
     submit = SubmitField("Submit")
 
     def populate_choices(self):
-        """populates category and home choices prior to form validation."""
+        """populates category and location choices prior to form validation."""
         if self.sector.data:
             self.category.choices = Category.list(self.sector.data)
         else:
             self.category.choices = Category.list(1)
-        self.home.choices = [("home", f"Home - "
+        self.location.choices = [("home", f"Home - "
                                            f"{current_user.address.line1}, "
                                            f"{current_user.address.city}, "
                                            f"{current_user.address.state.state_short}"),
                                   ("gps", "New - Use GPS"), ("manual", "New - Manually Enter")]
-        self.home.default = self.home.choices[0]
+        self.location.default = self.location.choices[0]
         location = session.get('location')
-        if location is not None and self.home.data == "manualExisting":
-            self.home.choices.insert(0, ("manualExisting", 
+        if location is not None and self.location.data == "manualExisting":
+            self.location.choices.insert(0, ("manualExisting", 
                                          f"{location['address']}"))        
         return self
     
     def initialize(self):
-        """Update home choices and empty manual location input prior to rendering"""
+        """Update location choices and empty manual location input prior to rendering"""
         location = session.get('location')
-        if location is not None and self.home.data=="manual":
-            self.home.choices.insert(0, ("manualExisting", 
+        if location is not None and self.location.data=="manual":
+            self.location.choices.insert(0, ("manualExisting", 
                                          f"{location['address']}"))
-            self.home.data = self.home.choices[0]    
+            self.location.data = self.location.choices[0]    
             self.manual_location.data = ""
         return self 
 

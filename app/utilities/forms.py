@@ -1,6 +1,6 @@
 
 from wtforms import SelectMultipleField, widgets
-from wtforms.widgets.core import html_params
+from wtforms.widgets.core import html_params, RadioInput
 
 
 
@@ -21,6 +21,14 @@ def select_multi_checkbox(field, ul_class='', **kwargs):
         html.append(u'<label for="%s">%s</label></li>' % (field_id, label))
     html.append(u'</ul>')
     return u''.join(html)
+
+
+class RadioInputDisabled(RadioInput):
+    """Option widget to render radio field options as disabled."""
+    def __call__(self, field, **kwargs):
+        kwargs['disabled'] = True
+        return super(RadioInputDisabled, self).__call__(field, **kwargs)
+
 
 class MultiCheckboxField(SelectMultipleField):
     """
