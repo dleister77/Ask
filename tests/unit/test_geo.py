@@ -75,7 +75,7 @@ def test_geocodeTamu(test_app):
     assert location[1] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
 
-def test_LocationAddToSession(test_app, activeClient):
+def test_LocationAddToSession(activeClient):
     assert 'location' not in session
     location = Location("gps", "", (35.123949, -80.864783))
     session.pop('location')
@@ -87,7 +87,7 @@ def test_LocationAddToSession(test_app, activeClient):
     assert session['location']['latitude'] == 35.123949
     assert session['location']['longitude'] == -80.864783
     
-def test_LocationNewGPS(test_app, activeClient):
+def test_LocationNewGPS(activeClient):
     location = Location("gps", "", (35.123949, -80.864783))
     assert location.source == "gps"
     assert location.address == ""
@@ -95,7 +95,7 @@ def test_LocationNewGPS(test_app, activeClient):
     assert session['location']['source'] == "gps"
     assert session['location']['coordinates'] == (35.123949, -80.864783)
 
-def test_LocationNewManual(test_app, activeClient):
+def test_LocationNewManual(activeClient):
     location = Location("manual", "7708 Covey Chase Dr Charlotte, NC 28210")
     assert location.source == "manual"
     assert location.address == "7708 Covey Chase Dr, Charlotte, NC 28210"
@@ -103,7 +103,7 @@ def test_LocationNewManual(test_app, activeClient):
     assert session['location']['source'] == "manual"
     assert session['location']['address'] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
-def test_LocationNewHome(test_app, activeClient):
+def test_LocationNewHome(activeClient):
     location = Location("home")
     assert location.coordinates == (35.123949, -80.864783)
 

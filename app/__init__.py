@@ -4,7 +4,7 @@ import os
 
 from flask import Flask
 
-from config import Config
+import config
 from app.extensions import csrf, db, login, mail, migrate
 from app.models import User, Address, State, Category, Review, Provider, Group
 
@@ -72,10 +72,16 @@ def configure_logging(app):
         app.logger.info('Ask startup')
 
 
-def create_app(config_class=Config):
+def create_app(configClass=None):
     """Application factor."""
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    if configClass is None:
+        if app.config['ENV'] == 'production':
+            app.config.from_object(config.ProductionConfig)
+        else:
+            app.config.from_object(config.DevelopmentConfig)
+    else:
+        app.config.from_object(configClass)
     app.app_context().push()
     register_extensions(app)
     register_blueprints(app)
