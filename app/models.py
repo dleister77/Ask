@@ -117,16 +117,19 @@ class State(Model):
     state_short = db.Column(db.String(24), index=True)
     addresses = db.relationship("Address", backref="state")
 
+    
+
+    #TODO update to check if state table exists
+
     @staticmethod
     def list():
         """Query db to populate state list on forms."""
-        if current_app.config['TESTING'] == True:
+        if db.get_engine().has_table('state'):
+            list = [(s.id, s.name) for s in State.query.order_by("name")]
+        elif current_app.config['TESTING'] == True:
             list = current_app.config['TEST_STATES']
         else:
-            try:
-                list = [(s.id, s.name) for s in State.query.order_by("name")]
-            except OperationalError:
-                list = [(1,"Test")]
+            list = (None, None)
         return list
 
     def __repr__(self):
