@@ -780,14 +780,14 @@ class Sector(Model):
             None
         Returns:
             List of tuples (id, name)
-        """
-        try:
+        """        
+        
+        if db.get_engine().has_table('sector'):
             list = [(s.id, s.name) for s in Sector.query.order_by("name")]
-        except OperationalError:
-            if current_app.config['TESTING'] is True:
-                list = current_app.config['TEST_SECTOR']
-            else:
-                list = [(1, "Temp")]
+        elif current_app.config['TESTING'] is True:
+            list = current_app.config['TEST_SECTOR']
+        else:
+            list = [(None, None)]
         return list
 
     def __repr__(self):
@@ -832,7 +832,7 @@ class Category(Model):
         
         """
 
-        try:
+        if db.get_engine().has_table('category'):
             if sector_id is not None:
                 sector = Sector.query.get(sector_id)
                 catList = (Category.query.filter(Category.sector == sector)
@@ -840,8 +840,8 @@ class Category(Model):
             else:
                 catList = Category.query.all()
             catList = [(category.id, category.name) for category in catList]                
-        except OperationalError:
-            catList = [(1, "Test")]
+        else:
+            catList = [(None, None)]
         return catList
 
     def __repr__(self):
