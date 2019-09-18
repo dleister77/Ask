@@ -1,4 +1,5 @@
 from datetime import date
+import math
 import os
 
 from flask import url_for
@@ -44,6 +45,12 @@ def scenarioUpdate(testCase, parameters, values, assertions):
             testCase[param] = (val, assertion)
     else:
         testCase[parameters] = (values, assertions)
+
+def assertEqualsTolerance(testValue, targetValue, tolerance):
+    tolerance = math.pow(10,-tolerance)
+    lowerBounds = targetValue - tolerance
+    upperBounds = targetValue + tolerance
+    assert lowerBounds <= testValue <= upperBounds
 
 @pytest.mark.usefixtures("dbSession")
 class FunctionalTest(object):
@@ -107,14 +114,14 @@ def test_db(test_app):
     sect1 = Sector.create(id=1, name="Home Services")
     c1 = Category.create(id=1, name="Electrician", sector_id=1)
     c2 = Category.create(id=2, name="Plumber", sector_id=1)
-
+    a1 = Address.create(line1="13 Brook St", city="Lakewood",
+                        zip="14750", state_id = 2,
+                        latitude=42.100201, longitude=-79.340303)
 
     #add test users
     u1 = User.create(id=1, username="sarahsmith", first_name="Sarah", last_name="Smith", 
              email="sarahsmith@yahoo.com",
-             address = Address(line1="13 Brook St", city="Lakewood",
-                               zip="14750", state_id = 2, user_id=1,
-                               latitude=42.100201, longitude=-79.340303))
+             address = a1)
     u2 = User.create(id=2, username="jjones", first_name="John", last_name="Jones", 
              email="jjones@yahoo.com",
              address=Address(line1="7708 covey chase Dr", city="Charlotte",
@@ -242,12 +249,12 @@ def testGroup3(dbSession):
 
 @pytest.fixture()
 def testGroupRequest(dbSession, testUser4, testGroup):
-    request = GroupRequest.create(group_id=testGroup.id, requestor_id=testUser4.id)
+    request = GroupRequest.create(id=1, group_id=testGroup.id, requestor_id=testUser4.id)
     return request
 
 @pytest.fixture()
 def testGroupRequest2(dbSession, testUser4, testGroup3):
-    request = GroupRequest.create(group_id=testGroup3.id, requestor_id=testUser4.id)
+    request = GroupRequest.create(id=2, group_id=testGroup3.id, requestor_id=testUser4.id)
     return request
 
 @pytest.fixture()
@@ -285,7 +292,7 @@ def baseAddress():
 
 @pytest.fixture()
 def newAddressDict():
-    testCase = {"line1": "13 Brook St", "city": "Lakewood", "state_id": 2,
+    testCase = {"unknown": False, "line1": "13 Brook St", "city": "Lakewood", "state_id": 2,
                  "zip": "14750", "user_id": 4}
     return testCase
 

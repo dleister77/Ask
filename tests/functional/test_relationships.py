@@ -183,16 +183,28 @@ class TestFriendSearch(FunctionalTest):
 
     routeFunction = 'relationship.friendsearch'
 
-    def test_valid(self, activeClient, testUser3):
-        testCase = {"name": "mar"}
+    def runTests(self, activeClient, testCase, user):
+        """Helper method to run check returned json vs expected result"""
         response = self.getRequest(activeClient, **testCase)
         assert response.status_code == 200
-        check = [{"id": testUser3.id, 
-              "first_name": testUser3.first_name, 
-              "last_name": testUser3.last_name,
-              "city": testUser3.address.city,
-              "state": testUser3.address.state.state_short}]
+        check = [{"id": user.id, 
+              "first_name": user.first_name, 
+              "last_name": user.last_name,
+              "city": user.address.city,
+              "state": user.address.state.state_short}]
         assert check == response.json
+
+    def test_valid(self, activeClient, testUser3):
+        testCase = {"name": "mar"}
+        self.runTests(activeClient, testCase, testUser3)
+    
+    def test_validFullName(self, activeClient, testUser3):
+        testCase = {"name": "mark johnson"}
+        self.runTests(activeClient, testCase, testUser3)
+    
+    def test_validLastNameFirst(self, activeClient, testUser3):
+        testCase = {"name": "johnson, Mark"}
+        self.runTests(activeClient, testCase, testUser3)     
 
     def test_multiple(self, activeClient, testUser3, testUser4):
         testCase = {"name": "ma"}

@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from flask_login import current_user
@@ -8,6 +9,7 @@ from app.models import User, Address, Group, Category, Review, Provider,\
                        FriendRequest, GroupRequest, Sector
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
+from tests.conftest import assertEqualsTolerance
 
 
 def null_test(test_db, model_class, test_case, key):
@@ -18,6 +20,7 @@ def null_test(test_db, model_class, test_case, key):
     test_case[key] = None
     with pytest.raises(IntegrityError):
         m = model_class.create(**test_case)
+
 
 @pytest.mark.usefixtures('dbSession')
 class TestUser(object):
@@ -111,7 +114,8 @@ class TestUser(object):
     def test_summary(self, testUser):
         assert testUser.summary().average == 4
         assert testUser.summary().count == 3
-        assert testUser.summary().cost == (8/3)
+        testCost = (8/3)
+        assert (testCost - .0001) <= testUser.summary().cost <=(testCost + .0001)
 
     def test_addFriend(self, testUser, testUser4):
         assert len(testUser.receivedfriendrequests)==0
@@ -217,23 +221,22 @@ class TestAddress(object):
         assert address.zip == "28210"
         assert address.unknown == False
         assert address.user_id == 2
-        assert address.longitude == -80.864783
-        assert address.latitude == 35.123949
-        assert address.coordinates == (35.123949, -80.864783)
+        assertEqualsTolerance(address.longitude, -80.864783, 5)
+        assertEqualsTolerance(address.latitude, 35.123949, 5)
 
-    def test_newWithoutOwner(self, testAddress, mockGeoResponse):
-        new = Address(line1=testAddress.line1, city=testAddress.city,
-                    state_id=1, zip=testAddress.zip)
-        with pytest.raises(IntegrityError):
-            new.save()
-
-    @pytest.mark.parametrize('key', ['city', 'state_id', 'line1', 'zip'])
+    @pytest.mark.parametrize('key', ['city', 'state_id'])
     def test_newMissingRequired(self, key, newAddressDict, mockGeoResponse):
         newAddressDict[key] = None
         with pytest.raises(IntegrityError):
             Address.create(**newAddressDict)
 
-    def test_unknown(self, newAddressDict, mockGeoResponse):
+    @pytest.mark.parametrize('key', ['line1', 'zip'])
+    def test_missingRequiredUnknownFalse(self, key, newAddressDict, mockGeoResponse):
+        newAddressDict[key] = None
+        with pytest.raises(AssertionError):
+            address = Address.create(**newAddressDict)   
+
+    def test_unknownTrue(self, newAddressDict, mockGeoResponse):
         newAddressDict.update({'unknown': True, 'line1': None, 'zip': None})
         address = Address.create(**newAddressDict)
         assert address is not None
@@ -255,16 +258,24 @@ class TestAddress(object):
 
     def test_updateValid(self, activeClient, testUser, mockGeoResponse):
         assert testUser.address.line1 == "7708 Covey Chase Dr"
-        assert testUser.address.longitude == -80.864783
-        assert testUser.address.latitude == 35.123949
+        assertEqualsTolerance(testUser.address.longitude, -80.864783, 5)
+        assertEqualsTolerance(testUser.address.latitude, 35.123949, 5)
         testUser.address.update(line1="8012 Covey Chase Dr", city="Belmont", zip="28212")
         assert testUser.address.line1 == "8012 Covey Chase Dr"
-        assert testUser.address.longitude == -80.865332
-        assert testUser.address.latitude == 35.119714
+        assertEqualsTolerance(testUser.address.longitude, -80.865332, 5)
+        assertEqualsTolerance(testUser.address.latitude, 35.119714, 5)
 
     def test_updateInvalid(self, testUser,mockGeoResponse):
         with pytest.raises(AddressError):
             testUser.address.update(line1="1 covey chase dr")
+
+    def test_noOrphanAddress(self, testUser4):
+        with pytest.raises(AssertionError):
+            testUser4.address.update(user=None)
+    
+    def test_noOrphanAddress2(self, testUser4):
+        with pytest.raises(AssertionError):
+            testUser4.update(address=None)
 
     def test_userDeleteCascade(self, testUser4):
         address = testUser4.address
@@ -516,7 +527,7 @@ class TestProvider(object):
         providers = Provider.search(filters, sort=sort)
         assert len(providers) == 1
         assert providers[0].name == 'Douthit Electrical'
-        assert providers[0].reviewAverage == (7/3)
+        assertEqualsTolerance(providers[0].reviewAverage, (7/3), 3)
         assert providers[0].reviewCount == 3
         assert providers[0].reviewCost == 5
         assert providers[0].categories == "Electrician,Plumber"
@@ -526,8 +537,8 @@ class TestProvider(object):
         reviewFilter = {"friends_filter": False, "groups_filter": False}
         profile = testProvider.profile(reviewFilter)
         assert profile[0] == testProvider
-        assert profile[1] == 2.5
-        assert profile[2] == (18/4)
+        assertEqualsTolerance(profile[1], 2.5, 5)
+        assertEqualsTolerance(profile[2], (18/4), 5)
         assert profile[3] == 4
 
     def test_profileFriends(self, testProvider, activeClient):
@@ -550,7 +561,7 @@ class TestProvider(object):
         reviewFilter = {"friends_filter": True, "groups_filter": True}
         profile = testProvider.profile(reviewFilter)
         assert profile[0] == testProvider
-        assert profile[1] == (7/3)
+        assertEqualsTolerance(profile[1], (7/3), 3)
         assert profile[2] == 5
         assert profile[3] == 3
 

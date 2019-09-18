@@ -9,6 +9,7 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY") or "Mohren10$"
 
     #sql alchemy info
+    SQLALCHEMY_DATABASE_URI =  os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_NAMING_CONVENTION = {
     "ix": 'ix_%(column_0_label)s',
@@ -36,9 +37,7 @@ class Config(object):
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
-    
-    SQLALCHEMY_DATABASE_URI =  os.environ.get('DATABASE_URL')
-    
+        
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_PROTECTION = "strong"
     SESSION_COOKIE_SECURE = True
@@ -50,14 +49,15 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
     
-    SQLALCHEMY_DATABASE_URI =  'sqlite:///' + os.path.join(basedir, 'app.db')
+    # SQLALCHEMY_DATABASE_URI =  'sqlite:///' + os.path.join(basedir, 'app.db')
     
     PER_PAGE = 2
 
 class TestConfig(Config):
     TESTING = True
     SERVER_NAME = 'localhost.localdomain'
-    SQLALCHEMY_DATABASE_URI = "sqlite://"
+    SQLALCHEMY_DATABASE_URI =  os.environ.get('TEST_DATABASE_URL')
+    # SQLALCHEMY_DATABASE_URI = "sqlite://"
     PER_PAGE = 2
     WTF_CSRF_ENABLED = False
     MEDIA_FOLDER = os.path.join(basedir, 'instance', 'tests', 'photos')

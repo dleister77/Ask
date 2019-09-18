@@ -3,8 +3,9 @@ from pathlib import Path
 from urllib import parse
 
 from flask import flash, redirect, render_template, request, url_for, jsonify,\
-                  send_from_directory, current_app, session, json
+                  send_from_directory, current_app, session, json, Markup
 from flask_login import current_user, login_required
+import simplejson
 from werkzeug.utils import secure_filename
 
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
@@ -249,9 +250,10 @@ def search():
                 reviewFilter[field.name] = 'y'
         form.initialize()
         providersDict = [provider._asdict() for provider in providers]
-        providersDict = providersDict
+        providersDict = Markup(simplejson.dumps(providersDict, sort_keys=True))
         if session.get('location'):
             locationDict = session['location']
+            locationDict = Markup(simplejson.dumps(locationDict, sort_keys=True))
         else:
             locationDict = None
         return render_template("index.html", form=form, title="Search", 

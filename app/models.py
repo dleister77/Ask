@@ -11,7 +11,7 @@ import jwt
 from sqlalchemy import CheckConstraint, func as saFunc, or_, and_, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import backref
+from sqlalchemy.orm import backref, validates
 from sqlalchemy.sql import exists, func
 from sqlalchemy.sql.expression import desc
 from threading import Thread
@@ -117,10 +117,6 @@ class State(Model):
     state_short = db.Column(db.String(24), index=True)
     addresses = db.relationship("Address", backref="state")
 
-    
-
-    #TODO update to check if state table exists
-
     @staticmethod
     def list():
         """Query db to populate state list on forms."""
@@ -141,12 +137,13 @@ class Address(Model):
 
     Args:
         id (int): id set by db
+        unknown (bool): for businesses, if person entering business doesn't know
+                       full address, allows user to only enter city/state. Must
+                       be added prior to other lines
         line1 (str): hybrid property, 1st address line
         line2 (str): hybrid property, 2nd address line
         zip (str): zip code
         city (str): hybrid property, city name
-        unknown (bool): for businesses, if person entering business doesn't know
-                       full address, allows user to only enter city/state
         user_id (int): foreign key, user_id if user associated with address
         provider_id (int): foreign key, provider id if business assoc with
                            address
@@ -165,28 +162,19 @@ class Address(Model):
         Child of: State, User, Provider
     """
     id = db.Column(db.Integer, primary_key=True)
+    unknown = db.Column(db.Boolean, default=False, index=True)
     _line1 = db.Column(db.String(128))
     _line2 = db.Column(db.String(128))
     zip = db.Column(db.String(20), index=True)
     _city = db.Column(db.String(64), index=True, nullable=False)
-    unknown = db.Column(db.Boolean, default=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id",
                                                   ondelete="CASCADE"))
     provider_id = db.Column(db.Integer, db.ForeignKey("provider.id",
                                                       ondelete="CASCADE"))
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
-    latitude = db.Column(db.Float, index=True)
-    longitude = db.Column(db.Float, index=True)
+    latitude = db.Column(db.Float(precision='8,6'), index=True)
+    longitude = db.Column(db.Float(precision='9,6'), index=True)
 
-
-    __table_args__ = (
-        CheckConstraint('provider_id IS NOT NULL OR user_id IS NOT NULL',
-                        name="chk_address_fks"),
-        CheckConstraint('_line1 IS NOT NULL OR unknown == 1',
-                        name='chk_line1unknown'),
-        CheckConstraint('zip IS NOT NULL OR unknown == 1',
-                        name='chk_zipunknown')                        
-    )
 
     def __init__(self, **kwargs):
         super(Address, self).__init__(**kwargs)
@@ -215,6 +203,13 @@ class Address(Model):
             line1 = line1.title()
         self._line1 = line1
 
+    @validates('_line1', 'zip')
+    def validate_line1zip(self, key, field):
+        if isinstance(self.unknown, bool):
+            assert field is not None or self.unknown is True
+        return field
+       
+
     @hybrid_property
     def line2(self):
         return self._line2
@@ -226,6 +221,7 @@ class Address(Model):
             line2 = line2.title()
         self._line2 = line2
 
+
     @hybrid_property
     def city(self):
         return self._city
@@ -236,6 +232,7 @@ class Address(Model):
         if city is not None:
             city = city.title()
         self._city = city
+
     
     @hybrid_property
     def coordinates(self):
@@ -283,20 +280,6 @@ class Address(Model):
 
     def __repr__(self):
         return f"<Address {self.line1}, {self.city}, {self.state}>"
-
-
-# def filters['location'](Model):
-#     """US cities and States used to populate service area locations.
-#     Relationships:
-#     Many to Many: Providers
-#     """
-#     id = db.Column(db.Integer, primary_key=True)
-#     city = db.Column(db.String(64))
-#     state = db.Column(db.String(64))
-#     state_short = db.Column(db.String(64))
-
-#     def __repr__(self):
-#         return f"<filters['location'] {self.city} {self.state}>"
 
 
 class User(UserMixin, Model):
@@ -411,6 +394,15 @@ class User(UserMixin, Model):
             self._email = email
         else:
             pass
+    
+    @validates('address', include_removes=True)
+    def validate_address(self, key, address, is_remove):
+        if is_remove:
+            raise ValueError("Address for user is required.")
+        else:
+            assert address is not None
+        return address
+
 
     def set_password(self, password):
         """Converts plaintext password to hash and stores in db."""
@@ -902,20 +894,19 @@ class Provider(Model):
         if telephone is not None:
             telephone = re.sub('\D+', '', telephone)
         self._telephone = telephone
+
+    @validates('address', include_removes=True)
+    def validate_address(self, key, address, is_remove):
+        if is_remove:
+            raise ValueError("Address for provider is required.")
+        else:
+            assert address is not None
+        return address
     
     @hybrid_property
     def categoryList(self):
         return self._categoryList    
     
-    # @categoryList.expression
-    # def categoryList(cls):
-    #     # return saFunc.group_concat(Category.name)
-    #     return select([saFunc.group_concat(Category.name)])\
-    #             .where(category_provider.c.provider_id == 3)\
-    #             .select_from(Category)\
-    #             .join(category_provider, Category.id == category_provider.c.category_id)
-
-
     @hybrid_property
     def review_count(self):
         return len(self.reviews)
@@ -968,86 +959,6 @@ class Provider(Model):
 
 
     @classmethod
-    def searchOld(cls, filters, sort=None, reviewFilters=None, limit=None):
-        """Search for providers meeting specified filters and social filters.
-
-        Search for providers based on category and distance from search origin.
-        Sorting by name or average rating are done by database.  Distance sort
-        done outside of this method.  
-        
-        Args:
-            filters (dict): main search filters (category, name, location, id)
-            sort (str): sort criteria to use.  name, distance, rating
-            reviewFilters (dict): optional, additional search filters based on if 
-                            reviewed and whether reviewed by users social circle
-            limit (int): optional, defaults to none, limits number of results 
-                         returned
-        Returns:
-            list: list of providers plus summary statistics for each provider,
-                  sorted by provider name
-        """
-        filter_args = []
-        join_args = [Provider.address, Address.state, Provider.categories]
-        outerjoin_args = [Provider.reviews, Review.user]
-        query_args = [Provider.id, Provider.name, Provider.email,
-                      Provider.telephone, Address.line1, Address.line2,
-                      Address.city, State.state_short, Address.zip,
-                      Address.latitude, Address.longitude,
-                      saFunc.group_concat(Category.name.distinct()).label("categories"),
-                      func.avg(Review.rating).label("reviewAverage"),
-                      func.avg(Review.cost).label("reviewCost"),
-                      func.count(Review.id.distinct()).label("reviewCount"),
-                      saFunc.group_concat(Review.id).label("ReviewIds"),
-                      saFunc.group_concat(Review.rating).label("ReviewRatings")
-                      ]
-
-        if sort and sort == "rating":
-            sort_args = [desc("reviewAverage"), Provider.name]
-        else:
-            sort_args = [Provider.name]
-        if "category" in filters.keys():
-            filter_args.append(Category.id == filters['category'].id)
-        if "location" in filters.keys():
-            filter_args.extend([Address.longitude > filters['location'].minLong,
-                               Address.longitude < filters['location'].maxLong,
-                               Address.latitude > filters['location'].minLat,
-                               Address.latitude < filters['location'].maxLat])
-        if "id" in filters.keys():
-            filter_args.append(Provider.id == filters['id'])
-        if "name" in filters.keys() and filters['name'] not in ["", None]:
-            name = f"%{filters['name']}%"
-            filter_args.append(Provider.name.ilike(name))
-
-        reviewed = True in [filters.get('friends'), filters.get('groups'),
-                            filters.get('reviewed')]
-        if reviewed:
-            outerjoin_args = []
-            join_args.extend([Provider.reviews, Review.user])
-            friendsFilter = User.friends.contains(current_user)
-            groups = [g.id for g in current_user.groups]
-            groupsFilter = (and_(Group.id.in_(groups), User.id != current_user.id))
-            if filters.get('friends') is True and filters.get('groups') is False:
-                filter_args.append(friendsFilter)
-            elif filters.get('groups') is True and filters.get('friends') is False:
-                filter_args.append(groupsFilter)
-                join_args.append(User.groups)
-            elif filters.get('groups') is True and filters.get('friends') is True:
-                filter_args.append(or_(groupsFilter, friendsFilter))
-                outerjoin_args.append(User.groups)
-
-        providers = (db.session.query(*query_args)
-                                    .select_from(Provider)
-                                    .join(*join_args)
-                                    .outerjoin(*outerjoin_args)
-                                    .filter(*filter_args)
-                                    .group_by(Provider.id)
-                                    .order_by(*sort_args)
-                                    .limit(limit))                
-
-        providers=providers.all()
-        return providers
-
-    @classmethod
     def search(cls, filters, sort=None, limit=None):
         """Search for providers meeting specified filters and social filters.
 
@@ -1068,7 +979,10 @@ class Provider(Model):
         q = dbQuery()
         q.select_from = Provider
         q.limit = limit
-        q.group_by = [Provider.id]
+        q.group_by = [Provider.id, Provider.name, Provider.email,
+                      Provider.telephone, Address.line1, Address.line2,
+                      Address.city, State.state_short, Address.zip,
+                      Address.latitude, Address.longitude]
         q.join_args = [Provider.address, Address.state, Provider.categories]
         q.outerjoin_args = [Provider.reviews, Review.user]
         q.query_args = [Provider.id.label('id'), Provider.name.label('name'),
@@ -1129,8 +1043,8 @@ class Provider(Model):
             elif filters.get('groups') is True and filters.get('friends') is True:
                 sort_args = q.sort_args[:]
                 q.sort_args.clear()
-                q.group_by.clear()
-                q.group_by = ['reviewID']
+                q.group_by.insert(0, 'reviewID')
+                q.group_by.extend(['rating', 'cost'])
                 q.query_args[-4:] = []
                 q.query_args.extend([Review.id.label('reviewID'),
                                       Review.rating.label('rating'),
@@ -1154,7 +1068,7 @@ class Provider(Model):
                         func.count(sub.c.reviewID).label('reviewCount'),
                         saFunc.group_concat(sub.c.reviewID).label('reviewIDs')
                 ]
-                qP.group_by = [sub.c.id]       
+                qP.group_by = qP.query_args.copy()[:-4]    
 
                 if sort and sort == "rating":
                     qP.sort_args = [desc("reviewAverage"), sub.c.name]

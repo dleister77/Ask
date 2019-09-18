@@ -1,8 +1,8 @@
-"""new db copy
+"""initial mysql db
 
-Revision ID: 8e75fb301b58
+Revision ID: e284826a33e3
 Revises: 
-Create Date: 2019-09-12 20:34:11.751443
+Create Date: 2019-09-16 09:52:39.364095
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8e75fb301b58'
+revision = 'e284826a33e3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,27 +27,21 @@ def upgrade():
     sa.UniqueConstraint('_telephone', name=op.f('uq_provider__telephone')),
     sa.UniqueConstraint('email', name=op.f('uq_provider_email'))
     )
-    with op.batch_alter_table('provider', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_provider__name'), ['_name'], unique=False)
-
+    op.create_index(op.f('ix_provider__name'), 'provider', ['_name'], unique=False)
     op.create_table('sector',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_sector'))
     )
-    with op.batch_alter_table('sector', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_sector_name'), ['name'], unique=True)
-
+    op.create_index(op.f('ix_sector_name'), 'sector', ['name'], unique=True)
     op.create_table('state',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=True),
     sa.Column('state_short', sa.String(length=24), nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_state'))
     )
-    with op.batch_alter_table('state', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_state_name'), ['name'], unique=False)
-        batch_op.create_index(batch_op.f('ix_state_state_short'), ['state_short'], unique=False)
-
+    op.create_index(op.f('ix_state_name'), 'state', ['name'], unique=False)
+    op.create_index(op.f('ix_state_state_short'), 'state', ['state_short'], unique=False)
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=64), nullable=False),
@@ -59,40 +53,33 @@ def upgrade():
     sa.Column('_last_name', sa.String(length=64), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_user'))
     )
-    with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_user__email'), ['_email'], unique=True)
-        batch_op.create_index(batch_op.f('ix_user__first_name'), ['_first_name'], unique=False)
-        batch_op.create_index(batch_op.f('ix_user__last_name'), ['_last_name'], unique=False)
-        batch_op.create_index(batch_op.f('ix_user_password_set_date'), ['password_set_date'], unique=False)
-        batch_op.create_index(batch_op.f('ix_user_username'), ['username'], unique=True)
-
+    op.create_index(op.f('ix_user__email'), 'user', ['_email'], unique=True)
+    op.create_index(op.f('ix_user__first_name'), 'user', ['_first_name'], unique=False)
+    op.create_index(op.f('ix_user__last_name'), 'user', ['_last_name'], unique=False)
+    op.create_index(op.f('ix_user_password_set_date'), 'user', ['password_set_date'], unique=False)
+    op.create_index(op.f('ix_user_username'), 'user', ['username'], unique=True)
     op.create_table('address',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('unknown', sa.Boolean(), nullable=True),
     sa.Column('_line1', sa.String(length=128), nullable=True),
     sa.Column('_line2', sa.String(length=128), nullable=True),
     sa.Column('zip', sa.String(length=20), nullable=True),
     sa.Column('_city', sa.String(length=64), nullable=False),
-    sa.Column('unknown', sa.Boolean(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('provider_id', sa.Integer(), nullable=True),
     sa.Column('state_id', sa.Integer(), nullable=False),
     sa.Column('latitude', sa.Float(), nullable=True),
     sa.Column('longitude', sa.Float(), nullable=True),
-    sa.CheckConstraint('_line1 IS NOT NULL OR unknown == 1', name='chk_line1unknown'),
-    sa.CheckConstraint('provider_id IS NOT NULL OR user_id IS NOT NULL', name='chk_address_fks'),
-    sa.CheckConstraint('zip IS NOT NULL OR unknown == 1', name='chk_zipunknown'),
     sa.ForeignKeyConstraint(['provider_id'], ['provider.id'], name=op.f('fk_address_provider_id_provider'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['state_id'], ['state.id'], name=op.f('fk_address_state_id_state')),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], name=op.f('fk_address_user_id_user'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_address'))
     )
-    with op.batch_alter_table('address', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_address__city'), ['_city'], unique=False)
-        batch_op.create_index(batch_op.f('ix_address_latitude'), ['latitude'], unique=False)
-        batch_op.create_index(batch_op.f('ix_address_longitude'), ['longitude'], unique=False)
-        batch_op.create_index(batch_op.f('ix_address_unknown'), ['unknown'], unique=False)
-        batch_op.create_index(batch_op.f('ix_address_zip'), ['zip'], unique=False)
-
+    op.create_index(op.f('ix_address__city'), 'address', ['_city'], unique=False)
+    op.create_index(op.f('ix_address_latitude'), 'address', ['latitude'], unique=False)
+    op.create_index(op.f('ix_address_longitude'), 'address', ['longitude'], unique=False)
+    op.create_index(op.f('ix_address_unknown'), 'address', ['unknown'], unique=False)
+    op.create_index(op.f('ix_address_zip'), 'address', ['zip'], unique=False)
     op.create_table('category',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=True),
@@ -100,9 +87,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['sector_id'], ['sector.id'], name=op.f('fk_category_sector_id_sector')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_category'))
     )
-    with op.batch_alter_table('category', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_category_name'), ['name'], unique=True)
-
+    op.create_index(op.f('ix_category_name'), 'category', ['name'], unique=True)
     op.create_table('friendrequest',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('friend_id', sa.Integer(), nullable=False),
@@ -112,9 +97,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['requestor_id'], ['user.id'], name=op.f('fk_friendrequest_requestor_id_user'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_friendrequest'))
     )
-    with op.batch_alter_table('friendrequest', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_friendrequest_date_sent'), ['date_sent'], unique=False)
-
+    op.create_index(op.f('ix_friendrequest_date_sent'), 'friendrequest', ['date_sent'], unique=False)
     op.create_table('group',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('_name', sa.String(length=64), nullable=False),
@@ -123,9 +106,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['admin_id'], ['user.id'], name=op.f('fk_group_admin_id_user')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_group'))
     )
-    with op.batch_alter_table('group', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_group__name'), ['_name'], unique=True)
-
+    op.create_index(op.f('ix_group__name'), 'group', ['_name'], unique=True)
     op.create_table('user_friend',
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('friend_id', sa.Integer(), nullable=True),
@@ -147,9 +128,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['requestor_id'], ['user.id'], name=op.f('fk_grouprequest_requestor_id_user'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_grouprequest'))
     )
-    with op.batch_alter_table('grouprequest', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_grouprequest_date_sent'), ['date_sent'], unique=False)
-
+    op.create_index(op.f('ix_grouprequest_date_sent'), 'grouprequest', ['date_sent'], unique=False)
     op.create_table('review',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
@@ -166,9 +145,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], name=op.f('fk_review_user_id_user'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_review'))
     )
-    with op.batch_alter_table('review', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_review_timestamp'), ['timestamp'], unique=False)
-
+    op.create_index(op.f('ix_review_timestamp'), 'review', ['timestamp'], unique=False)
     op.create_table('user_group',
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('group_id', sa.Integer(), nullable=True),
@@ -191,55 +168,35 @@ def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('picture')
     op.drop_table('user_group')
-    with op.batch_alter_table('review', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_review_timestamp'))
-
+    op.drop_index(op.f('ix_review_timestamp'), table_name='review')
     op.drop_table('review')
-    with op.batch_alter_table('grouprequest', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_grouprequest_date_sent'))
-
+    op.drop_index(op.f('ix_grouprequest_date_sent'), table_name='grouprequest')
     op.drop_table('grouprequest')
     op.drop_table('category_provider')
     op.drop_table('user_friend')
-    with op.batch_alter_table('group', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_group__name'))
-
+    op.drop_index(op.f('ix_group__name'), table_name='group')
     op.drop_table('group')
-    with op.batch_alter_table('friendrequest', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_friendrequest_date_sent'))
-
+    op.drop_index(op.f('ix_friendrequest_date_sent'), table_name='friendrequest')
     op.drop_table('friendrequest')
-    with op.batch_alter_table('category', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_category_name'))
-
+    op.drop_index(op.f('ix_category_name'), table_name='category')
     op.drop_table('category')
-    with op.batch_alter_table('address', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_address_zip'))
-        batch_op.drop_index(batch_op.f('ix_address_unknown'))
-        batch_op.drop_index(batch_op.f('ix_address_longitude'))
-        batch_op.drop_index(batch_op.f('ix_address_latitude'))
-        batch_op.drop_index(batch_op.f('ix_address__city'))
-
+    op.drop_index(op.f('ix_address_zip'), table_name='address')
+    op.drop_index(op.f('ix_address_unknown'), table_name='address')
+    op.drop_index(op.f('ix_address_longitude'), table_name='address')
+    op.drop_index(op.f('ix_address_latitude'), table_name='address')
+    op.drop_index(op.f('ix_address__city'), table_name='address')
     op.drop_table('address')
-    with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_user_username'))
-        batch_op.drop_index(batch_op.f('ix_user_password_set_date'))
-        batch_op.drop_index(batch_op.f('ix_user__last_name'))
-        batch_op.drop_index(batch_op.f('ix_user__first_name'))
-        batch_op.drop_index(batch_op.f('ix_user__email'))
-
+    op.drop_index(op.f('ix_user_username'), table_name='user')
+    op.drop_index(op.f('ix_user_password_set_date'), table_name='user')
+    op.drop_index(op.f('ix_user__last_name'), table_name='user')
+    op.drop_index(op.f('ix_user__first_name'), table_name='user')
+    op.drop_index(op.f('ix_user__email'), table_name='user')
     op.drop_table('user')
-    with op.batch_alter_table('state', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_state_state_short'))
-        batch_op.drop_index(batch_op.f('ix_state_name'))
-
+    op.drop_index(op.f('ix_state_state_short'), table_name='state')
+    op.drop_index(op.f('ix_state_name'), table_name='state')
     op.drop_table('state')
-    with op.batch_alter_table('sector', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_sector_name'))
-
+    op.drop_index(op.f('ix_sector_name'), table_name='sector')
     op.drop_table('sector')
-    with op.batch_alter_table('provider', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_provider__name'))
-
+    op.drop_index(op.f('ix_provider__name'), table_name='provider')
     op.drop_table('provider')
     # ### end Alembic commands ###

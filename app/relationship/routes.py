@@ -141,12 +141,13 @@ def friendsearch():
     name = parse.unquote_plus(request.args.get("name"))
     #remove non alpha characters and spaces if present
     a = re.compile('[^a-zA-Z]+')
-    name = a.sub("", name)
-    users = (User.query.filter((User.first_name + User.last_name).contains(name)
+    name = f'%{a.sub("", name)}%'
+    users = (User.query.filter((User.first_name + User.last_name).ilike(name)
                             |(User.last_name + User.first_name).contains(name))
                             .order_by(User.last_name, User.first_name)
-                            .limit(10)
-                            .all())
+                            .limit(10))
+    print(users)
+    users = users.all()
     names = ([{"id": person.id, 
               "first_name": person.first_name, 
               "last_name": person.last_name,

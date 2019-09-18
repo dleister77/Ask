@@ -224,7 +224,7 @@ class TestProviderSearch(FunctionalTest):
         assert autocompleteURL in response.data
         providerCard = b'<div class="card">'
         assert response.data.count(providerCard) == 2
-        searchHome = b'{"address": "", "coordinates": [35.123949, -80.864783], "latitude": 35.123949, "longitude": -80.864783, "source": "home"}';
+        searchHome = b'{"address": "", "coordinates": [35.123947, -80.864784], "latitude": 35.123947, "longitude": -80.864784, "source": "home"}';
         assert searchHome in response.data
         # test correct stars rendered
         full = b'<i class="fas fa-star star-full"></i>'

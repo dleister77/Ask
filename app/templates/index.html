@@ -101,9 +101,9 @@
 
     {% if locationDict and providersDict %}
 
-    let searchHome = '{{ locationDict| tojson | safe }}';
+    let searchHome = '{{ locationDict }}';
     searchHome = JSON.parse(searchHome);
-    var providersDict = '{{ providersDict | tojson | safe }}';
+    var providersDict = '{{ providersDict }}';
     let searchResults = JSON.parse(providersDict);
     
     {% endif %}

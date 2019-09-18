@@ -7,7 +7,7 @@ import pytest
 from app.models import addressTuple
 from app.utilities.geo import geocode, _geocodeGEOCODIO, _geocodeTamu, getGeoRange, getDistance,\
                               Location, sortByDistance, AddressError
-
+from tests.conftest import assertEqualsTolerance
 
 def test_geocode():
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"
@@ -105,7 +105,8 @@ def test_LocationNewManual(activeClient):
 
 def test_LocationNewHome(activeClient):
     location = Location("home")
-    assert location.coordinates == (35.123949, -80.864783)
+    assertEqualsTolerance(location.latitude, 35.123949, 5)
+    assertEqualsTolerance(location.longitude, -80.864783, 5)
 
 def test_LocationSetRangeCoords(activeClient, mockGeoResponse):
     location = Location("manual", "8012 Covey Chase Dr, Charlotte, NC 28210")
