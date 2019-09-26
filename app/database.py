@@ -5,6 +5,7 @@ from sqlalchemy.engine import Engine
 from sqlite3 import Connection as SQLite3Connection
 
 from app.extensions import db, login
+from app.utilities.helpers import noneIfEmptyString
 
 
 # # sets foreign keys to on for sqlite db connection
@@ -21,11 +22,13 @@ class CRUDMixin(object):
     Source: """
 
     @classmethod
+    @noneIfEmptyString
     def create(cls, **kwargs):
         """Create a new record and save it the database."""
         instance = cls(**kwargs)
         return instance.save()
-
+        
+    @noneIfEmptyString
     def update(self, commit=True, **kwargs):
         """Update specific fields of a record."""
         for attr, value in kwargs.items():

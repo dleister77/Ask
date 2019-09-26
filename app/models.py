@@ -21,6 +21,7 @@ from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
 from app.utilities.geo import getDistance, geocode, AddressError, APIAuthorizationError
+from app.utilities.helpers import noneIfEmptyString
 
 addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
 
@@ -366,6 +367,7 @@ class User(UserMixin, Model):
     def last_name(self):
         return self._last_name
 
+
     @last_name.setter
     def last_name(self, last_name):
         """Title cases last name when being set."""
@@ -389,7 +391,6 @@ class User(UserMixin, Model):
         Saves new email only if changing from what is stored in db.  Avoids
         unique constraint in db.
         """
-
         if email != self._email:
             self._email = email
         else:

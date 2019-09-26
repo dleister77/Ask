@@ -130,9 +130,19 @@ def listToString(items):
     else:
         return f'{", ".join(items[:-1])} & {items[-1]}'
     
-    
-    
-        
+
+def noneIfEmptyString(func):
+    @functools.wraps(func)
+    def wrapped_function(*args, **kwargs):
+        """Decorator to convert empty string to None """
+        for arg in args:
+            if arg == '':
+                arg = None
+        for k,v in kwargs.items():
+            if v == '':
+                kwargs[k] = None
+        return func(*args, **kwargs)
+    return wrapped_function
 
 
 

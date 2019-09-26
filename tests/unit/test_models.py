@@ -57,9 +57,21 @@ class TestUser(object):
                         email="rfirmino@lfc.com", username="yardsmith")
 
     @pytest.mark.parametrize('key', ['first_name', 'last_name', 'username', 'email'])
-    def test_newMissingInformation(self, newUserDict, key):
+    def test_newMissingRequired(self, newUserDict, key):
         newUserDict[key] = None
         with pytest.raises(IntegrityError):
+                User.create(**newUserDict)
+
+    @pytest.mark.parametrize('key', ['first_name', 'last_name', 'username', 'email'])
+    def test_newMissingEmptyString(self, newUserDict, key):
+        newUserDict[key] = ''
+        with pytest.raises(IntegrityError):
+                User.create(**newUserDict)
+
+    @pytest.mark.parametrize('key', ['address'])
+    def test_newMissingAddress(self, newUserDict, key):
+        newUserDict[key] = None
+        with pytest.raises(AssertionError):
                 User.create(**newUserDict)
 
         # change ever field except user_id
@@ -230,6 +242,12 @@ class TestAddress(object):
         with pytest.raises(IntegrityError):
             Address.create(**newAddressDict)
 
+    @pytest.mark.parametrize('key', ['city', 'state_id'])
+    def test_newRequiredEmptyString(self, key, newAddressDict, mockGeoResponse):
+        newAddressDict[key] = ""
+        with pytest.raises(IntegrityError):
+            Address.create(**newAddressDict)
+
     @pytest.mark.parametrize('key', ['line1', 'zip'])
     def test_missingRequiredUnknownFalse(self, key, newAddressDict, mockGeoResponse):
         newAddressDict[key] = None
@@ -268,6 +286,7 @@ class TestAddress(object):
     def test_updateInvalid(self, testUser,mockGeoResponse):
         with pytest.raises(AddressError):
             testUser.address.update(line1="1 covey chase dr")
+
 
     def test_noOrphanAddress(self, testUser4):
         with pytest.raises(AssertionError):
@@ -398,6 +417,29 @@ class TestProvider(object):
         assert testProvider.telephone == "7047263329"
         assert testProvider.address.line1 == "6000 Fairview Rd"
 
+    def test_newValid(self, newProviderDict, newAddressDict, mockGeoResponse):
+        new = Provider.create(**newProviderDict)
+        assert new.name == newProviderDict['name']
+        assert new.email == newProviderDict['email']
+    
+    @pytest.mark.parametrize('key', ['name', 'telephone'])
+    def test_newMissingRequired(self, newProviderDict, key):
+        newProviderDict[key] = None
+        with pytest.raises(IntegrityError):
+                Provider.create(**newProviderDict)
+
+    @pytest.mark.parametrize('key', ['address'])
+    def test_newMissingAddress(self, newProviderDict, key):
+        newProviderDict[key] = None
+        with pytest.raises(AssertionError):
+                Provider.create(**newProviderDict)
+
+    @pytest.mark.parametrize('key', ['name', 'telephone'])
+    def test_newMissingRequiredEmptyString(self, newProviderDict, key):
+        newProviderDict[key] = ''
+        with pytest.raises(IntegrityError):
+                Provider.create(**newProviderDict)
+
     def test_newDuplicateEmail(self):
         with pytest.raises(IntegrityError):
             newProvider = Provider.create(name="Test Provider",
@@ -405,6 +447,15 @@ class TestProvider(object):
                                         telephone="1234567891",
                                         categories = [Category.query.get(1)]
                                         )
+
+    def test_newDuplicateNullEmail(self):
+        newProvider = Provider.create(name="Test Provider",
+                                        telephone="1234567891",
+                                        email='',
+                                        categories = [Category.query.get(1)])
+        p = Provider.query.filter_by(name="Test Provider").first()
+        assert p is not None
+
 
     def test_newDuplicateTelephone(self):
         with pytest.raises(IntegrityError):
@@ -575,6 +626,18 @@ class TestReview(object):
         assert testReview.cost == 3
         assert testReview.description == 'Fixed a light bulb'
         assert testReview.comments == 'Satisfactory work.'
+
+    @pytest.mark.parametrize('key', ['provider', 'category','rating', 'cost'])
+    def test_newMissingRequired(self, newReviewDict, key):
+        newReviewDict[key] = None
+        with pytest.raises(IntegrityError):
+                Review.create(**newReviewDict)
+
+    @pytest.mark.parametrize('key', ['provider', 'category','rating', 'cost'])
+    def test_newMissingRequiredEmptyString(self, newReviewDict, key):
+        newReviewDict[key] = ''
+        with pytest.raises(IntegrityError):
+                Review.create(**newReviewDict)
 
     def test_search(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": False}

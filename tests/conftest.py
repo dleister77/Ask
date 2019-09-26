@@ -107,6 +107,7 @@ def activeClient(testClient, test_db):
 
 @pytest.fixture(scope='session')
 def test_db(test_app):
+    db.drop_all()
     db.create_all()
     #define categories
     s1 = State.create(id=1, name="North Carolina", state_short="NC")
@@ -124,17 +125,17 @@ def test_db(test_app):
              address = a1)
     u2 = User.create(id=2, username="jjones", first_name="John", last_name="Jones", 
              email="jjones@yahoo.com",
-             address=Address(line1="7708 covey chase Dr", city="Charlotte",
+             address=Address(line1="7708 covey chase Dr", line2='', city="Charlotte",
                              zip="28210", state_id=1, latitude=35.123949,
                              longitude=-80.864783))
     u3 = User.create(id=3, username="yardsmith", first_name="Mark", last_name="Johnson",
               email="yardsmith@gmail.com",
-              address=Address(line1="7718 Covey Chase Dr", city="Charlotte",
+              address=Address(line1="7718 Covey Chase Dr", line2='', city="Charlotte",
                               zip="28210", state_id=1, latitude=35.123681,
                              longitude=-80.865045)) 
     u4 = User.create(id=4, username="nukepower4ever", first_name="Hyman",
               last_name="Rickover", email="hyman@navy.mil",
-              address=Address(line1="7920 Covey Chase Dr", city="Charlotte",
+              address=Address(line1="7920 Covey Chase Dr", line2='', city="Charlotte",
                               zip="28210", state_id=1, latitude=35.120759,
                              longitude=-80.865781))
     
@@ -147,13 +148,14 @@ def test_db(test_app):
                                   latitude=35.150495, longitude=-80.838958),
                   categories=[c1, c2])
     p2 = Provider.create(id=2, name="Evers Electric", telephone="7048431910",
+                  email='',
                   address=Address(line1="3924 Cassidy Drive", line2="",
                                   city="Waxhaw", zip="28173", state_id=1,
                                   latitude=34.938645, longitude=-80.760691),
                   categories=[c1]),
     p3 = Provider.create(id=3, name="Preferred Electric Co", telephone="7043470446",
                          email="preferred@gmail.com", categories=[c1],
-                  address=Address(line1="4113 Yancey Rd", city="charlotte",
+                  address=Address(line1="4113 Yancey Rd", line2='', city="charlotte",
                                   zip="28217", state_id=1, latitude=35.186947,
                                   longitude=-80.880459))
 
@@ -292,8 +294,8 @@ def baseAddress():
 
 @pytest.fixture()
 def newAddressDict():
-    testCase = {"unknown": False, "line1": "13 Brook St", "city": "Lakewood", "state_id": 2,
-                 "zip": "14750", "user_id": 4}
+    testCase = {"unknown": False, "line1": "13 Brook St", "line2":'', 
+                "city": "Lakewood", "state_id": 2, "zip": "14750", "user_id": 4}
     return testCase
 
 @pytest.fixture()
@@ -308,12 +310,24 @@ def newUserDict():
     return testCase
 
 @pytest.fixture()
+def newProviderDict():
+    addressDict = {"line1": "7708 Covey Chase Dr", 'line2': '',
+                 "city": "Charlotte", "state": State.query.get(1),
+                 "zip": "28210", "unknown": False}
+    address = Address(**addressDict)
+    testCase = {"name": "Smith Electric","telephone": "704-410-3873",
+    "email": "smith@smith.com", "address": Address(**addressDict),
+    "categories": [Category.query.get(1), Category.query.get(2)]}
+    return testCase
+
+@pytest.fixture()
 def baseUserNew():
     testCase = {"first_name": "Roberto", "last_name":"Firmino",
                  "email": "rfirmino@lfc.com", "username": "rfirmino",
                  "password": "password", "confirmation": "password",
                  "address-line1": "13 Brook St", "address-city": "Lakewood",
-                 "address-state": "2", "address-zip": "14750"}
+                 "address-state": "2", "address-zip": "14750",
+                 "address-line2": ''}
     return testCase
 
 
@@ -365,6 +379,14 @@ def baseReview():
                  "picture": ""}
     return testCase
 
+@pytest.fixture()
+def newReviewDict():
+    testCase = {"category": Category.query.get(1), "user": User.query.get(2),
+                "provider": Provider.query.get(2),
+                 "rating": "3", "cost": "3", "description": "test",
+                 "service_date": "4/15/2019", "comments": "testcomments",
+                 "pictures": []}
+    return testCase
 
 @pytest.fixture()
 def baseProviderNew():

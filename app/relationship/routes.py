@@ -143,10 +143,9 @@ def friendsearch():
     a = re.compile('[^a-zA-Z]+')
     name = f'%{a.sub("", name)}%'
     users = (User.query.filter((User.first_name + User.last_name).ilike(name)
-                            |(User.last_name + User.first_name).contains(name))
+                            |(User.last_name + User.first_name).ilike(name))
                             .order_by(User.last_name, User.first_name)
                             .limit(10))
-    print(users)
     users = users.all()
     names = ([{"id": person.id, 
               "first_name": person.first_name, 
