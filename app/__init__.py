@@ -82,7 +82,6 @@ def create_app(configClass=None):
             app.config.from_object(config.DevelopmentConfig)
     else:
         app.config.from_object(configClass)
-    app.app_context().push()
     register_extensions(app)
     register_blueprints(app)
     configure_logging(app)

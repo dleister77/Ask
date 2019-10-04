@@ -22,7 +22,7 @@ class Pagination:
             data
                
     """
-    def __init__(self, data, page, per_page=current_app.config.get('PER_PAGE')):
+    def __init__(self, data, page, per_page):
         self.data = data
         self.page = page
         self.per_page = per_page

@@ -19,6 +19,7 @@ class TestLogin(FunctionalTest):
         check = testClient.get(url_for('auth.welcome', _external=False),
                                 follow_redirects=True)
         assert response.data == check.data
+        assert b'Search for Business' not in response.data
     
     def test_loginRequiredPage(self, testClient):
         response = testClient.get(url_for('main.review', _external=False), follow_redirects=True)
@@ -40,7 +41,17 @@ class TestLogin(FunctionalTest):
         self.form = {"username": "jjones", 'password': 'password'}
         response = self.postRequest(activeClient)
         check = activeClient.get(url_for('main.index', _external=False))
-        assert response.data == check.data        
+        assert response.data == check.data
+
+    def test_alreadyLoggedIn2(self, testClient, testUser2):
+        self.form = {"username": "jjones", 'password': 'badpassword'}
+        with testClient:
+            login(testClient, "sarahsmith",'password1234'
+              )
+            assert current_user == testUser2
+            response = testClient.get(url_for('main.index', _external=False), follow_redirects=True)
+            assert b'Search for Business' in response.data   
+        assert True
 
 class TestRegister(FunctionalTest):
     

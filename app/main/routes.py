@@ -18,6 +18,7 @@ from app.utilities.helpers import disableForm, email_verified, name_check,\
                                   thumbnail_from_buffer
 from app.utilities.pagination import Pagination
 from app.main import bp
+from app.extensions import db
 
 
 @bp.route('/index')
@@ -76,7 +77,7 @@ def provider(name, id):
         return_code = 422
     if provider.reviewCount > 0:
         reviews = Review.search(provider.id, reviewFilter)
-        pagination = Pagination(reviews, page)
+        pagination = Pagination(reviews, page, current_app.config.get('PER_PAGE'))
         pag_args = {"name": name, "id": id}
         pag_urls = pagination.get_urls('main.provider', pag_args)
         reviews = pagination.paginatedData
@@ -95,7 +96,9 @@ def provider_add():
     """Adds provider to db."""
     form = ProviderAddForm()
     if request.method == 'POST':
-        form.category.choices = Category.list(form.sector.data)
+        form.populate_choices(form.sector.data)
+    else:
+        form.populate_choices()    
     if form.validate_on_submit():
         address = Address(unknown=form.address.unknown.data,
                           line1=form.address.line1.data, 
@@ -116,7 +119,7 @@ def provider_add():
                                form=form), 422
     if not current_user.email_verified:
         disableForm(form)
-        flash("Form disabled. Please verify email to unlock.")    
+        flash("Form disabled. Please verify email to unlock.")
     return render_template("provideradd.html", title="Add Provider", form=form)
 
 
@@ -212,9 +215,11 @@ def review():
 @login_required
 @email_verified
 def search():
+    print(db.session)
     form = ProviderSearchForm(request.args)
     form.populate_choices()
     page = request.args.get('page', 1, int)
+    print(Provider.query.all())
     if form.validate() or request.args.get('page') is not None:
         try:
             searchLocation = Location(form.location.data, form.manual_location.data,
@@ -240,7 +245,7 @@ def search():
             flash("No results found. Please try a different search.")
             form.initialize()
             return render_template("index.html", form=form, title="Search")
-        pagination = Pagination(providers, page)
+        pagination = Pagination(providers, page, current_app.config.get('PER_PAGE'))
         pag_urls = pagination.get_urls('main.search', request.args)
         providers = pagination.paginatedData
         filter_fields = [form.reviewed_filter, form.friends_filter, form.groups_filter]
@@ -256,6 +261,7 @@ def search():
             locationDict = Markup(simplejson.dumps(locationDict, sort_keys=True))
         else:
             locationDict = None
+        print(db.session)
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
                                reviewFilter=reviewFilter,
@@ -285,7 +291,7 @@ def searchJSON():
         providers = Provider.search(filters, sortCriteria,reviewFilters)
         if sortCriteria == "distance":
             providers = sortByDistance(searchLocation.coordinates, providers)
-        pagination = Pagination(providers, page)
+        pagination = Pagination(providers, page, current_app.config.get('PER_PAGE'))
         providers = pagination.paginatedData
         providersDict = [provider._asdict() for provider in providers]
         return jsonify (providersDict, location)
@@ -301,12 +307,12 @@ def user(username):
     reviews = user.reviews
     summary = user.summary()
     pag_args = {"username": username}
-    pagination = Pagination(reviews,page)
+    pagination = Pagination(reviews,page, current_app.config.get('PER_PAGE'))
     pag_urls = pagination.get_urls('main.user', pag_args)
     reviews = pagination.paginatedData
     
     if user == current_user:
-        form = UserUpdateForm(obj=user)
+        form = UserUpdateForm(obj=user).populate_choices()
         form.address.state.data = user.address.state.id
         pform = PasswordChangeForm()
         modal_title = "Edit User Information"

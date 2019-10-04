@@ -164,13 +164,12 @@ class TestReview(FunctionalTest):
         assert testUser.email_verified is True
         response = self.getRequest(activeClient, name=testProvider1.name,
                                    id=testProvider1.id)
+        print(response.data.decode())
         assert response.status_code == 200
         newPageHeader = b'<h3>Add Review</h3>'
         assert newPageHeader in response.data
-        var = 'disabled'
-        assert response.data.decode().count(var) == 1 # 1 field and 1 comments
         var2 = 'readonly'
-        assert response.data.decode().count(var2) == 1
+        assert response.data.decode().count(var2) == 2
     
     def test_getEmailNotVerified(self, activeClient, testUser, testProvider1):
         assert testUser.email_verified is False
@@ -181,11 +180,9 @@ class TestReview(FunctionalTest):
         assert newPageHeader in response.data
         assert b"Form disabled. Please verify email to unlock." in response.data
         var = 'disabled'
-        print(response.data.decode())
-
         assert response.data.decode().count(var) == 19
         var2 = 'readonly'
-        assert response.data.decode().count(var2) == 1
+        assert response.data.decode().count(var2) == 2
     
     
     def test_getNoArgs(self, activeClient):

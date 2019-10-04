@@ -26,7 +26,7 @@ class Config(object):
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') # 'djl.webprojects' 
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['djl.webprojects@gmail.com']
 
@@ -42,26 +42,24 @@ class ProductionConfig(Config):
     SESSION_PROTECTION = "strong"
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
-
     PER_PAGE = 10
 
 class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
-    
-    # SQLALCHEMY_DATABASE_URI =  'sqlite:///' + os.path.join(basedir, 'app.db')
-    
+    REMEMBER_COOKIE_HTTPONLY = True
+    SESSION_PROTECTION = "strong"
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
     PER_PAGE = 2
 
 class TestConfig(Config):
     TESTING = True
     SERVER_NAME = 'localhost.localdomain'
     SQLALCHEMY_DATABASE_URI =  os.environ.get('TEST_DATABASE_URL')
-    # SQLALCHEMY_DATABASE_URI = "sqlite://"
     PER_PAGE = 2
     WTF_CSRF_ENABLED = False
     MEDIA_FOLDER = os.path.join(basedir, 'instance', 'tests', 'photos')
-    
     TEST_STATES = [(2, "New York"),(1, "North Carolina")]
     TEST_CATEGORIES = [(1, "Electrician"), (2, "Plumber")]
     TEST_SECTOR = [(1, "Home Services")]

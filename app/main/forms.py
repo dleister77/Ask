@@ -148,6 +148,9 @@ class ProviderAddress(AddressField):
           validators=[unknown_check, 
               InputRequired(message="Zip code is required.")])
 
+    def populate_choices(self):
+        """Populate choices in state drop down."""
+        self.state.choices = State.list()
 
 class NonValSelectField(SelectField):
     """Select field with pre-validation removed to allow for client side generated 
@@ -179,7 +182,7 @@ class ReviewForm(FlaskForm):
         """
 
     name = StringField("Provider / Business Name",
-                        render_kw = {'disabled':True},
+                        render_kw = {'readonly':True},
                         validators=[InputRequired(message="Business name is required.")])
     id = HiddenField("Provider Value", 
                      render_kw = {'readonly':True},
@@ -291,7 +294,12 @@ class ProviderAddForm(FlaskForm):
         if p:
             raise ValidationError("Business already exists, please look up "
                 "business or use a different name/address.")
-
+    def populate_choices(self, sector=1):
+        """Populate choices for sector and category drop downs."""
+        self.sector.choices = Sector.list()
+        self.category.choices = Category.list(sector)
+        self.address.state.choices = State.list()
+        return self
 
 class ProviderSearchForm(FlaskForm):
     """Form to search for providers.
@@ -353,6 +361,7 @@ class ProviderSearchForm(FlaskForm):
 
     def populate_choices(self):
         """populates category and location choices prior to form validation."""
+        self.sector.choices = Sector.list()
         if self.sector.data:
             self.category.choices = Category.list(self.sector.data)
         else:

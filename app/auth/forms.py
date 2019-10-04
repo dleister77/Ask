@@ -64,6 +64,10 @@ class AddressField(FlaskForm):
         elif not field.data.isdigit():
             raise ValidationError('Only include numbers in zip code.')
 
+    def populate_choices(self):
+        self.state.choices = State.list()
+        return self
+
 class LoginForm(FlaskForm):
     """Defines user login form.
     
@@ -105,7 +109,10 @@ class RegistrationForm(FlaskForm):
                 EqualTo('password', message="Passwords must match.")])
     submit = SubmitField("Submit")
     
-
+    def populate_choices(self):
+        """Populate state drop down list for address field."""
+        self.address.state.choices = State.list()
+        return self
 
 class UserUpdateForm(FlaskForm):
     """Update user information.
@@ -141,6 +148,9 @@ class UserUpdateForm(FlaskForm):
         if user is not None and user != current_user:
             raise ValidationError("Email address is already registered, please choose a "
                                   "different email address.")
+    def populate_choices(self):
+        self.address.state.choices = State.list()
+        return self
 
 class PasswordChangeForm(FlaskForm):
     """Form to change password.

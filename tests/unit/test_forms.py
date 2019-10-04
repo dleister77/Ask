@@ -6,7 +6,7 @@ from wtforms import ValidationError
 
 from app import create_app
 from app.models import Sector, Category, Provider, FriendRequest, GroupRequest,\
-	                   Group
+	                   Group, State
 from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
 									GroupSearchForm, GroupEditForm,
 									FriendDeleteForm, FriendApproveForm,
@@ -341,6 +341,11 @@ class TestAddress(FormTest):
 
 	formType = AddressField
 
+	def make_form(self, formDict):
+		"""Override FormTest make form to populate choices"""
+		super().make_form(formDict)
+		self.form.state.choices = State.list()
+
 	def test_new(self, baseAddress):
 		self.new(baseAddress)
 
@@ -385,6 +390,11 @@ class TestRegister(FormTest):
 	"""Tests for User Registration form."""
 
 	formType = RegistrationForm
+
+	def make_form(self, formDict):
+		"""Override FormTest make form to populate choices"""
+		super().make_form(formDict)
+		self.form.populate_choices()
 
 	def test_new(self, baseUserNew):
 		self.new(baseUserNew)
@@ -483,6 +493,11 @@ class TestUserUpdate(FormTest):
 
 	formType = UserUpdateForm
 
+	def make_form(self, formDict):
+		"""Override FormTest make form to populate choices"""
+		super().make_form(formDict)
+		self.form.populate_choices()
+
 	def test_new(self, baseUser):
 		self.new(baseUser)
 	
@@ -571,7 +586,7 @@ class TestProviderAdd(FormTest):
 	
 	def make_form(self, formDict):
 		super().make_form(formDict)
-		self.form.category.choices = Category.list(self.formDict.get('sector'))
+		self.form.populate_choices(self.formDict.get('sector'))
 
 	def test_new(self, baseProviderNew):
 		self.new(baseProviderNew)
@@ -629,6 +644,10 @@ class TestProviderAdd(FormTest):
 class TestProviderAddress(FormTest):
 
 	formType = ProviderAddress
+
+	def make_form(self, formDict):
+		super().make_form(formDict)
+		self.form.populate_choices()
 
 	def test_new(self):
 		a = {"line1": "7708 Covey Chase Dr", "city": "Charlotte", "state": 1,

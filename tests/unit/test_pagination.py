@@ -1,3 +1,4 @@
+from flask import current_app
 import pytest
 
 from app.utilities.pagination import Pagination
@@ -13,7 +14,7 @@ class TestPagination(object):
     }
 
     def test_newPage1(self):
-        p = Pagination(self.testIterable, self.testArgs['page'])
+        p = Pagination(self.testIterable, self.testArgs['page'], current_app.config['PER_PAGE'])
         assert p.page == 1
         assert p.per_page == 2
         assert p.pages == 6
@@ -25,7 +26,7 @@ class TestPagination(object):
     
     def test_newMiddlePage(self):
         self.testArgs['page'] = 3
-        p = Pagination(self.testIterable, self.testArgs['page'])
+        p = Pagination(self.testIterable, self.testArgs['page'], current_app.config['PER_PAGE'])
         assert p.page == 3
         assert p.per_page == 2
         assert p.pages == 6
@@ -37,7 +38,7 @@ class TestPagination(object):
     
     def test_lastPage(self):
         self.testArgs['page'] = 6
-        p = Pagination(self.testIterable, self.testArgs['page'])
+        p = Pagination(self.testIterable, self.testArgs['page'], current_app.config['PER_PAGE'])
         assert p.page == 6
         assert p.per_page == 2
         assert p.pages == 6
@@ -48,7 +49,7 @@ class TestPagination(object):
         assert p.paginatedData == self.testIterable[10:11]        
 
     def test_get_urls(self):
-        p = Pagination(self.testIterable, 2)
+        p = Pagination(self.testIterable, 2, current_app.config['PER_PAGE'])
         u = p.get_urls('main.index', self.testArgs)
         assert len(u['pages']) == 6
         assert u['next'] == 'http://localhost.localdomain/index?page=3&name=testName'

@@ -357,9 +357,9 @@
                         <li>
                             {% if provider.reviewCount > 0 %}
                             <ul class="list-inline">
-                                <li class="list-inline-item">{{provider.reviewAverage}}</li>
+                                <li class="list-inline-item">{{provider.reviewAverage | round(1)}}</li>
                                 <li class="list-inline-item">{{star_rating(provider.reviewAverage)}}</li>
-                                <li class="list-inline-item">({{provider.reviewCount}})</li>                                    
+                                <li class="list-inline-item">({{provider.reviewCount|round(0)}})</li>                                    
                             </ul>
                             {% else %}
                             No ratings
@@ -368,7 +368,7 @@
                         <li>
                             {% if provider.reviewCount > 0 %}
                             <ul class="list-inline">
-                                <li class="list-inline-item">{{provider.reviewCost}}</li>
+                                <li class="list-inline-item">{{provider.reviewCost | round(1)}}</li>
                                 <li class="list-inline-item">{{cost_rating(provider.reviewCost)}}</li>                                    
                             </ul>                           
                             {% endif %}                            
@@ -381,8 +381,7 @@
                         <li>{{provider.line2}}</li>
                         <li>{{"%s, %s %s"|format(provider.city, provider.state_short, provider.zip)}}</li>
                         <li>{{'(%s) %s-%s'|format(provider.telephone[0:3],provider.telephone[3:6], provider.telephone[6:10])}}</li>
-                        <li>{{provider.email}}
-                        <li>{{provider.website}}</li>
+                        <li>{{provider.email | replace('None', "")}}
                     </ul>
                 </div>
             </div>
@@ -401,7 +400,7 @@
                     <a href='{{url_for("main.provider", name=review.provider.name,
                                        id=review.provider.id)}}'>
                         {{review.provider.name}}
-                    </a>: {{review.title}}</h4>
+                    </a></h4>
             {% else %}
                 <h4>{{review.title}}</h4>
             {% endif %}

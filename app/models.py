@@ -121,12 +121,13 @@ class State(Model):
     @staticmethod
     def list():
         """Query db to populate state list on forms."""
-        if db.get_engine().has_table('state'):
-            list = [(s.id, s.name) for s in State.query.order_by("name")]
-        elif current_app.config['TESTING'] == True:
-            list = current_app.config['TEST_STATES']
+        if current_app:
+            if current_app.config['TESTING'] == True:
+                list = current_app.config['TEST_STATES']
+            else:
+                list = [(s.id, s.name) for s in State.query.order_by("name")]
         else:
-            list = (None, None)
+            list = [(None, None)]
         return list
 
     def __repr__(self):
@@ -775,12 +776,13 @@ class Sector(Model):
             List of tuples (id, name)
         """        
         
-        if db.get_engine().has_table('sector'):
-            list = [(s.id, s.name) for s in Sector.query.order_by("name")]
-        elif current_app.config['TESTING'] is True:
-            list = current_app.config['TEST_SECTOR']
+        if current_app:
+            if current_app.config['TESTING'] is True:
+                list = current_app.config['TEST_SECTOR']
+            else:
+                list = [(s.id, s.name) for s in Sector.query.order_by("name")]
         else:
-            list = [(None, None)]
+            list = []
         return list
 
     def __repr__(self):
@@ -825,7 +827,7 @@ class Category(Model):
         
         """
 
-        if db.get_engine().has_table('category'):
+        if current_app:
             if sector_id is not None:
                 sector = Sector.query.get(sector_id)
                 catList = (Category.query.filter(Category.sector == sector)
@@ -834,7 +836,7 @@ class Category(Model):
                 catList = Category.query.all()
             catList = [(category.id, category.name) for category in catList]                
         else:
-            catList = [(None, None)]
+            catList = []
         return catList
 
     def __repr__(self):

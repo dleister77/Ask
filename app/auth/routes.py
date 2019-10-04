@@ -120,7 +120,7 @@ def passwordupdate():
         current_user.save()
         flash("Password updated")
         return redirect(url_for('main.user', username=current_user.username))
-    form = UserUpdateForm()
+    form = UserUpdateForm().populate_choices()
     modal_title = "Edit User Information"
     modal_title_2 = "Change Password"
     pword_open = True
@@ -130,7 +130,7 @@ def passwordupdate():
     reviews = user.reviews
     summary = user.summary()
     pag_args = {"username": user.username}    
-    pagination = Pagination(reviews,page)
+    pagination = Pagination(reviews,page, current_app.config.get('PER_PAGE'))
     pag_urls = pagination.get_urls('main.user', pag_args)
     reviews = pagination.paginatedData
     return render_template("user.html", title="User Profile", user=user,
@@ -146,7 +146,7 @@ def register():
     if current_user.is_authenticated:
         flash("You are already registered.")
         return redirect(url_for("main.index"))
-    form = RegistrationForm()
+    form = RegistrationForm().populate_choices()
     if form.validate_on_submit():
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
@@ -170,7 +170,7 @@ def register():
 @email_verified
 def userupdate():
     """Update user information minus password which is updated seperately."""
-    form = UserUpdateForm()
+    form = UserUpdateForm().populate_choices()
     if form.validate_on_submit():
         current_user.address.update(line1=form.address.line1.data,
                                     line2=form.address.line2.data,
@@ -193,7 +193,7 @@ def userupdate():
     reviews = current_user.reviews
     summary = current_user.summary()
     pag_args = {"username": current_user.username}
-    pagination = Pagination(reviews,page)
+    pagination = Pagination(reviews,page, current_app.config.get('PER_PAGE'))
     pag_urls = pagination.get_urls('main.user', pag_args)
     reviews = pagination.paginatedData
     return render_template("user.html", form=form, reviews=reviews,
