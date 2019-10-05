@@ -141,7 +141,7 @@ def test_db(test_app):
     
 
     # add test providers
-    p1 = Provider.create(id=1, name="douthit electrical", telephone="704-726-3329",
+    p1 = Provider.create(id=1, name="Douthit Electrical", telephone="704-726-3329",
                   email="douthit@gmail.com",
                   address=Address(line1="6000 Fairview Rd", line2="suite 1200",
                                   city="Charlotte", zip="28210", state_id=1,

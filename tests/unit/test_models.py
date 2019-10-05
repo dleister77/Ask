@@ -676,7 +676,7 @@ class TestReview(object):
 @pytest.mark.usefixtures("dbSession")
 class TestGroup(object):
     def test_attributes(self, testGroup, testUser, testUser3):
-        assert testGroup.name == 'Qhiv Hoa'
+        assert testGroup.name == 'QHIV HOA'
         assert testGroup.description == 'Hoa for the neighborhood'
         assert testGroup.admin == testUser
         assert testUser in testGroup.members
@@ -685,7 +685,7 @@ class TestGroup(object):
 
     def test_newRepeatName(self):
         with pytest.raises(IntegrityError):
-            Group.create(name="Qhiv Hoa", description="test", admin_id=2)
+            Group.create(name="QHIV HOA", description="test", admin_id=2)
 
     def test_update(self, testGroup):
         testGroup.update(name='Quail Hollow Estates', description='Testdescription')

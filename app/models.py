@@ -885,7 +885,7 @@ class Provider(Model):
     @name.setter
     def name(self, name):
         if name is not None:
-            name = capwords(name)
+            name = name
         self._name = name
 
     @hybrid_property
@@ -1287,7 +1287,7 @@ class Group(Model):
 
     @name.setter
     def name(self, name):
-        self._name = capwords(name)
+        self._name = name
 
     @hybrid_property
     def description(self):
