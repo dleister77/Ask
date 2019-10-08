@@ -146,8 +146,8 @@ class TestReview(FunctionalTest):
         try:
             assert b'review added' in response.data
             assert response.status_code == 200
-            path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'test.jpg'))
-            path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc.jpg'))
+            path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'test_thumbnail.jpg'))
+            path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc_thumbnail.jpg'))
             assert path.is_file()
             assert path2.is_file()
             review = Review.query.filter_by(provider_id=baseReview['id']).all()

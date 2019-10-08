@@ -189,7 +189,6 @@ def review():
                 filename = name_check(path, filename)
                 file_location = os.path.join(path, filename).replace("\\","/")
                 thumb = thumbnail_from_buffer(picture, (400, 400), filename, path)
-                picture.save(file_location)         
                 pictures.append(Picture(path=file_location,
                                         name=filename, thumb=thumb))
                 
