@@ -348,7 +348,7 @@ class TestProviderProfile(FunctionalTest):
         response = self.getRequest(activeClient, **test_case)
         assert b'Reviewer' in response.data
         assert b'Category: Electrician, Plumber' in response.data
-        assert b'Qhiv Hoa' in response.data
+        assert b'QHIV HOA' in response.data
         assert b'Relationship: Self' in response.data
         assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=2">2</a></li>' in response.data
         

@@ -49,7 +49,6 @@ class DevelopmentConfig(Config):
     TESTING = False
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_PROTECTION = "strong"
-    SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
     PER_PAGE = 2
 
@@ -64,3 +63,4 @@ class TestConfig(Config):
     TEST_CATEGORIES = [(1, "Electrician"), (2, "Plumber")]
     TEST_SECTOR = [(1, "Home Services")]
     TEST_USER = {"username": "jjones", "password": "password"}
+    

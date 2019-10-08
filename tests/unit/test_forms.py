@@ -164,7 +164,7 @@ class TestGroupDelete(FormTest):
 	def test_populateChoices(self):
 		self.form = self.formType()
 		self.form.populate_choices(current_user)
-		assert self.form.name.choices == [(1, 'Qhiv Hoa')]
+		assert self.form.name.choices == [(1, 'QHIV HOA')]
 
 @pytest.mark.usefixtures("activeClient")
 class TestFriendDelete(FormTest):

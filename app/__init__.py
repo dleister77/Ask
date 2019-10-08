@@ -31,6 +31,9 @@ def register_blueprints(app):
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
 
+    from app.admin import bp as admin_bp
+    app.register_blueprint(admin_bp)
+
 
 def register_shell(app):
     """Register shell context objects."""

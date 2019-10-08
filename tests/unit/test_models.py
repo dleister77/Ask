@@ -173,7 +173,7 @@ class TestUser(object):
                 assert len(outbox) == 1
                 msg = outbox[0]
                 assert "jjones@yahoo.com" in msg.recipients
-                assert msg.subject == 'Ask a Neighbor: Email Verification'
+                assert msg.subject == 'Ask Your Peeps: Email Verification'
                 assert 'To verify your email' in msg.body
                 assert 'Dear John' in msg.body
 
@@ -217,7 +217,7 @@ class TestUser(object):
                 assert len(outbox) == 1
                 msg = outbox[0]
                 assert "jjones@yahoo.com" in msg.recipients
-                assert msg.subject == 'Ask a Neighbor: Password Reset'
+                assert msg.subject == 'Ask Your Peeps: Password Reset'
                 assert 'To reset your password, please paste the below link into your browser' in msg.body
 
 
@@ -324,8 +324,8 @@ class TestFriendRequest(object):
             assert len(outbox) == 1
             msg = outbox[0]
             assert testUser.email in msg.recipients
-            assert msg.subject == 'Ask a Neighbor: Friend Verification'
-            assert f"{testUser4.full_name} would like to be friends with you on Ask a Neighbor" in msg.body
+            assert msg.subject == 'Ask Your Peeps: Friend Verification'
+            assert f"{testUser4.full_name} would like to be friends with you on Ask Your Peeps" in msg.body
 
     def test_verifyValid(self, testFriendrequest):
         testToken = testFriendrequest._get_request_token()
@@ -354,8 +354,8 @@ class TestGroupRequest(object):
             assert len(outbox) == 1
             msg = outbox[0]
             assert "jjones@yahoo.com" in msg.recipients
-            assert msg.subject == "Ask a Neighbor: Group Join Request"
-            assert f"{testUser4.full_name} would like to join {testGroup.name} on Ask a Neighbor" in msg.body
+            assert msg.subject == "Ask Your Peeps: Group Join Request"
+            assert f"{testUser4.full_name} would like to join {testGroup.name} on Ask Your Peeps" in msg.body
 
     def test_getPending(self, testUser, testGroupRequest):
         pending = GroupRequest.get_pending(testUser)

@@ -425,7 +425,7 @@ class User(UserMixin, Model):
     def send_password_reset_email(self):
         """Send email to allow user to reset password."""
         token = self._get_reset_password_token()
-        send_email('Ask a Neighbor: Password Reset',
+        send_email('Ask Your Peeps: Password Reset',
                 sender=current_app.config['ADMINS'][0],
                 recipients=[self.email],
                 cc = None,
@@ -461,7 +461,7 @@ class User(UserMixin, Model):
     def send_email_verification(self):
         """Send email to request email verification."""
         token = self._get_email_verification_token()
-        send_email('Ask a Neighbor: Email Verification',
+        send_email('Ask Your Peeps: Email Verification',
                    sender=current_app.config['ADMINS'][0],
                    recipients=[self.email],
                    cc = None,
@@ -616,7 +616,7 @@ class FriendRequest(Model):
         """
 
         token = self._get_request_token()
-        send_email('Ask a Neighbor: Friend Verification',
+        send_email('Ask Your Peeps: Friend Verification',
                 sender=current_app.config['ADMINS'][0],
                 recipients=[self.requested_friend.email],
                 cc=None,
@@ -697,7 +697,7 @@ class GroupRequest(Model):
         """
         # create group join request
         token = self._get_request_token()
-        send_email('Ask a Neighbor: Group Join Request',
+        send_email('Ask Your Peeps: Group Join Request',
                 sender=current_app.config['ADMINS'][0],
                 recipients=[self.group.admin.email],
                 cc = None,

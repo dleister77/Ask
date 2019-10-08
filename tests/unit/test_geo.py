@@ -9,7 +9,7 @@ from app.utilities.geo import geocode, _geocodeGEOCODIO, _geocodeTamu, getGeoRan
                               Location, sortByDistance, AddressError
 from tests.conftest import assertEqualsTolerance
 
-def test_geocode():
+def test_geocode(test_app):
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"
     location = geocode(address)
     assert location[0] == (35.123949, -80.864783)
@@ -21,13 +21,13 @@ def test_geocodeInvalid(mockGeoResponse):
         location = geocode(address)
 
 
-def test_geocodeGEOCODIO():
+def test_geocodeGEOCODIO(test_app):
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"
     location = _geocodeGEOCODIO(address)
     assert location[0] == (35.123949, -80.864783)
     assert location[1] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
-def test_geocodeGEOCODIOInvalidAddress():
+def test_geocodeGEOCODIOInvalidAddress(test_app):
     with pytest.raises(AddressError):
         address = "1 covey chase dr charlotte nc"
         _geocodeGEOCODIO(address)
@@ -35,13 +35,13 @@ def test_geocodeGEOCODIOInvalidAddress():
         address = "7550 Covey Chase Dr Charlotte nc"
         _geocodeGEOCODIO(address)
         
-def test_geocodeAuthError(mockGeoApiBad):
+def test_geocodeAuthError(test_app, mockGeoApiBad):
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"
     location = geocode(address)
     assert location[0] == (35.123949, -80.864783)
     assert location[1] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
-def test_geocodeGECODIOAuthError(mockGeocodioApiBad):
+def test_geocodeGECODIOAuthError(test_app, mockGeocodioApiBad):
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"
     location = geocode(address)
     assert location[0] == (35.123949, -80.864783)
