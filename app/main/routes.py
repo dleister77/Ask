@@ -215,11 +215,9 @@ def review():
 @login_required
 @email_verified
 def search():
-    print(db.session)
     form = ProviderSearchForm(request.args)
     form.populate_choices()
     page = request.args.get('page', 1, int)
-    print(Provider.query.all())
     if form.validate() or request.args.get('page') is not None:
         try:
             searchLocation = Location(form.location.data, form.manual_location.data,
@@ -261,7 +259,6 @@ def search():
             locationDict = Markup(simplejson.dumps(locationDict, sort_keys=True))
         else:
             locationDict = None
-        print(db.session)
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
                                reviewFilter=reviewFilter,

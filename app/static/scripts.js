@@ -417,7 +417,7 @@ function initSearch(jquery){
     //add name autocomplete
     url = '/provider/list/autocomplete'
     id = "#provider_name"
-    filter_ids = ['sector', 'category', 'home', 'manual_location']
+    filter_ids = ['sector', 'category', 'location', 'manual_location']
     auto_complete(id, url, 'name', filter_ids);
     //add location field toggles 
     toCheck = document.getElementById("location")
