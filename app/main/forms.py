@@ -211,7 +211,7 @@ class ReviewForm(FlaskForm):
                         )
     description = StringField("Service Description", validators=[Optional()])
     service_date = DateField("Service Date", validators=[Optional()])
-    comments = TextAreaField("Comments", validators=[Optional()])
+    comments = TextAreaField("Comments", render_kw={"rows":6}, validators=[Optional()])
     picture = MultipleFileField("Picture", render_kw=({"accept": 'image/*'}),
                                 validators=[Picture_Upload_Check, Optional()])
     submit = SubmitField("Submit", id="review_submit")

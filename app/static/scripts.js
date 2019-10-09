@@ -260,6 +260,36 @@ function toggle_fields(toCheck, checkValue, toBeHiddenIDs=null, toBeVisibleID=nu
     }
 }
 
+function toggle_fields_required(toCheck, checkValue, toBeHiddenIDs=null, toBeVisibleID=null){
+    if (toBeVisibleID != null){
+        toBeVisible = document.getElementById(toBeVisibleID)
+    }
+    let value;
+    if (toCheck.type == "select-one"){
+        value = toCheck.value
+        console.log("value: " + value)
+    } else if (toCheck.type == 'checkbox'){
+        value = toCheck.checked
+    }
+    if(value == checkValue){
+        if (toBeHiddenIDs != null){
+            for(var i = 0; i < toBeHiddenIDs.length; i++){
+                field = document.getElementById(toBeHiddenIDs[i]);
+                field.required = false;
+                field.parentNode.parentNode.hidden = true;
+            }
+        }
+    }else if (value != checkValue){
+        if (toBeHiddenIDs != null){
+            for(var i = 0; i < toBeHiddenIDs.length; i++){
+                field = document.getElementById(toBeHiddenIDs[i]);
+                field.hidden = true;
+                field.parentNode.parentNode.hidden = false;
+            }          
+        }
+    }
+}
+
 function request_location(toCheck, checkValue){
     let geoSuccess = function(position) {
         newPos = position;
@@ -677,6 +707,7 @@ function initProviderAdd(jquery){
     checkValue = true
     toCheck.addEventListener("input", function(){
         toggle_fields(toCheck, checkValue, toBeHiddenID, toBeVisibleID);
+        toggle_fields_required(toCheck, checkValue, toBeHiddenID)
     });
 
 }

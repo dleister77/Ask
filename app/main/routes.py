@@ -252,10 +252,10 @@ def search():
                 reviewFilter[field.name] = 'y'
         form.initialize()
         providersDict = [provider._asdict() for provider in providers]
-        providersDict = Markup(simplejson.dumps(providersDict, sort_keys=True))
+        providersDict = simplejson.dumps(providersDict, sort_keys=True)
         if session.get('location'):
             locationDict = session['location']
-            locationDict = Markup(simplejson.dumps(locationDict, sort_keys=True))
+            locationDict = simplejson.dumps(locationDict, sort_keys=True)
         else:
             locationDict = None
         return render_template("index.html", form=form, title="Search", 
