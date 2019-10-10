@@ -241,7 +241,8 @@ class GroupCreateForm(FlaskForm):
     """
     name = StringField("Group Name", validators=[InputRequired(message="Group name is required."),
                        unique_check(Group, Group.name)])
-    description = TextAreaField("Description", validators=[InputRequired("Description is required.")])
+    description = TextAreaField("Description", render_kw={"rows":3}, 
+                         validators=[InputRequired("Description is required.")])
     submit = SubmitField("Add Group", id="submit_new_group")
 
 

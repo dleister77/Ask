@@ -50,8 +50,8 @@ class TestLogin(FunctionalTest):
               )
             assert current_user == testUser2
             response = testClient.get(url_for('main.index', _external=False), follow_redirects=True)
-            assert b'Search for Business' in response.data   
-        assert True
+            assert b'Search for Business' in response.data
+            logout(testClient)
 
 class TestRegister(FunctionalTest):
     

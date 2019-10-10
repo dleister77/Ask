@@ -75,7 +75,7 @@ def test_geocodeTamu(test_app):
     assert location[1] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
 
-def test_LocationAddToSession(activeClient):
+def test_LocationAddToSession(dbSession, activeClient):
     assert 'location' not in session
     location = Location("gps", "", (35.123949, -80.864783))
     session.pop('location')
@@ -87,7 +87,7 @@ def test_LocationAddToSession(activeClient):
     assert session['location']['latitude'] == 35.123949
     assert session['location']['longitude'] == -80.864783
     
-def test_LocationNewGPS(activeClient):
+def test_LocationNewGPS(dbSession, activeClient):
     location = Location("gps", "", (35.123949, -80.864783))
     assert location.source == "gps"
     assert location.address == ""
@@ -95,7 +95,7 @@ def test_LocationNewGPS(activeClient):
     assert session['location']['source'] == "gps"
     assert session['location']['coordinates'] == (35.123949, -80.864783)
 
-def test_LocationNewManual(activeClient):
+def test_LocationNewManual(dbSession, activeClient):
     location = Location("manual", "7708 Covey Chase Dr Charlotte, NC 28210")
     assert location.source == "manual"
     assert location.address == "7708 Covey Chase Dr, Charlotte, NC 28210"
@@ -103,12 +103,12 @@ def test_LocationNewManual(activeClient):
     assert session['location']['source'] == "manual"
     assert session['location']['address'] == "7708 Covey Chase Dr, Charlotte, NC 28210"
 
-def test_LocationNewHome(activeClient):
+def test_LocationNewHome(dbSession, activeClient):
     location = Location("home")
     assertEqualsTolerance(location.latitude, 35.123949, 5)
     assertEqualsTolerance(location.longitude, -80.864783, 5)
 
-def test_LocationSetRangeCoords(activeClient, mockGeoResponse):
+def test_LocationSetRangeCoords(dbSession, activeClient, mockGeoResponse):
     location = Location("manual", "8012 Covey Chase Dr, Charlotte, NC 28210")
     location.setRangeCoordinates()
     distance1 = distance.distance(location.coordinates,
