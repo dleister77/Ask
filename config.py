@@ -1,6 +1,7 @@
 
 import os
 import dotenv
+import redis
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 dotenv.load_dotenv(os.path.join(basedir, '.env'))
@@ -29,6 +30,10 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['djl.webprojects@gmail.com']
+
+    #Session
+    SESSION_TYPE = 'redis'
+    SESSION_REDIS = redis.from_url(os.environ.get('SESSION_REDIS'))
 
     #API Keys
     GEOCODIO_API_KEY = os.environ.get('GEOCODIO_API_KEY')

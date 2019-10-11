@@ -5,7 +5,7 @@ import os
 from flask import Flask
 
 import config
-from app.extensions import csrf, db, login, mail, migrate
+from app.extensions import csrf, db, login, mail, migrate, sess
 from app.models import User, Address, State, Category, Review, Provider, Group
 
 
@@ -16,6 +16,7 @@ def register_extensions(app):
     login.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+    sess.init_app(app)
 
 
 def register_blueprints(app):
