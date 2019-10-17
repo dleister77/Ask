@@ -2,6 +2,8 @@ import functools
 from io import BytesIO
 import os
 from pathlib import Path
+import requests
+from urllib.parse import urlparse
 
 from flask import flash, Markup, session, url_for
 from flask_login import current_user
@@ -145,6 +147,25 @@ def noneIfEmptyString(func):
     return wrapped_function
 
 
-
+def url_check(url):
+    u = urlparse(url)
+    if u.scheme != "" and u.netloc != "":
+        url = f"{u.scheme}://{u.netloc}{u.path}"
+    elif u.scheme == "" and u.netloc != "":
+        url = f"http://{u.netloc}{u.path}"
+    else:
+        url = f"http://{u.path}"
+    headers = {
+        "user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36"
+    }
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            return True
+        else:
+            return False
+    except requests.RequestException as e:
+        print(e)
+        return False
 
 

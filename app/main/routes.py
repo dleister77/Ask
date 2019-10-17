@@ -108,7 +108,8 @@ def provider_add():
                           zip=form.address.zip.data)
         categories = [Category.query.get(cat) for cat in form.category.data]
         provider = Provider.create(name=form.name.data, email=form.email.data,
-                                   telephone=form.telephone.data, 
+                                   telephone=form.telephone.data,
+                                   website=form.website.data,
                                    address=address, categories=categories)
         address.get_coordinates()
         flash(provider.name + " added.")

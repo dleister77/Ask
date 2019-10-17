@@ -244,6 +244,7 @@ class ProviderAddForm(FlaskForm):
         sector (select): macro sector that business belongs to
         category (select): categories (w/in sector) that business belongs to
         email (str): optional, email address of business
+        website (str): optional, website of business
         telepohone (str): telephone number of business
         address-unknown (bool): checked if street address (line1/line2) and zip
             are unknown (i.e. service provider without phyiscal location).  If 
@@ -273,6 +274,7 @@ class ProviderAddForm(FlaskForm):
     address = FormField(ProviderAddress)
     email = StringField("Email", validators=[Email(),
                          unique_check(Provider, Provider.email), Optional()])
+    website = StringField("Website")
     telephone = StringField("Telephone",
                 validators=[InputRequired(message="Telephone number is required."),
                 Regexp("[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"), 

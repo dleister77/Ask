@@ -21,7 +21,7 @@ from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
 from app.utilities.geo import getDistance, geocode, AddressError, APIAuthorizationError
-from app.utilities.helpers import noneIfEmptyString
+from app.utilities.helpers import noneIfEmptyString, url_check
 
 addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
 
@@ -871,6 +871,7 @@ class Provider(Model):
     _name = db.Column(db.String(64), index=True, nullable=False)
     email = db.Column(db.String(120), unique=True)
     _telephone = db.Column(db.String(24), unique=True, nullable=False)
+    website = db.Column(db.String(30))
 
     address = db.relationship("Address", backref="provider", uselist=False,
                               passive_deletes=True,
@@ -906,6 +907,13 @@ class Provider(Model):
             assert address is not None
         return address
     
+    @validates('website')
+    def validate_website(self, key, website):
+        if not url_check(website):
+            raise ValueError("Invalid website url")
+        return website
+
+
     @hybrid_property
     def categoryList(self):
         return self._categoryList    
