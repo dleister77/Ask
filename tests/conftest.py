@@ -142,13 +142,13 @@ def test_db(test_app):
 
     # add test providers
     p1 = Provider.create(id=1, name="Douthit Electrical", telephone="704-726-3329",
-                  email="douthit@gmail.com",
+                  email="douthit@gmail.com", website='https://www.douthitelectrical.com/',
                   address=Address(line1="6000 Fairview Rd", line2="suite 1200",
                                   city="Charlotte", zip="28210", state_id=1,
                                   latitude=35.150495, longitude=-80.838958),
                   categories=[c1, c2])
     p2 = Provider.create(id=2, name="Evers Electric", telephone="7048431910",
-                  email='',
+                  email='', website='http://www.everselectric.com/',
                   address=Address(line1="3924 Cassidy Drive", line2="",
                                   city="Waxhaw", zip="28173", state_id=1,
                                   latitude=34.938645, longitude=-80.760691),
@@ -392,7 +392,7 @@ def newReviewDict():
 def baseProviderNew():
     """Return new provider that generates no validation errors."""
     testCase = {"sector": "1", "category": ["1","2"], "name": "Smith Electric",
-                 "telephone": "704-410-3873", "email": "smith@smith.com",
+                 "telephone": "704-410-3873", "website":'google.com', "email": "smith@smith.com",
                  "address-line1": "7708 Covey Chase Dr",
                  "address-city": "Charlotte", "address-state": 1,
                  "address-zip": "28210", "address-unknown": "False"}
@@ -402,7 +402,7 @@ def baseProviderNew():
 def baseProviderSearch():
     testCase = {
         "location": 'home', "manual_location": "", "gpsLat": "",
-        "gpsLong": "", "sector": 1,  "category": 1, "name": None,
+        "gpsLong": "", "searchRange": 30, "sector": 1,  "category": 1, "name": None,
         "reviewed_filter": None, "friends_filter": None,
         "groups_filter": None, "sort": "name"
     }

@@ -146,15 +146,21 @@ def noneIfEmptyString(func):
         return func(*args, **kwargs)
     return wrapped_function
 
-
-def url_check(url):
+def url_parse(url):
     u = urlparse(url)
     if u.scheme != "" and u.netloc != "":
         url = f"{u.scheme}://{u.netloc}{u.path}"
+        url_string = f"{u.netloc}{u.path}"
     elif u.scheme == "" and u.netloc != "":
         url = f"http://{u.netloc}{u.path}"
+        url_string = f"{u.netlock}{u.path}"
     else:
         url = f"http://{u.path}"
+        url_string = u.path
+    return (url, url_string)  
+
+def url_check(url):
+    url = url_parse(url)[0]
     headers = {
         "user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36"
     }

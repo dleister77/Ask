@@ -22,25 +22,22 @@
             </div>
         </div>
         {{ form.hidden_tag(form.gpsLat, form.gpsLong) }}
+        {{field_render(form.searchRange)}}
         {{field_render(form.sector)}}
         {{field_render(form.category)}}
         {{field_render(form.name)}}
         <!-- form filters -->
         <fieldset class="form-group">
-            <legend class="col-form-label">Check to filter by:</legend>
-            <div class="form-group row mx-4">
+            <legend class="col-form-label">Check to filter reviewed by:</legend>
+            <div class="form-group row mx-12">
                 <div class="col">
                 {{form.reviewed_filter(class_="form-check-input")}}
                 {{form.reviewed_filter.label(class_="form-check-label")}}
                 </div>
-            </div>
-            <div class="form-group row mx-4">
                 <div class="col">
                 {{form.friends_filter(class_="form-check-input")}}
                 {{form.friends_filter.label(class_="form-check-label")}}
                 </div>
-            </div>
-            <div class="form-group row mx-4">
                 <div class="col">
                 {{form.groups_filter(class_="form-check-input")}}
                 {{form.groups_filter.label(class_="form-check-label")}}

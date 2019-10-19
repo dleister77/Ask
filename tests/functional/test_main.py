@@ -209,7 +209,7 @@ class TestProviderSearch(FunctionalTest):
 
     routeFunction = 'main.search'
 
-    def test_search(self, activeClient, baseProviderSearch):
+    def test_search(self, activeClient, baseProviderSearch, testProvider1):
         test_case = baseProviderSearch
         response = self.getRequest(activeClient, **test_case)
         assert response.status_code == 200
@@ -219,6 +219,8 @@ class TestProviderSearch(FunctionalTest):
         assert resultsDiv in response.data
         autocompleteURL = b'/provider/list/autocomplete'
         assert autocompleteURL in response.data
+        provider1Url = f"http://{testProvider1.website}"
+        assert provider1Url.encode() in response.data
         providerCard = b'<div class="card">'
         assert response.data.count(providerCard) == 2
         #TODO: fix test for proper json rendering on search page script block
@@ -229,6 +231,7 @@ class TestProviderSearch(FunctionalTest):
         assert response.data.count(full) == 2
         half = b'<i class="fas fa-star-half-alt star-half"></i>'
         assert response.data.count(half) == 1
+
     
     def test_searchNoResults(self, activeClient, baseProviderSearch):
         baseProviderSearch.update({"name": "Test Electrician"})
@@ -328,7 +331,7 @@ class TestProviderAdd(FunctionalTest):
     def test_emailNotVerified(self, activeClient):
         response = self.getRequest(activeClient)
         assert b"Form disabled. Please verify email to unlock." in response.data
-        var = 'disabled'
+        var = 'disabled id'
         assert response.data.decode().count(var) == 13
 
     def test_getRequest(self, activeClient):

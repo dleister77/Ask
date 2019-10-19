@@ -260,7 +260,8 @@ class TestGroupProfile(FunctionalTest):
             link = url_for('main.user', username=user.username)
             check = re.compile(f'<li> <a href="{link}">\s*{user.full_name} </a></li>')
             assert check.search(page) is not None
-    
+        reviewDateString = '<li>Review Date:'
+        assert response.data.count(reviewDateString.encode()) == 2
 
     def test_validNonAdmin(self, activeClient, testGroup3):
         testCase = {"name": testGroup3.name, "id": testGroup3.id}
@@ -270,7 +271,7 @@ class TestGroupProfile(FunctionalTest):
         updateForm = "id=groupUpdateForm"
         assert updateForm.encode() not in response.data
         updateLink = '<a href="" class="btn btn-md btn-light ml-auto" data-toggle="modal" data-target="#groupUpdateForm">Edit</a>'
-        assert updateLink.encode() not in response.data    
+        assert updateLink.encode() not in response.data
     
     #TODO testcase for referrer
     def test_invalidWithReferrer(self, activeClient):
@@ -318,7 +319,7 @@ class TestGroupAdd(FunctionalTest):
         self.form = {"id": len(Group.query.all()) + 1}
         response = self.postRequest(activeClient)
         assert response.status_code == 422
-        nextPageElement = '<div id="groupSearch"></div>'
+        nextPageElement = '<div id="network_groups">'
         assert nextPageElement.encode() in response.data
         flash = 'Group does not exist, please choose a different group to add.'
         assert flash.encode() in response.data

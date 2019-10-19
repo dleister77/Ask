@@ -400,7 +400,7 @@ class TestProvider(object):
         """From dict, populate filters used in call to Provider.search"""
 
         location = Location(searchDict['location'])
-        location.setRangeCoordinates()
+        location.setRangeCoordinates(searchDict['searchRange'])
         category = Category.query.get(searchDict['category'])
         filters = {"name": searchDict['name'],
                 "category": category,
@@ -414,6 +414,7 @@ class TestProvider(object):
     def test_attributes(self, testProvider):
         assert testProvider.name == "Douthit Electrical"
         assert testProvider.email == "douthit@gmail.com"
+        assert testProvider.website == 'www.douthitelectrical.com/'
         assert testProvider.telephone == "7047263329"
         assert testProvider.address.line1 == "6000 Fairview Rd"
 
@@ -511,11 +512,20 @@ class TestProvider(object):
         assert providers[0].reviewCost == (18/4)
         assert providers[0].categories == "Electrician,Plumber"
 
+    def test_searchShortDistance(self, activeClient, baseProviderSearch):
+        baseProviderSearch.update({"searchRange": 7})
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        providers = Provider.search(filters, sort)
+        assert len(providers) == 2
+        assert providers[0].name == 'Douthit Electrical'
+        assert providers[1].name == 'Preferred Electric Co'
+
     def test_searchName(self, activeClient, baseProviderSearch):
         baseProviderSearch['name'] = 'Evers Electric'
         filters, sort = self.generateSearchFilters(baseProviderSearch)
         providers = Provider.search(filters, sort)
         assert providers[0].name == 'Evers Electric'
+        assert providers[0].website == 'www.everselectric.com/'
         assert providers[0].reviewAverage == None
         assert providers[0].reviewCount == 0
         assert providers[0].reviewCost == None
@@ -641,24 +651,24 @@ class TestReview(object):
 
     def test_search(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": False}
-        reviews = Review.search(testProvider.id, reviewFilter)
+        reviews = Review.search(providerId=testProvider.id, filter=reviewFilter)
         assert len(reviews) == 4
         assert reviews[0].rating == 3
         assert reviews[0].cost == 3
         assert reviews[0].description == 'Fixed a light bulb'
 
-    def test_searchFriend(self, testProvider, activeClient):
+    def test_searchFriendFilter(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": True, "groups_filter": False}
-        reviews = Review.search(testProvider.id, reviewFilter)
+        reviews = Review.search(providerId=testProvider.id, filter=reviewFilter)
         assert len(reviews) == 2
         assert reviews[0].rating == 1
         assert reviews[0].cost == 5
         assert reviews[0].description == 'Test'
 
 
-    def test_searchGroups(self, testProvider, activeClient):
+    def test_searchGroupsFilter(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": False, "groups_filter": True}
-        reviews = Review.search(testProvider.id, reviewFilter)
+        reviews = Review.search(providerId=testProvider.id, filter=reviewFilter)
         assert len(reviews) == 1
         assert reviews[0].rating == 5
         assert reviews[0].cost == 5
@@ -667,11 +677,22 @@ class TestReview(object):
 
     def test_searchGroupsandFriends(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": True, "groups_filter": True}
-        reviews = Review.search(testProvider.id, reviewFilter)
+        reviews = Review.search(providerId=testProvider.id, filter=reviewFilter)
         assert len(reviews) == 3
         assert reviews[0].rating == 5
         assert reviews[0].cost == 5
-        assert reviews[0].description == 'Installed breaker box'        
+        assert reviews[0].description == 'Installed breaker box'
+
+    def test_searchGroup(self, testGroup, testUser3, activeClient):
+        reviews = Review.search(groupId=testGroup.id)
+        assert len(reviews) == 4
+        review_ids = [1, 2, 4, 5]
+        for r in review_ids:
+            assert Review.query.get(r) in reviews
+    
+    def test_searchSummaryStats(self):
+        reviews = Review.summaryStatSearch(filters=None)
+        assert reviews.count == 6
 
 @pytest.mark.usefixtures("dbSession")
 class TestGroup(object):

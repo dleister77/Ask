@@ -76,7 +76,7 @@ def provider(name, id):
         page = last.get('page', 1)
         return_code = 422
     if provider.reviewCount > 0:
-        reviews = Review.search(provider.id, reviewFilter)
+        reviews = Review.search(providerId=provider.id, filter=reviewFilter)
         pagination = Pagination(reviews, page, current_app.config.get('PER_PAGE'))
         pag_args = {"name": name, "id": id}
         pag_urls = pagination.get_urls('main.provider', pag_args)
@@ -228,7 +228,7 @@ def search():
                 form.manual_location.errors.append("Invalid Address. Please updated.")
             return render_template("index.html", form=form, title="Search"),422
 
-        searchLocation.setRangeCoordinates()     
+        searchLocation.setRangeCoordinates(form.searchRange.data)     
         filters = {"name": form.name.data,
                    "category": Category.query.get(form.category.data),
                    "location": searchLocation,
@@ -237,12 +237,12 @@ def search():
                    "reviewed": form.reviewed_filter.data}
         sortCriteria = form.sort.data
         providers = Provider.search(filters, sortCriteria)
-        if sortCriteria == "distance":
-            providers = sortByDistance(searchLocation.coordinates, providers)
         if providers == []:
             flash("No results found. Please try a different search.")
             form.initialize()
             return render_template("index.html", form=form, title="Search")
+        if sortCriteria == "distance":
+            providers = sortByDistance(searchLocation.coordinates, providers)
         pagination = Pagination(providers, page, current_app.config.get('PER_PAGE'))
         pag_urls = pagination.get_urls('main.search', request.args)
         providers = pagination.paginatedData
@@ -259,6 +259,7 @@ def search():
             locationDict = simplejson.dumps(locationDict, sort_keys=True)
         else:
             locationDict = None
+        #TODO calculate summary review statistics to display
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
                                reviewFilter=reviewFilter,

@@ -7,7 +7,7 @@ from flask_wtf import FlaskForm
 from magic import from_file, from_buffer
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
-     MultipleFileField, HiddenField, FloatField)
+     MultipleFileField, HiddenField, FloatField, IntegerField)
 from wtforms.validators import (DataRequired, InputRequired, Email, ValidationError, Optional,
  Regexp, InputRequired, StopValidation)
 from wtforms.widgets import HiddenInput
@@ -15,6 +15,7 @@ from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
 from app.models import Address, Category, Provider, Sector, State
+from app.utilities.helpers import url_check, url_parse
 
 
 def Picture_Upload_Check(form, field):
@@ -296,6 +297,12 @@ class ProviderAddForm(FlaskForm):
         if p:
             raise ValidationError("Business already exists, please look up "
                 "business or use a different name/address.")
+    
+    def validate_website(self, website):
+        """check that url is valid."""
+        if website.data != "" and not url_check(website.data):
+            raise ValidationError("Invalid website url")
+
     def populate_choices(self, sector=1):
         """Populate choices for sector and category drop downs."""
         self.sector.choices = Sector.list()
@@ -341,6 +348,7 @@ class ProviderSearchForm(FlaskForm):
     gpsLong = FloatField("New longitude", render_kw={"hidden":True}, id="gpsLong")
     gpsLat = HiddenField("New latitude", validators=[gpsVal, floatCheck], id="gpsLat")
     gpsLong = HiddenField("New longitude", validators=[gpsVal, floatCheck], id="gpsLong")
+    searchRange = IntegerField("Search Range (miles)", default=30, validators=[InputRequired('Search range is required.')])
     sector = SelectField("Sector",
                                  choices=Sector.list(), 
                                  coerce=int,
@@ -351,15 +359,19 @@ class ProviderSearchForm(FlaskForm):
                            coerce=int)
     name = StringField("Provider / Business Name", validators=[Optional()],
                        id="provider_name")
-    reviewed_filter = BooleanField("Reviewed - all")
-    friends_filter = BooleanField("Reviewed - friends")
-    groups_filter = BooleanField("Reviewed - groups")
+    reviewed_filter = BooleanField("all")
+    friends_filter = BooleanField("friends")
+    groups_filter = BooleanField("groups")
     sort = SelectField("Sort By",
                         choices=[("rating", "Rating"), ("name", "Name"),
                                 ("distance", "Distance")],
                         validators=[InputRequired("Sort criteria is required.")]
                        )
     submit = SubmitField("Submit")
+
+    def validate_searchRange(self, searchRange):
+        if searchRange.data < 0:
+            raise ValidationError("Search range must be a positive number.")
 
     def populate_choices(self):
         """populates category and location choices prior to form validation."""

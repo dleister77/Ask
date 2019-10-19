@@ -680,6 +680,15 @@ class TestProviderSearch(object):
 		form.populate_choices()
 		assert form.validate()
 
+	def test_newSearchRangeInvalid(self, baseProviderSearch):
+		baseProviderSearch.update({"searchRange": -5})
+		formdata = ImmutableMultiDict(baseProviderSearch)
+		form = ProviderSearchForm(formdata=formdata)
+		form.populate_choices()
+		assert not form.validate()
+		msg = "Search range must be a positive number."
+		assert msg in form.errors['searchRange']
+		
 	def test_newGPSInvalid(self, baseProviderSearch):
 		baseProviderSearch.update({"location": "gps", "gpsLat": "not_lat",
 								"gpsLong": "not_long"})
@@ -742,6 +751,7 @@ class TestProviderSearch(object):
 		assert form.manual_location.data == ""
 
 	@pytest.mark.parametrize('key, errorMsg', [('location', 'Search location is required.'),
+									('searchRange', 'Search range is required.'),
 									('sector', 'Sector is required.'),
 									('category', 'Category is required.'),
 									('sort', 'Sort criteria is required.')

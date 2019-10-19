@@ -21,7 +21,7 @@ from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
 from app.utilities.geo import getDistance, geocode, AddressError, APIAuthorizationError
-from app.utilities.helpers import noneIfEmptyString, url_check
+from app.utilities.helpers import noneIfEmptyString, url_check, url_parse
 
 addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
 
@@ -909,9 +909,11 @@ class Provider(Model):
     
     @validates('website')
     def validate_website(self, key, website):
-        if not url_check(website):
+        if website is None:
+            return website
+        elif not url_check(website):
             raise ValueError("Invalid website url")
-        return website
+        return url_parse(website)[1]
 
 
     @hybrid_property
@@ -997,7 +999,8 @@ class Provider(Model):
         q.join_args = [Provider.address, Address.state, Provider.categories]
         q.outerjoin_args = [Provider.reviews, Review.user]
         q.query_args = [Provider.id.label('id'), Provider.name.label('name'),
-                        Provider.email.label('email'), 
+                        Provider.email.label('email'),
+                        Provider.website.label('website'),
                         Provider.telephone.label('telephone'),
                         Address.line1.label('line1'),
                         Address.line2.label('line2'),
@@ -1214,11 +1217,12 @@ class Review(Model):
         return f"<Rating {self.provider}, {self.rating}>"
 
     @classmethod
-    def search(cls, providerId, filter):
+    def search(cls, providerId=None, groupId = None,  filter=None):
         """Searches for reviews based on provider id and social filters.
         
         Args:
             providerId (int): provider id from database
+            groupId (int): group id from database
             filter (dict): determines whether to only include reviews
                                  that have been reviewed by friends or members
                                  users groups
@@ -1227,22 +1231,39 @@ class Review(Model):
         
         """
         # base filter and join args
-        filter_args = [Provider.id == providerId]
-        join_args = [Review.provider, Review.user]
-        friendsFilter = User.friends.contains(current_user)
-        groups = [g.id for g in current_user.groups]
-        groupsFilter = and_(Group.id.in_(groups), User.id != current_user.id)
-        if filter['friends_filter'] is True and filter['groups_filter'] is False:
-            filter_args.append(friendsFilter)
-        elif filter['groups_filter'] is True and filter['friends_filter'] is False:
-            join_args.extend([User.groups])
-            filter_args.extend(groupsFilter)
-        elif filter['groups_filter'] is True and filter['friends_filter'] is True:
-            filter_args.append(or_(groupsFilter, friendsFilter))
-        reviews = (db.session.query(Review).join(*join_args)
-                                           .filter(*filter_args)
-                                           .all())
-        return reviews
+        q = dbQuery()
+        q.select_from = Review
+        q.query_args = [Review]
+        if providerId is not None:
+            q.filter_args = [Provider.id == providerId]
+            q.join_args = [Review.provider, Review.user]
+            friendsFilter = User.friends.contains(current_user)
+            groups = [g.id for g in current_user.groups]
+            groupsFilter = and_(Group.id.in_(groups), User.id != current_user.id)
+            if filter['friends_filter'] is True and filter['groups_filter'] is False:
+                q.filter_args.append(friendsFilter)
+            elif filter['groups_filter'] is True and filter['friends_filter'] is False:
+                q.join_args.extend([User.groups])
+                q.filter_args.extend(groupsFilter)
+            elif filter['groups_filter'] is True and filter['friends_filter'] is True:
+                q.filter_args.append(or_(groupsFilter, friendsFilter))
+            return q.all()
+        elif groupId is not None:
+            q.filter_args = [Group.id == groupId]
+            q.join_args = [Review.user, User.groups]
+            q.sort_args = [Review.timestamp]
+            return q.all()
+    
+    #TODO implement summary stat search
+    @classmethod
+    def summaryStatSearch(cls, filters):
+        """Calculate summary statistics for review meeting filter criteria."""
+        pass
+        # countsub = db.session.query(Review.rating.label('rating')).order_by(Review.rating).subquery(name='countsub')
+        # sum = db.session.query(func.count(countsub.c.rating).label('count'),
+        #                        func.percentile_cont(countsub.c.rating).within_group(countsub.c.rating).label('median')).first()
+
+        return sum
 
 
 class Picture(Model):

@@ -3,7 +3,8 @@ import os
 import pytest
 
 
-from app.utilities.helpers import name_check, disableForm, listToString
+from app.utilities.helpers import name_check, disableForm, listToString,\
+                                  url_check, url_parse
 from app.utilities.forms import RadioInputDisabled
 from app.models import Provider, Review
 
@@ -44,4 +45,20 @@ def test_listToStringTriple():
     x = listToString(testList)
     assert x == "Tom, Dick & Harry"
 
+def test_urlCheck():
+    goodUrls = ['www.google.com', 'google.com', 'google.com/','http://google.com', 'https://google.com']
+    for url in goodUrls:
+        r = url_check(url)
+        assert r is True
 
+def test_urlCheckBad():
+    badUrls = ['www.askyourpeeps.us', 'askyourpeeps.us', 'http://askyourpeeps.us']
+    for url in badUrls:
+        assert url_check(url) is False
+
+@pytest.mark.parametrize('url, result', [
+    ('www.google.com', ('http://www.google.com', 'www.google.com')),
+    ('http://www.google.com', ('http://www.google.com', 'www.google.com'))
+])
+def test_url_parse(url, result):
+    assert url_parse(url) == result

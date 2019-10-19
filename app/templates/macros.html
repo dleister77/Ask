@@ -382,6 +382,9 @@
                         <li>{{"%s, %s %s"|format(provider.city, provider.state_short, provider.zip)}}</li>
                         <li>{{'(%s) %s-%s'|format(provider.telephone[0:3],provider.telephone[3:6], provider.telephone[6:10])}}</li>
                         <li>{{provider.email | replace('None', "")}}
+                        {% if provider.website is not none %}
+                        <li><a href="http://{{provider.website}}">{{ provider.website }}</a></li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
@@ -524,7 +527,7 @@
                 </a>
             {% if group.membership == false %}
                 <form action="{{url}}" method=post>
-                    {{ form.hidden_tag() }}
+                    {{ form.csrf_token }}
                     {{ form.id(value=group.id)}}
                     <button class="btn btn-secondary align-self-stretch">Join</button>
                 </form>

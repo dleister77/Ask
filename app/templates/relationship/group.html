@@ -5,9 +5,9 @@
 
 {% set member = group in current_user.groups %}
 
-<div class="card pb-0" id="user_profile">
+<div class="card pb-0" id="group_profile">
     <div class="card-header p-3 clearfix">
-            <div class="d-flex justify-content-center">
+            <div class="d-flex justify-content-between">
                 <!-- filler for flexbox -->
                 <h4>Profile Information</h4>
                 {% if current_user.id == group.admin_id %}    
@@ -30,8 +30,7 @@
                     {% else %}    
                         {{ renderInlineList("Admin - username",
                                              group.admin.username) }}
-                    {% endif %}
-                    {{ renderInlineList("Admin - email", group.admin.email) }}                      
+                    {% endif %}                    
             </dl>
 
     </div>
@@ -42,7 +41,7 @@
 {% if member %}    
     <div class="card">
         <div class="card-header p-2">
-            <h4 class="text-center"> Group Members </h4>
+            <h4 class="text-left"> Group Members </h4>
         </div>
         <div class="card-body pb-0">
             <ul>
@@ -54,10 +53,25 @@
         </div>
     </div>
      <br>
-{% endif %}     
+{% endif %}
+
+{% if reviews %}
+
+<h3>Recent Reviews</h3>
+<br>
+{%for review in reviews %}
+    {{render_review(review, current_user)}}
+    <br>
+{% endfor %}
+
+{{pagination(pag_urls)}}
+
+{% endif %}
+
 {% endblock %}
 
 {% block content_wide %}
+
 
 {% endblock %}
 

@@ -1,7 +1,9 @@
 import re
+import urllib
 from urllib import parse
 
-from flask import flash, redirect, render_template, request, url_for, jsonify, has_request_context, _request_ctx_stack
+from flask import flash, redirect, render_template, request, url_for, jsonify,\
+                  has_request_context, _request_ctx_stack, current_app
 from flask_login import current_user, login_required
 
 from app.relationship.forms import GroupSearchForm, FriendDeleteForm, \
@@ -9,8 +11,9 @@ from app.relationship.forms import GroupSearchForm, FriendDeleteForm, \
                                    GroupEditForm, FriendApproveForm,\
                                    GroupDeleteForm, GroupMemberApproveForm,\
                                    GroupAddForm
-from app.models import User, Group, FriendRequest, GroupRequest
+from app.models import User, Group, FriendRequest, GroupRequest, Review
 from app.utilities.helpers import disableForm, email_verified, listToString
+from app.utilities.pagination import Pagination
 from app.relationship import bp
 
 
@@ -194,8 +197,15 @@ def group(name, id):
         else:
             modal_form = False
             modal_title = None
+        reviews = Review.search(groupId=group.id)
+        page = request.args.get('page', 1, int)
+        pagination = Pagination(reviews, page, current_app.config.get('PER_PAGE'))
+        pag_args = {"name": name, "id": id}
+        pag_urls = pagination.get_urls('relationship.group', pag_args)
+        reviews = pagination.paginatedData
         return render_template("relationship/group.html", group=group,
                                modal_form=modal_form, modal_title=modal_title,
+                               reviews=reviews, pag_urls=pag_urls,
                                title="Group Profile")
 
 
@@ -222,7 +232,7 @@ def groupadd():
     else:
         for error in form.errors['id']:
             flash(error)
-        return render_template("relationship/groupSearch.html", form=form),422
+        return groups_render(code=422)
 
 @bp.route('/network/groups/approve', methods=['POST'])
 @login_required
@@ -305,7 +315,6 @@ def groupSearchAutocomplete():
     groups = [{"id": group.id, "name": group.name} for group in groups]
     return jsonify(groups)
 
-#TODO add pagination to group search results???
 
 @bp.route('/group/search')
 @login_required
@@ -315,15 +324,19 @@ def groupSearch():
     if form.validate():
         filters = {"name": form.name.data}
         groups = Group.search(filters)
+        page = request.args.get('page', 1, int)
+        pagination = Pagination(groups, page, current_app.config.get('PER_PAGE'))
+        pag_args = {"name": form.name.data}
+        pag_urls = pagination.get_urls('relationship.groupSearch', pag_args)
+        groups = pagination.paginatedData
         addForm = GroupAddForm()
         code = 200
+        return render_template("relationship/groupSearch.html", form=form,
+                           title="Group Search", groups=groups,
+                           addForm=addForm, pag_urls=pag_urls),code
     else:
         code = 422
-        groups = []
-        addForm=None
-    return render_template("relationship/groupSearch.html", form=form,
-                           title="Group Search", groups=groups,
-                           addForm=addForm),code
+        return groups_render(form, code=422)
 
 @bp.route('/group/update', methods=['POST'])
 @login_required
