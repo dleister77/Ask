@@ -1254,16 +1254,73 @@ class Review(Model):
             q.sort_args = [Review.timestamp]
             return q.all()
     
-    #TODO implement summary stat search
+    #TODO add median to summary stat
     @classmethod
-    def summaryStatSearch(cls, filters):
-        """Calculate summary statistics for review meeting filter criteria."""
-        pass
-        # countsub = db.session.query(Review.rating.label('rating')).order_by(Review.rating).subquery(name='countsub')
-        # sum = db.session.query(func.count(countsub.c.rating).label('count'),
-        #                        func.percentile_cont(countsub.c.rating).within_group(countsub.c.rating).label('median')).first()
+    def summaryStatSearch(cls, filters=None):
+        """Calculate summary statistics for review meeting filter criteria.
+        
+        Args:
+            filters (dict): search criteria (location, category, friends, groups)
+                for reviews to include in summary stat calc
+        Returns:
+            aggregated summary statistics: count, avg rating, avg cost
+        
+        """
+        q = dbQuery()
+        q.select_from = Review
+        q.query_args = [
+            func.count(Review.id).label("count"),
+            func.avg(Review.rating).label("average"),
+            func.avg(Review.cost).label("cost")
+        ]
+        q.join_args = [Review.category,
+                       Review.provider,
+                       Provider.address,
+                       Review.user
+        ]
 
-        return sum
+        if "category" in filters.keys():
+            q.filter_args.append(Provider.categories.contains(filters['category']))
+
+        if "location" in filters.keys():
+            q.filter_args.extend([Address.longitude > filters['location'].minLong,
+                               Address.longitude < filters['location'].maxLong,
+                               Address.latitude > filters['location'].minLat,
+                               Address.latitude < filters['location'].maxLat])
+
+        friendsFilter = User.friends.contains(current_user)
+        groups = [g.id for g in current_user.groups]
+        groupsFilter = (and_(Group.id.in_(groups), User.id != current_user.id))
+
+        # update filter and joins for relationship filters
+        if filters['friends'] is True and filters['groups'] is False:
+            q.filter_args.append(friendsFilter)
+        if filters['groups'] is True and filters['friends'] is False:
+            q.join_args.append(User.groups)
+            q.filter_args.append(groupsFilter)
+        if filters['groups'] is True and filters['friends'] is True:
+            q.query_args = [Review.id.label('reviewID'),
+                                    Review.rating.label('rating'),
+                                    Review.cost.label('cost')]           
+            qF = q.copy()
+            qG = q.copy()
+            qF.filter_args.append(friendsFilter)
+
+            qG.filter_args.append(groupsFilter)
+            qG.join_args.append(User.groups)
+
+            sub = qF.getQuery().union(qG.getQuery()).subquery(name='sub')
+
+            q = dbQuery()
+            q.select_from = sub
+            q.query_args = [func.count(sub.c.reviewID).label("count"),
+                            func.avg(sub.c.rating).label("average"),
+                            func.avg(sub.c.cost).label("cost"),
+            ]            
+
+        summary = q.getQuery().first()
+        return summary
+
 
 
 class Picture(Model):

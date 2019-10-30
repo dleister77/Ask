@@ -628,6 +628,22 @@ class TestProvider(object):
 
 @pytest.mark.usefixtures("dbSession")
 class TestReview(object):
+
+    def generateSearchFilters(self, searchDict):
+        """From dict, populate filters used in call to Provider.search"""
+
+        location = Location(searchDict['location'])
+        location.setRangeCoordinates(searchDict['searchRange'])
+        category = Category.query.get(searchDict['category'])
+        filters = {"name": searchDict['name'],
+                "category": category,
+                "location": location,
+                "reviewed": bool(searchDict['reviewed_filter']),
+                "friends": bool(searchDict['friends_filter']),
+                "groups": bool(searchDict['groups_filter'])}
+        sort = searchDict['sort']
+        return filters, sort    
+
     def test_attributes(self, testReview):
         assert testReview.user_id == 2
         assert testReview.provider.name == 'Douthit Electrical'
@@ -690,9 +706,29 @@ class TestReview(object):
         for r in review_ids:
             assert Review.query.get(r) in reviews
     
-    def test_searchSummaryStats(self):
-        reviews = Review.summaryStatSearch(filters=None)
+    def test_summaryStatSearch(self, activeClient, baseProviderSearch):
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        reviews = Review.summaryStatSearch(filters)
         assert reviews.count == 6
+        assert reviews.average == round(Decimal(19/6), 4)
+        assert reviews.cost == round(Decimal(23/6), 4)
+
+    def test_summaryStatSearchGroups(self, activeClient, baseProviderSearch):
+        baseProviderSearch['groups_filter'] = True
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        reviews = Review.summaryStatSearch(filters)
+        assert reviews.count == 1
+        assert reviews.average == round(Decimal(5), 4)
+        assert reviews.cost == round(Decimal(5), 4)
+
+    def test_summaryStatSearchFriends(self, activeClient, baseProviderSearch):
+        baseProviderSearch['friends_filter'] = True
+        filters, sort = self.generateSearchFilters(baseProviderSearch)
+        reviews = Review.summaryStatSearch(filters)
+        assert reviews.count == 2
+        assert reviews.average == round(Decimal(1), 4)
+        assert reviews.cost == round(Decimal(5), 4)
+
 
 @pytest.mark.usefixtures("dbSession")
 class TestGroup(object):

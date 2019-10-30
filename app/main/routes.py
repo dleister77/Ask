@@ -241,6 +241,7 @@ def search():
             flash("No results found. Please try a different search.")
             form.initialize()
             return render_template("index.html", form=form, title="Search")
+        summary = Review.summaryStatSearch(filters)
         if sortCriteria == "distance":
             providers = sortByDistance(searchLocation.coordinates, providers)
         pagination = Pagination(providers, page, current_app.config.get('PER_PAGE'))
@@ -259,12 +260,12 @@ def search():
             locationDict = simplejson.dumps(locationDict, sort_keys=True)
         else:
             locationDict = None
-        #TODO calculate summary review statistics to display
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
                                reviewFilter=reviewFilter,
                                locationDict=locationDict,
-                               providersDict=providersDict)
+                               providersDict=providersDict,
+                               summary=summary)
     return render_template("index.html", form=form, title="Search"), 422
 
 @bp.route('/provider/search/json', methods=['GET'])
