@@ -12,7 +12,7 @@
             {% elif field.type == "SubmitField" %}
                 {{field(class_=(buttonClass))}}
             {% elif field.type == "RadioField" %}
-                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                <legend class={{labelClass}}>{{field.label.text.capitalize()}}</legend>
                 {% if field.flags.optional %}
                     <span class = "small italic"> optional</span>
                 {%endif %}
@@ -398,15 +398,25 @@
 <!-- Inputs: review and user object. bizname determines if bizname in header-->
 <div class="card">
         <div class="card-header">
-            {% if bizname == true %}
-                <h4>
-                    <a href='{{url_for("main.provider", name=review.provider.name,
-                                       id=review.provider.id)}}'>
-                        {{review.provider.name}}
-                    </a></h4>
-            {% else %}
-                <h4>{{review.title}}</h4>
-            {% endif %}
+            <div class="row">
+                <div class="col-7 col-md-8">
+                    <h4>
+                        <a href='{{url_for("main.provider", name=review.provider.name,
+                                        id=review.provider.id)}}'>
+                            {{review.provider.name}}
+                        </a>
+                    </h4>
+                </div>
+                {% if review.user_id == current_user.id %}
+                <div class="col-5 col-md-4">
+                    <ul class="nav justify-content-end">
+                        <a class="prov-link nav-link" href="{{ url_for('main.reviewEdit', id=review.id) }}">
+                        Edit
+                        </a>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
         </div>
         <div class="card-body">
             <div class="row">
@@ -444,9 +454,13 @@
                             <ul class="list-inline">
                                 <li class="list-inline-item">Cost: </li>
                                 {{cost_rating(review.cost)}}
+
                             </ul>
                         </li>
-                        <li>Service Description: {{review.service_description|replace(None, 'Not Provided')}}</li>
+                        <li>Service Description: {{review.description|replace(None, 'Not Provided')}}</li>
+                        {% if review.price_paid is not none %}
+                            <li>Price Paid: {{ "$%s" |format(review.price_paid) }}</li>
+                        {% endif %}
                         <li>Review Date: {{'%s-%s-%s'|format(review.timestamp.month, review.timestamp.day, review.timestamp.year)}}</li>
                         <li>Service Date: {{ 'Not provided' if review.service_date == None else '%s-%s-%s'|format(review.service_date.month, review.service_date.day, review.service_date.year)}}</li>
                     </ul>

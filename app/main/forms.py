@@ -8,13 +8,15 @@ from magic import from_file, from_buffer
 from wtforms import (StringField, BooleanField, SelectField,
      SubmitField, FormField, TextAreaField, RadioField, SelectMultipleField,
      MultipleFileField, HiddenField, FloatField, IntegerField)
-from wtforms.validators import (DataRequired, InputRequired, Email, ValidationError, Optional,
- Regexp, InputRequired, StopValidation)
+from wtforms.validators import (DataRequired, InputRequired, Email, \
+                                ValidationError, Optional, NumberRange,\
+                                Regexp, InputRequired, StopValidation)
 from wtforms.widgets import HiddenInput
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
-from app.models import Address, Category, Provider, Sector, State
+from app.models import Address, Category, Provider, Sector, State, Review, Picture
+from app.utilities.forms import MultiCheckboxField
 from app.utilities.helpers import url_check, url_parse
 
 
@@ -192,7 +194,7 @@ class ReviewForm(FlaskForm):
                       choices=[],
                       validators=[InputRequired(message="Category is required.")],
                       coerce=int, id="category")    
-    rating = RadioField("Rating", choices=[
+    rating = RadioField("Overall Rating", choices=[
                         (5, "***** (Highest quality)"),
                         (4, "**** (Above Average)"), 
                         (3, "*** (Satisfied - should be default choice"),
@@ -201,7 +203,7 @@ class ReviewForm(FlaskForm):
                         coerce=int,
                         validators=[InputRequired(message="Rating is required.")] 
                         )
-    cost = RadioField("Cost", choices=[
+    cost = RadioField("Cost- rating", choices=[
                         (5, "$$$$$ (Much higher than competitors)"),
                         (4, "$$$$ (Above Average)"), 
                         (3, "$$$ (Average / should be default choice"),
@@ -210,11 +212,17 @@ class ReviewForm(FlaskForm):
                         coerce=int,
                         validators=[InputRequired(message="Cost is required.")] 
                         )
+    price_paid = IntegerField("Price Paid", validators=[NumberRange(min=0,
+                 message="Dollar cost be greater than 0."), Optional()])
     description = StringField("Service Description", validators=[Optional()])
     service_date = DateField("Service Date", validators=[Optional()])
     comments = TextAreaField("Comments", render_kw={"rows":6}, validators=[Optional()])
     picture = MultipleFileField("Picture", render_kw=({"accept": 'image/*'}),
                                 validators=[Picture_Upload_Check, Optional()])
+    certify = BooleanField("Reviewer confirms that they have neither received "
+                           "compensation for review nor are related (relative, "
+                           "employee) to business being reviewed.", 
+                           validators=[InputRequired("Review unable to be submitted unless reviewer confirms agreement.")])
     submit = SubmitField("Submit", id="review_submit")
 
     def validate_name(form, field):
@@ -235,6 +243,59 @@ class ReviewForm(FlaskForm):
             if field.data not in bizCategories:
                 raise ValidationError("Category not valid for business being reviewed.")
 
+class ReviewEditForm(ReviewForm):
+    id = HiddenField("Review ID", 
+                     render_kw = {'readonly':True},
+                     validators=[InputRequired(message="Review id is required. Do not remove from form submission.")])
+    
+    deletePictures = MultiCheckboxField("Existing Pictures")
+
+    picture = MultipleFileField("New Pictures", render_kw=({"accept": 'image/*'}),
+                                validators=[Picture_Upload_Check, Optional()])
+
+    def validate_id(form, field):
+        """validates submitted review id is valid"""
+        review = Review.query.get(form.id.data)
+        if review is None:
+            raise ValidationError("Submitted review id is not valid.")
+
+    def validate_name(form, field):
+        pass
+
+    def validate_deletePictures(form, field):
+        """check that picture id passed corresponds to actual review"""
+        
+        id = form.id.data
+        if id is None or id == "":
+            pass
+        else:
+            review = Review.query.get(form.id.data)
+            if review is not None:
+                for picID in form.deletePictures.data:
+                    picture = Picture.query.get(picID)
+                    if picture not in review.pictures:
+                        raise ValidationError("Invalid picture submitted for deletion.")
+    
+    def validate_category(form, field):
+        """Checks that category is valid category for provider."""
+        id = form.id.data
+        if id is None or id == "":
+            pass
+        else:
+            review = Review.query.get(form.id.data)
+            if review is not None:
+                bizCategories = [c.id for c in review.provider.categories]
+                if field.data not in bizCategories:
+                    raise ValidationError("Category not valid for business being reviewed.")
+    
+    def populate_choices(self, review):
+        """Populate existing picture checklist"""
+        self.deletePictures.choices = [
+            (picture.id, picture.name) for picture in review.pictures
+        ]
+        self.category.choices = [
+            (c.id, c.name) for c in review.provider.categories
+        ]
 
 
 class ProviderAddForm(FlaskForm):

@@ -1,11 +1,11 @@
 """Database configurations and customization."""
+import functools
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlite3 import Connection as SQLite3Connection
 
 from app.extensions import db, login
-from app.utilities.helpers import noneIfEmptyString
 
 
 # # sets foreign keys to on for sqlite db connection
@@ -16,6 +16,18 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA foreign_keys=ON;")
         cursor.close()
 
+def noneIfEmptyString(func):
+    @functools.wraps(func)
+    def wrapped_function(*args, **kwargs):
+        """Decorator to convert empty string to None """
+        for arg in args:
+            if arg == '':
+                arg = None
+        for k,v in kwargs.items():
+            if v == '':
+                kwargs[k] = None
+        return func(*args, **kwargs)
+    return wrapped_function
 
 class CRUDMixin(object):
     """Mixin that adds convenience methods for CRUD (create, read, update, delete) operations.

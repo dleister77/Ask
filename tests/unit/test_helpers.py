@@ -10,9 +10,9 @@ from app.models import Provider, Review
 
 def test_namecheck():
     test_path = os.path.join('instance', 'tests', 'photos', 'source')
-    filename = 'test1.jpg'
+    filename = 'test2.jpg'
     filename = name_check(test_path, filename)
-    assert filename == 'test1.jpg'
+    assert filename == 'test2.jpg'
     filename = 'test.jpg'
     filename = name_check(test_path, filename)
     assert filename == 'test_1.jpg'

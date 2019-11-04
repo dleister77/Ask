@@ -1,19 +1,25 @@
+from collections import namedtuple
 from datetime import date
 import math
 import os
+from pathlib import Path
+from shutil import rmtree
 
-from flask import url_for
+from flask import url_for, current_app
+from flask_login import current_user
 from geocodio import GeocodioClient
 from geocodio.exceptions import GeocodioAuthError
 import pytest
 from sqlalchemy.orm import sessionmaker
+from werkzeug.datastructures import FileStorage
 
 from app import create_app
 from app import db
 from app.models import User, Address, State, Category, Group, Provider, Review,\
-                       FriendRequest, GroupRequest, addressTuple, Sector
+                       FriendRequest, GroupRequest, addressTuple, Sector, Picture
 import app.utilities.geo as geo
 from app.utilities.geo import AddressError, APIAuthorizationError, _geocodeGEOCODIO
+from app.utilities.helpers import thumbnail_from_buffer
 from config import TestConfig
 
 Session = sessionmaker()
@@ -68,10 +74,10 @@ class FunctionalTest(object):
     routeFunction = None
     form = None
 
-    def getRequest(self, client, *args, **kwargs):
+    def getRequest(self, client, *args, headers=None, **kwargs):
         """Return response from password reset request"""
         return client.get(url_for(self.routeFunction, *args, **kwargs, _external=False), 
-                            follow_redirects=True)
+                            follow_redirects=True, headers=headers)
     
     
     def postRequest(self, client, **kwargs):
@@ -165,12 +171,14 @@ def test_db(test_app):
     g3 = Group.create(id=3, name="Shawshank Redemption Fans", description="test", admin_id=3)
 
     # add test reviews
-    r1 = Review.create(id=1, user=u2, provider=p1, category=c1, rating=3, cost=3, description="fIxed A light BULB", comments="satisfactory work.")
-    r2 = Review.create(id=2, user=u3, provider=p1, category=c1, rating=5, cost=5, description="installed breaker Box", comments="very clean")
-    r3 = Review.create(id=3, user=u1, provider=p1, category=c1, rating=1, cost=5, description="test", comments="Test")
-    r4 = Review.create(id=4, user=u2, provider=p3, category=c1, rating=5, cost=2, description="test", comments="Test123", service_date=date(2019, 5, 1))
-    r5 = Review.create(id=5, user=u2, provider=p3, category=c1, rating=4, cost=3, description="moretest", comments="Test123456", service_date=date(2019, 5, 1))
-    r6 = Review.create(id=6, user=u1, provider=p1, category=c1, rating=1, cost=5, description="yetanothertest", comments="Testing")
+    r1 = Review.create(id=1, user=u2, provider=p1, category=c1, rating=3, cost=3,
+     description="fIxed A light BULB", comments="satisfactory work.",
+     pictures=[Picture(path=os.path.join(test_app.config['MEDIA_FOLDER'], '2', 'test1.jpg'), name='test1.jpg')])
+    r2 = Review.create(id=2, user=u3, provider=p1, category=c1, rating=5, cost=5, price_paid="", description="installed breaker Box", comments="very clean")
+    r3 = Review.create(id=3, user=u1, provider=p1, category=c1, rating=1, cost=5, price_paid="", description="test", comments="Test")
+    r4 = Review.create(id=4, user=u2, provider=p3, category=c1, rating=5, cost=2, price_paid="", description="test", comments="Test123", service_date=date(2019, 5, 1))
+    r5 = Review.create(id=5, user=u2, provider=p3, category=c1, rating=4, cost=3, price_paid="", description="moretest", comments="Test123456", service_date=date(2019, 5, 1))
+    r6 = Review.create(id=6, user=u1, provider=p1, category=c1, rating=1, cost=5, price_paid="", description="yetanothertest", comments="Testing")
 
     # add test relationships
     u2.add(u1)
@@ -270,8 +278,29 @@ def testAddress():
     return address
     
 @pytest.fixture()
-def testReview():
+def testReview(dbSession):
     return Review.query.get(1)
+
+@pytest.fixture(scope='function')
+def testPicture(activeClient):
+    #named tuples to mock form
+    form = namedtuple('form', ['picture', 'deletePictures'])
+    picture = namedtuple('picture', 'data')
+    deletePictures = namedtuple('deletePictures', 'data')
+    filename = "test1.jpg"
+    p = os.path.join(current_app.config['MEDIA_FOLDER'], 'source', filename)
+    f = open(p, 'rb')
+    fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
+    testform = form(picture([fs]), None)
+    Picture.savePictures(testform)
+    path = Path(os.path.join(current_app.config['MEDIA_FOLDER'],
+                    str(current_user.id), filename))
+    yield path
+    try:
+        rmtree(path.parent)
+    except FileNotFoundError:
+        raise
+        
 
 @pytest.fixture()
 def search_form(test_app, dbSession):
@@ -376,8 +405,30 @@ def baseReview():
     testCase = {"home": "home", "category": "1", "id": "2", "name": "Evers Electric",
                  "rating": "3", "cost": "3", "description": "test",
                  "service_date": "4/15/2019", "comments": "testcomments",
-                 "picture": ""}
+                 "picture": "", "certify": "True", "price_paid": "0"}
     return testCase
+
+@pytest.fixture()
+def baseReviewEdit(test_db):
+    testReview = Review.query.get(1)
+    test_case = {
+			"id": str(testReview.id),
+            "name": str(testReview.provider.name),
+            "category": str(testReview.category_id),
+            "rating": str(testReview.rating),
+            "cost": str(testReview.cost),
+            "price_paid": str(testReview.price_paid),
+        	"description": str(testReview.description),
+            "service_date": str(testReview.service_date),
+			"comments": str(testReview.comments),
+			"deletePictures" : ["1"],
+			"certify": "True",
+			"picture": ""
+	}
+    for k, v in test_case.items():
+        if v == 'None':
+            test_case[k] = ''
+    return test_case
 
 @pytest.fixture()
 def newReviewDict():

@@ -1,0 +1,38 @@
+{% extends "single_column.html" %}
+{% from "macros.html" import form_render, field_render %}
+{% block title %} {{ super() }} {% endblock %}
+
+{% block content_narrow_form %}
+    <h3>Edit Review</h3>
+    <form action="{{url_for('main.reviewEdit', id=form.id.data)}}" method="POST", id="review_form", enctype="multipart/form-data">
+        {{form.hidden_tag()}}
+        {{ field_render(form.name)}}
+        {{field_render(form.category)}}
+        {{field_render(form.rating)}}
+        {{field_render(form.cost)}}
+        {{field_render(form.description)}}
+        {{field_render(form.price_paid)}}
+        {{field_render(form.service_date)}}
+        {{field_render(form.comments)}}
+        <div class="form-group row">
+            <div class="col">
+            {{ form.deletePictures.label() }}
+            <span class="small italic"> (Check to remove)</span>
+            {% for picture in form.deletePictures %}
+                <div class="form-group row">
+                    {{ picture(class_='form-check-input') }}
+                    <img src="{{url_for('main.download_file', id=current_user.id, filename=picture.label.text)}}" alt="" class="thumbnail">                    
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+        {{field_render(form.picture)}}
+        {{field_render(form.certify)}}
+        {{field_render(form.submit)}}
+    </form>
+{% endblock %}
+
+
+
+
+

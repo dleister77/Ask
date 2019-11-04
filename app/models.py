@@ -2,6 +2,7 @@ from collections import namedtuple
 import copy
 from datetime import datetime, date
 from operator import attrgetter
+import os
 import re
 from string import capwords
 
@@ -16,12 +17,14 @@ from sqlalchemy.sql import exists, func
 from sqlalchemy.sql.expression import desc
 from threading import Thread
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
 from app.utilities.geo import getDistance, geocode, AddressError, APIAuthorizationError
-from app.utilities.helpers import noneIfEmptyString, url_check, url_parse
+from app.utilities.helpers import url_check, url_parse, thumbnail_from_buffer,\
+                                  name_check
 
 addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
 
@@ -1156,6 +1159,7 @@ class Review(Model):
         rating (int): numeric rating between 1 (low) and 5 (high) to rate quality/satisfaction
         cost (int): numeric rating between 1 (low) and 5 (high) to rate how
                     expensive business is relative to others
+        price_paid (int): dollar cost paid for service/product
         description (str): short description of service being reviewed (ie. AC tuneup)
         service_date (Date): date that reviewers interaction with business took
                              place
@@ -1183,6 +1187,7 @@ class Review(Model):
                             nullable=False)
     rating = db.Column(db.Integer, nullable=False)
     cost = db.Column(db.Integer, nullable=False)
+    price_paid = db.Column(db.Integer)
     _description = db.Column(db.String(120))
     service_date = db.Column(db.Date)
     _comments = db.Column(db.Text)
@@ -1215,6 +1220,12 @@ class Review(Model):
 
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"
+
+    @validates('price_paid')
+    def validate_price_paid(self, key, price_paid):
+        if price_paid is not None and price_paid < 0:
+            raise ValueError("Price paid must be positive number")
+        return price_paid
 
     @classmethod
     def search(cls, providerId=None, groupId = None,  filter=None):
@@ -1324,20 +1335,74 @@ class Review(Model):
 
 
 class Picture(Model):
-    """Class to define picture table in db, to be linked with reviews.
-    picture_path - filters['location'] of picture in file storage system
+    """Pictures that are contained in reviews.
+
+    path (str) - path to picture in file storage system at time it is saved
+    name (str) - name of file that is being saved
+
     Relationships:
         Child of: Review
     """
     id = db.Column(db.Integer, primary_key=True)
     path = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(120), nullable=False)
-    thumb = db.Column(db.String(120), nullable=False)
     review_id = db.Column(db.Integer, db.ForeignKey("review.id",
                                                     ondelete="CASCADE"),
                           nullable=False)
     def __repr__(self):
         return f"<Picture {self.name}>"
+
+    @staticmethod
+    def savePictures(form, pictures=None):
+        """Process new pictures, saving pictures and returning list pictures.
+
+        Args:
+            form (wtf form): form that includes submitted pictures
+            pictures (list): list of existing Picture objects
+        
+        Returns:
+            Updated list of pictures.  Not yet committed to db.
+            
+        """
+
+        if pictures is None:
+            pictures = []
+        if form.picture.data[0]:
+            path = os.path.join(current_app.instance_path,
+                                current_app.config['MEDIA_FOLDER'],
+                                str(current_user.id))
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+            for picture in form.picture.data:
+                filename = secure_filename(picture.filename)
+                filename = name_check(path, filename)
+                file_location = os.path.join(path, filename)
+                thumbnail_from_buffer(picture, (400, 400), filename, path)
+                pictures.append(Picture(path=file_location,
+                                        name=filename))
+        return pictures
+
+    @staticmethod
+    def deletePictures(form):
+        """Deletes selected pictures
+
+        Args:
+            form (wtf form): form containing pictures to delete
+        
+        Return:
+            None
+        """
+
+        for picId in form.deletePictures.data:
+            picture = Picture.query.get(picId)
+            try:
+                os.remove(picture.path)
+            except FileNotFoundError:
+                path = os.path.join(current_app.instance_path,
+                                    current_app.config['MEDIA_FOLDER'],
+                                    str(current_user.id))
+                os.remove(os.path.join(path, picture.name))
+            picture.delete()
 
 class Group(Model):
     """Groups (social, religious, sports, etc.) that user can belong to.

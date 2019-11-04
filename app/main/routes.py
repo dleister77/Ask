@@ -6,16 +6,14 @@ from flask import flash, redirect, render_template, request, url_for, jsonify,\
                   send_from_directory, current_app, session, json, Markup
 from flask_login import current_user, login_required
 import simplejson
-from werkzeug.utils import secure_filename
 
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
-                           ProviderFilterForm
+                           ProviderFilterForm, ReviewEditForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
                         User
 from app.utilities.geo import AddressError, Location, sortByDistance
-from app.utilities.helpers import disableForm, email_verified, name_check,\
-                                  thumbnail_from_buffer
+from app.utilities.helpers import disableForm, email_verified
 from app.utilities.pagination import Pagination
 from app.main import bp
 from app.extensions import db
@@ -178,26 +176,13 @@ def review():
     provider = Provider.query.get(form.id.data)
     form.category.choices = [(c.id, c.name) for c in provider.categories]
     if form.validate_on_submit():
-        pictures = []
-        if form.picture.data[0]:
-            path = os.path.join(current_app.instance_path,
-                                current_app.config['MEDIA_FOLDER'],
-                                str(current_user.id))
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
-            for picture in form.picture.data:
-                filename = secure_filename(picture.filename)
-                filename = name_check(path, filename)
-                file_location = os.path.join(path, filename).replace("\\","/")
-                thumb = thumbnail_from_buffer(picture, (400, 400), filename, path)
-                pictures.append(Picture(path=file_location,
-                                        name=filename, thumb=thumb))
-                
+        pictures = Picture.savePictures(form)
         review = Review.create(user_id=current_user.id, 
                                provider_id=form.id.data, 
                                category_id=form.category.data,
                                rating=form.rating.data,
                                cost=form.cost.data,
+                               price_paid=form.price_paid.data,
                                description=form.description.data,
                                service_date=form.service_date.data,
                                comments=form.comments.data,
@@ -210,6 +195,63 @@ def review():
         disableForm(form)
         flash("Form disabled. Please verify email to unlock.")
     return render_template("review.html", title="Review", form=form)
+
+@bp.route('/provider/review/edit/<id>', methods=["GET", "POST"])
+@login_required
+@email_verified
+def reviewEdit(id):
+    #if get request, populate via review id
+    review = Review.query.get(id)
+    # provider = Provider.query.get(rev.provider_id)
+    if request.method == 'GET':
+        session['referrer'] = request.referrer
+        form = ReviewEditForm(
+            id = review.id,
+            name = review.provider.name,
+            category_id = review.category_id,
+            rating= review.rating,
+            cost = review.cost,
+            price_paid=review.price_paid,
+            description=review.description,
+            service_date=review.service_date,
+            comments=review.comments
+        )
+        form.populate_choices(review)
+        return render_template("review_edit.html", title="Review - Edit",
+                               form=form, review=review)
+    else:
+        form = ReviewEditForm()
+        form.populate_choices(review)
+        if form.validate_on_submit():
+            if form.deletePictures.data is not None:
+                Picture.deletePictures(form)
+            # pictures = Picture.savePictures(form, review.pictures)
+            review.update(
+                category_id=form.category.data,
+                rating=form.rating.data,
+                cost=form.cost.data,
+                price_paid=form.price_paid.data,
+                description=form.description.data,
+                service_date=form.service_date.data,
+                comments=form.comments.data,
+                pictures=Picture.savePictures(form, review.pictures)
+            )
+            flash("Review updated.")
+            try:
+                url = session['referrer']
+                session.pop('referrer')
+            except KeyError:
+                url = url_for('main.user', username=current_user.username)
+            finally:
+                return redirect(url)
+
+        flash("Please correct form errors.")
+        return render_template("review_edit.html", title="Review - Edit",
+                               form=form),422
+
+    #if post request, populate choices and validate
+
+        # update review
 
 @bp.route('/provider/search', methods=['GET'])
 @login_required

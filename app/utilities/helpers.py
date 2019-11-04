@@ -1,21 +1,22 @@
 import functools
+
 from io import BytesIO
 import os
 from pathlib import Path
 import requests
 from urllib.parse import urlparse
 
-from flask import flash, Markup, session, url_for
+from flask import flash, Markup, session, url_for, current_app
 from flask_login import current_user
-from wtforms.widgets.core import RadioInput
 from PIL import Image
+from wtforms.widgets.core import RadioInput
 
 from app.utilities.forms import RadioInputDisabled
 
 
 
 def thumbnail_from_buffer(buffer, size, name, path):
-    """save thumbnail from submitted picture.
+    """Save thumbnail from submitted picture.
     buffer: incoming picture data
     size: tuple, size in pixels to convert picture to.
     name: original file name
@@ -27,10 +28,8 @@ def thumbnail_from_buffer(buffer, size, name, path):
     bio = BytesIO(bufferdata)
     thumb = Image.open(bio)
     thumb.thumbnail(size)
-    f = name.rsplit(".", 2)
-    thumb_name = f"{f[0]}_thumbnail.{f[1]}"
-    thumb.save(os.path.join(path, thumb_name))
-    return (thumb_name)
+    thumb.save(os.path.join(path, name))
+    return None
 
 
 def name_check(path, filename, counter=0):
@@ -133,19 +132,6 @@ def listToString(items):
         return f'{", ".join(items[:-1])} & {items[-1]}'
     
 
-def noneIfEmptyString(func):
-    @functools.wraps(func)
-    def wrapped_function(*args, **kwargs):
-        """Decorator to convert empty string to None """
-        for arg in args:
-            if arg == '':
-                arg = None
-        for k,v in kwargs.items():
-            if v == '':
-                kwargs[k] = None
-        return func(*args, **kwargs)
-    return wrapped_function
-
 def url_parse(url):
     u = urlparse(url)
     if u.scheme != "" and u.netloc != "":
@@ -173,5 +159,4 @@ def url_check(url):
     except requests.RequestException as e:
         print(e)
         return False
-
 

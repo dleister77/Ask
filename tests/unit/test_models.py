@@ -1,12 +1,19 @@
+from collections import namedtuple
 from decimal import Decimal
+import os
+from pathlib import Path
 import pytest
+from shutil import rmtree
 
+from flask import current_app
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
+from werkzeug.datastructures import FileStorage, MultiDict
 
 from app import db, mail
+from app.main.forms import ReviewForm
 from app.models import User, Address, Group, Category, Review, Provider,\
-                       FriendRequest, GroupRequest, Sector
+                       FriendRequest, GroupRequest, Sector, Picture
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
 from tests.conftest import assertEqualsTolerance
@@ -777,3 +784,38 @@ class TestGroup(object):
         assert groups[0].description == testGroup.description
         assert groups[0].id == testGroup.id
         assert groups[0].membership == True
+
+#mock test objects to replace wtf forms
+form = namedtuple('form', ['picture', 'deletePictures'])
+picture = namedtuple('picture', 'data')
+deletePictures = namedtuple('deletePictures', 'data')
+
+@pytest.mark.usefixtures("dbSession")
+class TestPicture(object):
+    def test_attributes(self, testReview):
+        name = 'test.jpg'
+        path = os.path.join(current_app.config['MEDIA_FOLDER'], name)
+        id = len(Review.query.all())
+        testReview.update(pictures=[Picture(path=path, name=name)])
+        assert testReview.pictures[0].path == path
+        assert testReview.pictures[0].name == name
+        
+    def test_savePictures(self, activeClient):
+        filename = "test.jpg"
+        path = os.path.join(current_app.config['MEDIA_FOLDER'], 'source', filename)
+        f = open(path, 'rb')
+        fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
+        testform = form(picture([fs]), None)
+        try:
+            Picture.savePictures(testform)
+            path = Path(os.path.join(current_app.config['MEDIA_FOLDER'], str(current_user.id), filename))
+            assert path.is_file()
+        finally:
+            path = os.path.join(current_app.config['MEDIA_FOLDER'], str(current_user.id))
+            rmtree(path)
+    
+    def test_deletePictures(self, activeClient, testPicture):
+        testform = form(None, deletePictures(['1']))
+        assert testPicture.is_file()       
+        Picture.deletePictures(testform)
+        assert not testPicture.is_file()

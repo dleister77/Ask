@@ -1,12 +1,14 @@
+
 from flask import request
 from flask_login import current_user
+import os
 import pytest
-from werkzeug.datastructures import ImmutableMultiDict
+from werkzeug.datastructures import ImmutableMultiDict, FileStorage, Headers
 from wtforms import ValidationError
 
 from app import create_app
 from app.models import Sector, Category, Provider, FriendRequest, GroupRequest,\
-	                   Group, State
+	                   Group, State, Review
 from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
 									GroupSearchForm, GroupEditForm,
 									FriendDeleteForm, FriendApproveForm,
@@ -18,7 +20,7 @@ from config import TestConfig
 app = create_app(TestConfig)
 with app.app_context():
 	from app.main.forms import ProviderAddForm, ProviderSearchForm, ReviewForm,\
-		                       ProviderFilterForm, ProviderAddress
+		                       ProviderFilterForm, ProviderAddress, ReviewEditForm
 	from app.auth.forms import UserUpdateForm, PasswordChangeForm,\
 							   RegistrationForm, LoginForm, AddressField,\
 							   PasswordResetForm, PasswordResetRequestForm
@@ -543,6 +545,12 @@ class TestReview(FormTest):
 		catList = [(c.id, c.name) for c in categories]
 		self.form.category.choices = catList
 
+	def add_picture(self, formDict, filename, content_type, test_app):
+		path = os.path.join(test_app.config['MEDIA_FOLDER'], 'source', filename)
+		f = open(path, 'rb')
+		fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
+		formDict['picture'] = [fs]
+
 	def test_new(self, baseReview):
 		self.new(baseReview)
 
@@ -551,7 +559,8 @@ class TestReview(FormTest):
 		('id', "Business id is required. Do not remove from form submission."),
 		('category', 'Category is required.'),
 		('rating', 'Rating is required.'),
-		('cost', 'Cost is required.')])
+		('cost', 'Cost is required.'),
+		('certify', 'Review unable to be submitted unless reviewer confirms agreement.')])
 	def test_missingRequired(self, baseReview, key, errorMsg):
 		self.missingRequired(baseReview, key, errorMsg)
 	
@@ -578,6 +587,71 @@ class TestReview(FormTest):
 		self.make_form(baseReview)
 		errorMsg = "Not a valid choice"
 		self.assertNot('cost', errorMsg)
+
+	def test_withPicture(self, baseReview, test_app):
+		file = "test.jpg"
+		self.add_picture(baseReview, file, 'image/jpeg', test_app)
+		self.make_form(baseReview)
+		assert self.form.validate()
+
+	def test_invalidPicture(self, baseReview, test_app):
+		file = "Week1.pdf"
+		self.add_picture(baseReview, file, 'application/pdf', test_app)
+		self.make_form(baseReview)
+		msg = "Please choose an image file."
+		self.assertNot('picture', msg)
+	
+class TestReviewEdit(FormTest):
+
+	formType = ReviewEditForm
+
+	#test whether form populates correctly for get request
+	def test_newGet(self, testReview):
+		self.form = ReviewEditForm(
+			id=testReview.id,
+            name = testReview.provider.name,
+            category = testReview.category_id,
+            rating= testReview.rating,
+            cost = testReview.cost,
+            price_paid=testReview.price_paid,
+            description=testReview.description,
+            service_date=testReview.service_date,
+            comments=testReview.comments,
+			certify=True	
+		)
+		self.form.populate_choices(testReview)
+		assert self.form.id.data == testReview.id
+		assert self.form.id.render_kw == {'readonly': True}
+		assert self.form.name.data == testReview.provider.name
+		assert self.form.name.render_kw == {'readonly': True}
+		assert self.form.deletePictures.choices == [(1, 'test1.jpg')]
+		assert self.form.category.choices == [(1, "Electrician"), (2, "Plumber")]
+
+	def test_newPost(self, baseReviewEdit):
+		self.make_form(baseReviewEdit)
+		review = Review.query.get(self.form.id.data)
+		self.form.populate_choices(review)
+		assert self.form.validate()
+	
+	def test_postInvalidDelete(self, baseReviewEdit):
+		baseReviewEdit['deletePictures'] = ['10']
+		self.make_form(baseReviewEdit)
+		msg = 'Invalid picture submitted for deletion.'
+		self.assertNot('deletePictures', msg)
+
+	def test_invalidReviewID(self, baseReviewEdit):
+		baseReviewEdit['id'] = len(Review.query.all()) + 1
+		self.make_form(baseReviewEdit)
+		msg = 'Submitted review id is not valid.'
+		self.assertNot('id', msg)
+
+	def test_invalidCategory(self, baseReviewEdit):
+		baseReviewEdit['category'] = [len(Category.query.all()) + 1]
+		self.make_form(baseReviewEdit)
+		msg = 'Category not valid for business being reviewed.'
+		self.assertNot('category', msg)	
+
+
 
 class TestProviderAdd(FormTest):
 	"""Test Provider add form."""

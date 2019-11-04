@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 from shutil import rmtree
 
-from flask import url_for, json
+from flask import url_for, json, current_app
 from flask_login import current_user
 
 from app.models import Category, Provider, Review, User, State
@@ -104,7 +104,7 @@ class TestReview(FunctionalTest):
                     path = os.path.join(test_app.config['MEDIA_FOLDER'], 'source', file)
                     f = open(path, 'rb')
                     self.form['picture'].append((f, file))
-                return client.post(url_for(self.routeFunction, _external=False), data=self.form,
+                return client.post(url_for(self.routeFunction, **kwargs, _external=False), data=self.form,
                 follow_redirects=True, buffered=True, content_type='multipart/form-data')
             finally:
                 for file in self.form['picture']:
@@ -146,8 +146,8 @@ class TestReview(FunctionalTest):
         try:
             assert b'review added' in response.data
             assert response.status_code == 200
-            path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'test_thumbnail.jpg'))
-            path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc_thumbnail.jpg'))
+            path = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'test.jpg'))
+            path2 = Path(os.path.join(test_app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc.jpg'))
             assert path.is_file()
             assert path2.is_file()
             review = Review.query.filter_by(provider_id=baseReview['id']).all()
@@ -164,7 +164,6 @@ class TestReview(FunctionalTest):
         assert testUser.email_verified is True
         response = self.getRequest(activeClient, name=testProvider1.name,
                                    id=testProvider1.id)
-        print(response.data.decode())
         assert response.status_code == 200
         newPageHeader = b'<h3>Add Review</h3>'
         assert newPageHeader in response.data
@@ -180,7 +179,7 @@ class TestReview(FunctionalTest):
         assert newPageHeader in response.data
         assert b"Form disabled. Please verify email to unlock." in response.data
         var = 'disabled'
-        assert response.data.decode().count(var) == 19
+        assert response.data.decode().count(var) == 21
         var2 = 'readonly'
         assert response.data.decode().count(var2) == 2
     
@@ -191,6 +190,67 @@ class TestReview(FunctionalTest):
         assert flash in response.data
         newPageHeader = b'<h3>Search for Business</h3>'
         assert newPageHeader in response.data
+
+class TestReviewEdit(FunctionalTest):
+
+    routeFunction = 'main.reviewEdit'
+
+    def postRequest(self, client, test_app=None, **kwargs):
+        """Add review and return response."""
+        #only do below if files exists
+        if 'picture' in self.form and self.form['picture'] != "":
+        # list of files to upload
+            files = self.form['picture'][:]
+            self.form['picture'] = []
+            try:
+                for file in files:
+                    path = os.path.join(test_app.config['MEDIA_FOLDER'], 'source', file)
+                    f = open(path, 'rb')
+                    self.form['picture'].append((f, file))
+                return client.post(url_for(self.routeFunction, **kwargs, _external=False), data=self.form,
+                follow_redirects=True, buffered=True, 
+                content_type='multipart/form-data')
+            finally:
+                for file in self.form['picture']:
+                    file[0].close()                
+        else:
+            return super().postRequest(client, **kwargs)    
+
+    def test_get(self, activeClient, testReview, testPicture):
+        current_user.email_verified = True
+        referrer = url_for('main.user', username=current_user.username)
+        headers = dict(referer=referrer)
+        response = self.getRequest(activeClient, id=testReview.id,headers=headers)
+        assert response.status_code == 200
+        var = 'readonly'
+        assert response.data.decode().count(var) == 2
+        assert testReview.provider.name.encode() in response.data
+        url = url_for('main.download_file', id=current_user.id, filename=testReview.pictures[0].name)
+        img = f'<img src="{url}" alt="" class="thumbnail">'  
+        assert img.encode() in response.data
+    
+    def test_PostValid(self, activeClient, baseReviewEdit, test_app, testPicture):
+        current_user.email_verified = True
+        assert testPicture.is_file()
+        baseReviewEdit['picture'] = ['nyc.jpg']
+        baseReviewEdit['deletePictures'] = ['1']
+        self.form = baseReviewEdit
+        response = self.postRequest(activeClient, test_app=test_app, id=self.form['id'])
+        assert response.status_code == 200
+        newPicture = Path(os.path.join(current_app.config['MEDIA_FOLDER'], str(current_user.id), baseReviewEdit['picture'][0][1]))
+        assert not testPicture.is_file()
+        assert newPicture.is_file()
+
+    def test_postInvalid(self, activeClient, baseReviewEdit, test_app, testPicture):
+        current_user.email_verified = True
+        baseReviewEdit.pop('rating')
+        self.form = baseReviewEdit
+        response = self.postRequest(activeClient, test_app=test_app, id=self.form.get('id'))
+        assert response.status_code == 422
+        flash = 'Please correct form errors.'
+        assert flash.encode() in response.data
+        error = "Rating is required."
+        assert error.encode() in response.data
 
 class TestIndex(FunctionalTest):
 
@@ -352,10 +412,11 @@ class TestProviderProfile(FunctionalTest):
         response = self.getRequest(activeClient, **test_case)
         assert b'Reviewer' in response.data
         assert b'Category: Electrician, Plumber' in response.data
+        print(response.data.decode())
         assert b'QHIV HOA' in response.data
         assert b'Relationship: Self' in response.data
         assert b'<li class="page-item"><a class="page-link" href="/provider/Douthit%20Electrical/1?page=2">2</a></li>' in response.data
-        
+
     def test_page2(self, activeClient, testProvider1):
         test_case = {"name": testProvider1.name, "id": testProvider1.id, "page": 2}
         response = self.getRequest(activeClient, **test_case)
