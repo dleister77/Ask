@@ -473,7 +473,7 @@
             <div class="row">
                 <div class="col-12 px-3">
                     {% for image in review.pictures %}
-                    <img src="{{url_for('main.download_file', id=review.user.id, filename=image.thumb)}}" alt="" class="thumbnail">
+                    <img src="{{url_for('main.download_file', id=review.user.id, filename=image.name)}}" alt="" class="thumbnail">
                     {%endfor %}
                 </div>
             </div>
