@@ -71,8 +71,7 @@ class Pagination:
         Returns:
             Dict of urls
         """
-
-        pag_args = dict(pag_args)
+        pag_args = {} if pag_args == None else dict(pag_args)
         for k in ['submit', 'page']:
             if k in pag_args:
                 del pag_args[k]

@@ -6,9 +6,11 @@
 <div class="card" id="user_profile">
     <div class="card-header p-2">
         <h4 class="text-center">Profile Information
+        <small><a href="" data-toggle="modal" data-target="#modal_message">(message)</a></small>
         {% if user == current_user %}    
         <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
         {% endif %}
+
         </h4>
     </div>
     <div class="card-body">
@@ -90,6 +92,22 @@
         {{modal_render(form, modal_title, action="/userupdate")}}
     {% endif %}
 
+
+    {% if message %}
+        {{modal_render(message, "Message", action="#", modalID = "modal_message") }}
+        {% set msg_url = url_for('main.send_message') %} 
+        <script>
+        let submit_msg = document.getElementById("submit_msg")
+        submit_msg.addEventListener("click", function(event){
+            event.preventDefault();
+            ajaxModalPost("{{url_for('main.send_message')}}",
+                        "modal_message",
+                        "Message sent",
+                        "Message send failed.");
+        })
+        </script>
+        {% endif %}
+
     {% if pword_open %}
         <script>$(window).on('load', function(){
             $("#modal_password").modal("show");
@@ -101,3 +119,8 @@
         {{modal_render(pform, modal_title_2, action="/passwordupdate", modalID="modal_password")}}
     {% endif %}
 {% endblock%}
+
+{% block jsScripts %}
+
+
+{% endblock %}

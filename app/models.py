@@ -1472,4 +1472,34 @@ class Group(Model):
                                      .order_by(*sort_arg)
                                      .limit(limit)
                                      .all())      
-        return groups        
+        return groups
+
+# many to many table linking pictures with users with friends
+user_message = db.Table('user_message', db.Model.metadata,
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('message_id', db.Integer, db.ForeignKey('message.id')))
+
+class Message(Model):
+    """User to user messages"""
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer,
+                                db.ForeignKey("conversation.id",
+                                              ondelete="CASCADE"),
+                                nullable=False)
+    from_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
+    msg_type = db.Column(db.String(25), index=True)
+    read = db.Column(db.Boolean, default=False, index=True)
+    subject = db.Column(db.String(50), index=True)
+    body = db.Column(db.String(250))
+
+    recipients = db.relationship("User", secondary=user_message,
+                                 backref="received_messages")
+    sender = db.relationship("User", backref="sent_messages", uselist=False)
+    conversation = db.relationship("Conversation", backref="messages")
+
+
+class Conversation(Model):
+    """Converstation that captures multiple messages"""
+    id = db.Column(db.Integer, primary_key=True)

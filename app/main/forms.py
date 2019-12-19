@@ -10,12 +10,13 @@ from wtforms import (StringField, BooleanField, SelectField,
      MultipleFileField, HiddenField, FloatField, IntegerField)
 from wtforms.validators import (DataRequired, InputRequired, Email, \
                                 ValidationError, Optional, NumberRange,\
-                                Regexp, InputRequired, StopValidation)
+                                Regexp, InputRequired, StopValidation, Length)
 from wtforms.widgets import HiddenInput
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
-from app.models import Address, Category, Provider, Sector, State, Review, Picture
+from app.models import Address, Category, Provider, Sector, State, Review,\
+                       Picture, User, Conversation
 from app.utilities.forms import MultiCheckboxField
 from app.utilities.helpers import url_check, url_parse
 
@@ -472,3 +473,35 @@ class ProviderFilterForm(FlaskForm):
     friends_filter = BooleanField("Friends")
     groups_filter = BooleanField("Groups")
     submit = SubmitField("Update")
+
+
+class UserMessageForm(FlaskForm):    
+    """Form for users to send each other messages."""
+    recipient_id = IntegerField("to_id", id="msg_new_recipient_id",
+                   render_kw = {"readonly": True, "hidden": True},
+                   validators=[InputRequired("Recipient ID is required.")])
+    conversation_id = IntegerField("conversation_id", id="msg_new_conversation_id",
+                      render_kw = {"readonly": True, "hidden": True},
+                      )
+    recipient = StringField("To",
+                            id="msg_new_recipient", render_kw={"readonly": True},
+                             validators=[InputRequired("Recipient is required.")])
+    subject = StringField("Subject", id="msg_new_subject")
+    body = TextAreaField("Message Body", render_kw=dict(rows=6),
+                         id="msg_new_body",
+                          validators=[Length(min=0, max=500)])
+    submit = SubmitField("Send", id="submit_msg")
+
+    def validate_recipient_id(form, field):
+        recipient = User.query.filter_by(id=field.data).first()
+        if recipient is None:
+            raise ValidationError(f"User ({form.recipient.data}) does not exist.")
+
+    def validate_conversation_id(form, field):
+        if field.data is None:
+            pass
+        else:
+            conversation = Conversation.query.filter_by(id=field.data).first()
+            if conversation is None:
+                raise ValidationError("Message conversation does not exist. "
+                                       "Please refresh and try again")

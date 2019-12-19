@@ -35,7 +35,9 @@
                         <span class = "small italic"> optional</span>
                     {%endif %}
             {%else%}
+                {% if not field.render_kw or "hidden" not in field.render_kw %}
                 {{field.label(class_=labelClass)}}
+                {% endif %}
                 {% if field.flags.optional %}
                     <span class = "small italic"> optional</span>
                 {%endif %}

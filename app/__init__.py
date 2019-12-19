@@ -7,7 +7,7 @@ from flask import Flask
 import config
 from app.extensions import csrf, db, login, mail, migrate, sess
 from app.models import User, Address, State, Category, Review, Provider, Group
-
+from app.utilities.jinja import date_today, date_filter, time_filter
 
 def register_extensions(app):
     """Register extension with app."""
@@ -47,6 +47,12 @@ def register_shell(app):
 
     app.shell_context_processor(shell_context)
 
+def register_context_processors(app):
+    app.context_processor(date_today)
+
+def register_jinja_filters(app):
+    app.jinja_env.filters['date'] = date_filter
+    app.jinja_env.filters['time'] = time_filter
 
 def configure_logging(app):
     """Configure logging for app."""
@@ -88,6 +94,8 @@ def create_app(configClass=None):
         app.config.from_object(configClass)
     register_extensions(app)
     register_blueprints(app)
+    register_context_processors(app)
+    register_jinja_filters(app)
     configure_logging(app)
     register_shell(app)
     return app

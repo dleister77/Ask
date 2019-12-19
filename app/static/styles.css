@@ -1,4 +1,8 @@
 
+.clickable-row {
+  cursor: pointer;
+}
+
 .container-fluid {
   padding: 0;
 }
@@ -68,6 +72,21 @@
 }
  .inline{
   display:inline;
+}
+.inbox_body{
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.message_unread{
+  font-weight: bold;
+}
+.msg_read{
+margin-bottom: 3px;
+}
+#msg_read_body{
+  white-space: pre-wrap;
 }
 .nobullets{
   list-style:none

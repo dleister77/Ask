@@ -6,6 +6,12 @@ function is_equal(x, y){
     }
 }
 
+
+function toggle_visibility(id_to_hide, id_to_show){
+    document.getElementById(id_to_hide).hidden = true;
+    document.getElementById(id_to_show).hidden = false;    
+}
+
 function addcsrf(){
     var csrf_token = document.getElementById("csrf_token").value;
     $.ajaxSetup({
@@ -16,11 +22,9 @@ function addcsrf(){
         }
     });
 }
-
-function ajaxModalPost(urltarget, success_message, failure_message){
+function ajaxSend(urltarget, formID){
     addcsrf();
-    data=$(".modalinput").serialize();
-    console.log("logged data: ", data)
+    data=$(`#${formID}`).serialize();
     var parameters = {
         url: urltarget,
         type: "POST",
@@ -29,13 +33,43 @@ function ajaxModalPost(urltarget, success_message, failure_message){
     };
     $.ajax(parameters)
     .done(function(data){
-        if (data['message'] == "success"){
-            $("#modal_id").modal("hide");
-            alert(success_message)
-        } else if (data['message'] == "failure"){
+        if (data['status'] == "success"){
+            toggle_visibility('message_send', 'message_read')
+            alert("Message sent.");
+        } else if (data['status'] == "failure"){
             errorList = []
-            Object.keys(data['errors']).forEach(function(key) {
-                errorList.push(data['errors'][key])
+            Object.keys(data['errorMsg']).forEach(function(key) {
+                errorList.push(data['errorMsg'][key])
+            });
+            errors = errorList.join('\n')
+            alert("Message failed to send.  Please correct errors:" + "\n" + errors)
+        }
+
+    })
+    .fail(function(data){
+        console.log("failed")
+        alert("Message failed to send.");
+    });
+}
+
+function ajaxModalPost(urltarget, modalID, success_message, failure_message){
+    addcsrf();
+    data=$(".modalinput").serialize();
+    var parameters = {
+        url: urltarget,
+        type: "POST",
+        data: data,
+        dataType: "json"
+    };
+    $.ajax(parameters)
+    .done(function(data){
+        if (data['status'] == "success"){
+            $("#" + modalID).modal("hide");
+            alert(success_message);
+        } else if (data['status'] == "failure"){
+            errorList = []
+            Object.keys(data['errorMsg']).forEach(function(key) {
+                errorList.push(data['errorMsg'][key])
             });
             errors = errorList.join('\n')
             alert(failure_message + "\n" + errors)
