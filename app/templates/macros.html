@@ -36,11 +36,11 @@
                     {%endif %}
             {%else%}
                 {% if not field.render_kw or "hidden" not in field.render_kw %}
-                {{field.label(class_=labelClass)}}
+                    {{ field.label(class_=labelClass) }}
+                    {% if field.flags.optional %}
+                        <span class = "small italic"> optional</span>
+                    {%endif %}
                 {% endif %}
-                {% if field.flags.optional %}
-                    <span class = "small italic"> optional</span>
-                {%endif %}
                 {{field(class_=fieldClass + " " + classAdjust)}}
             {% endif %}
             {{render_errors(field)}}

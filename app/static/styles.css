@@ -26,6 +26,10 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+.action_move{
+  display: none;
+}
 .biz_rating_category{
   font-style:italic;
 }
@@ -74,7 +78,7 @@
   display:inline;
 }
 .inbox_body{
-  display: inline-block;
+  /* display: inline-block; */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

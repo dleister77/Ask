@@ -7,9 +7,9 @@ function is_equal(x, y){
 }
 
 
-function toggle_visibility(id_to_hide, id_to_show){
+function toggle_visibility(id_to_show, id_to_hide){
     document.getElementById(id_to_hide).hidden = true;
-    document.getElementById(id_to_show).hidden = false;    
+    document.getElementById(id_to_show).hidden = false;   
 }
 
 function addcsrf(){
@@ -22,6 +22,30 @@ function addcsrf(){
         }
     });
 }
+
+function post(path, params, method='post'){
+    const form = document.createElement('form');
+    form.method = method;
+    form.action = path;
+    
+    const csrf_token = document.getElementById("csrf_token").value;
+    params['csrf_token'] = csrf_token;
+
+    for (const key in params){
+        if (params.hasOwnProperty(key)){
+            const hidden_field = document.createElement('input');
+            hidden_field.type = "hidden";
+            hidden_field.name = key;
+            hidden_field.value = params[key];
+
+            form.append(hidden_field);
+        }
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
 function ajaxSend(urltarget, formID){
     addcsrf();
     data=$(`#${formID}`).serialize();
@@ -34,7 +58,6 @@ function ajaxSend(urltarget, formID){
     $.ajax(parameters)
     .done(function(data){
         if (data['status'] == "success"){
-            toggle_visibility('message_send', 'message_read')
             alert("Message sent.");
         } else if (data['status'] == "failure"){
             errorList = []
@@ -190,27 +213,28 @@ function auto_complete(selector_id, url,field_name, filter_ids){
     });    
 }
 //like above, but saves id associated with selected field as value
-function autocomplete_by_id(selector_id, url, label_fields, value_field, filter_ids, submit_id, validation_message){
-    var array = [];
-    var array_full = [];
-    var array_values = [];
-    var array_detailed = [];
+function autocomplete_by_id(selector_id, url, label_fields, value_field, value_field_id, filter_ids, submit_id, validation_message){
+    let array = [];
+    let array_full = [];
+    let array_labels = [];
+    let array_values = [];
+    let array_detailed = [];
     $(selector_id).autocomplete({
         autoFocus: true,
         minLength: 1,
         delay: 200,
         source: function(request, response){
             search_criteria = {name: request.term};
-            for (i=0; i < filter_ids.length; i++){
-                key_name = filter_ids[i];
+            for (let id of filter_ids){
+                key_name = id;
                 value = document.getElementById(key_name).value;
                 search_criteria[key_name] = value;
             }
             $.getJSON(url, search_criteria, function(data){
                     array = [];
-                    var array_labels = [];
-                    var array_values = [];
-                    var array_detailed = [];
+                    array_labels = [];
+                    array_values = [];
+                    array_detailed = [];
                     $.each(data, function(key, value){
                         var label = []
                         for (i=0; i < label_fields.length; i++){
@@ -231,6 +255,7 @@ function autocomplete_by_id(selector_id, url, label_fields, value_field, filter_
         },
         select: function(event, ui){
             var i = array_labels.indexOf(ui.item.label);
+            let val2save = array_detailed[i].key.id;
             $(value_field_id).val(array_detailed[i].key.id);
         }     
     });
@@ -391,15 +416,15 @@ function initReview (jquery) {
         });
     });
     //set up provider name autocomplete and validation
-    var url = "/provider/list/autocomplete";
-    var selector_id = "#review_name";
-    var label_fields = ["name", "line1", "city", "state"];
-    var value_field = "name";
-    var filter_ids = ['category', 'state', 'city'];
-    var submit_id = "review_submit";
-    var validation_message = "Please choose a name from the list.";
-    autocomplete_by_id(selector_id, url, label_fields, value_field, filter_ids,
-                       submit_id, validation_message);
+    // var url = "/provider/list/autocomplete";
+    // var selector_id = "#review_name";
+    // var label_fields = ["name", "line1", "city", "state"];
+    // var value_field = "name";
+    // var filter_ids = ['category', 'state', 'city'];
+    // var submit_id = "review_submit";
+    // var validation_message = "Please choose a name from the list.";
+    // autocomplete_by_id(selector_id, url, label_fields, value_field, filter_ids,
+    //                    submit_id, validation_message);
 
 }
 

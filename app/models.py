@@ -11,6 +11,7 @@ from flask_login import UserMixin, current_user
 import jwt
 from sqlalchemy import CheckConstraint, func as saFunc, or_, and_, select
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, validates
 from sqlalchemy.sql import exists, func
@@ -399,7 +400,25 @@ class User(UserMixin, Model):
             self._email = email
         else:
             pass
+
+    def unread_messages(self):
+        msgs = db.session.query(RecipientData)\
+                         .filter_by(user_id=self.id, status='inbox',
+                                 read=False)\
+                          .all()
+        return msgs
     
+    def get_messages(self, folder):
+        if folder != "sent":
+            msgs = db.session.query(RecipientData)\
+                                .filter_by(user_id=self.id, status=folder)\
+                                .all()
+        else:
+            msgs = db.session.query(Message)\
+                             .filter_by(sender_id=self.id).all()
+        return msgs
+
+
     @validates('address', include_removes=True)
     def validate_address(self, key, address, is_remove):
         if is_remove:
@@ -1474,11 +1493,6 @@ class Group(Model):
                                      .all())      
         return groups
 
-# many to many table linking pictures with users with friends
-user_message = db.Table('user_message', db.Model.metadata,
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('message_id', db.Integer, db.ForeignKey('message.id')))
-
 class Message(Model):
     """User to user messages"""
 
@@ -1487,17 +1501,47 @@ class Message(Model):
                                 db.ForeignKey("conversation.id",
                                               ondelete="CASCADE"),
                                 nullable=False)
-    from_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
     msg_type = db.Column(db.String(25), index=True)
-    read = db.Column(db.Boolean, default=False, index=True)
     subject = db.Column(db.String(50), index=True)
-    body = db.Column(db.String(250))
+    body = db.Column(db.String(1000))
+    status = db.Column(db.String(20), default="sent", index=True)
+    read = db.Column(db.Boolean, default=True, index=True)
 
-    recipients = db.relationship("User", secondary=user_message,
-                                 backref="received_messages")
     sender = db.relationship("User", backref="sent_messages", uselist=False)
     conversation = db.relationship("Conversation", backref="messages")
+
+class RecipientData(Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    message_id = db.Column(db.Integer, db.ForeignKey("message.id",
+                           ondelete="CASCADE"),nullable=False)
+    read = db.Column(db.Boolean, default=False, index=True)
+    status = db.Column(db.String(20), default="inbox", index=True)
+
+    message = db.relationship("Message", backref="recipient_data")
+    user = db.relationship("User", backref="received_messages")
+
+    @hybrid_property
+    def timestamp(self):
+        return self.message.timestamp
+
+    @hybrid_property
+    def body(self):
+        return self.message.body
+    
+    @hybrid_property
+    def subject(self):
+        return self.message.subject
+
+    @hybrid_property
+    def sender(self):
+        return self.message.sender
+    
+    @hybrid_property
+    def conversation_id(self):
+        return self.message.conversation_id
 
 
 class Conversation(Model):

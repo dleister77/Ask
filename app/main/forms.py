@@ -482,6 +482,7 @@ class UserMessageForm(FlaskForm):
                    validators=[InputRequired("Recipient ID is required.")])
     conversation_id = IntegerField("conversation_id", id="msg_new_conversation_id",
                       render_kw = {"readonly": True, "hidden": True},
+                      validators=[Optional(strip_whitespace=True)]
                       )
     recipient = StringField("To",
                             id="msg_new_recipient", render_kw={"readonly": True},
@@ -489,7 +490,7 @@ class UserMessageForm(FlaskForm):
     subject = StringField("Subject", id="msg_new_subject")
     body = TextAreaField("Message Body", render_kw=dict(rows=6),
                          id="msg_new_body",
-                          validators=[Length(min=0, max=500)])
+                          validators=[Length(min=0, max=1000)])
     submit = SubmitField("Send", id="submit_msg")
 
     def validate_recipient_id(form, field):

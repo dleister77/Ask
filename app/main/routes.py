@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 from urllib import parse
 
 from flask import flash, redirect, render_template, request, url_for, jsonify,\
@@ -14,7 +15,7 @@ from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            UserMessageForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
-                        User, Conversation, Message
+                        User, Conversation, Message, RecipientData
 from app.utilities.geo import AddressError, Location, sortByDistance
 from app.utilities.helpers import disableForm, email_verified
 from app.utilities.pagination import Pagination
@@ -366,7 +367,7 @@ def user(username):
                                 modal_title=modal_title, pform=pform, 
                                 modal_title_2=modal_title_2, pag_urls=pag_urls)
     
-    message = UserMessageForm(recipient = user.username)
+    message = UserMessageForm(recipient = user.full_name, recipient_id=user.id)
     return render_template("user.html", title="User Profile", user=user,
                             reviews=reviews, pag_urls=pag_urls,
                             summary=summary, message=message)
@@ -381,12 +382,12 @@ def send_message():
         if form.conversation_id.data == "" or form.conversation_id.data is None:
             Conversation.create(
                 messages=[
-                    Message.create(
+                    Message(
                         sender=current_user,
-                        recipients=[User.query.filter_by(id=form.recipient_id.data).first()],
                         subject=form.subject.data,
                         body=form.body.data,
-                        msg_type="user2user"
+                        msg_type="user2user",
+                        recipient_data=[RecipientData(user=User.query.filter_by(id=form.recipient_id.data).first())]
                     )
                 ]
             )
@@ -394,10 +395,10 @@ def send_message():
             Message.create(
                 conversation_id = form.conversation_id.data,
                 sender=current_user,
-                recipients=[User.query.filter_by(id=form.recipient_id.data).first()],
                 subject=form.subject.data,
                 body=form.body.data,
-                msg_type="user2user"
+                msg_type="user2user",
+                recipient_data=[RecipientData(user=User.query.filter_by(id=form.recipient_id.data).first())]
             )            
         return jsonify(dict(status="success"))
     return jsonify(
@@ -407,22 +408,23 @@ def send_message():
         )
     )
 
-@bp.route('/message/inbox', methods=['GET'])
+@bp.route('/message/<folder>', methods=['GET'])
 @login_required
-def view_messages():
-    messages = current_user.received_messages
+def view_messages(folder):
+    messages = current_user.get_messages(folder)
     page = request.args.get('page', 1, int)
     pagination = Pagination(messages, page, current_app.config.get('PER_PAGE'))
-    pag_urls = pagination.get_urls('main.view_messages', None)
+    pag_urls = pagination.get_urls('main.view_messages', dict(folder=folder))
     messages = pagination.paginatedData
     new_message = UserMessageForm()
     messages_dict = [{"id": msg.id,
                       "conversation_id": msg.conversation_id,
                       "timestamp": msg.timestamp,
                       "read": msg.read,
-                      "sender_id": msg.from_id,
+                      "sender_id": msg.sender.id,
                       "sender_full_name": msg.sender.full_name,
                       "sender_user_name": msg.sender.username,
+                      "status": msg.status,
                       "subject": msg.subject,
                       "body": msg.body } for msg in messages]
     messages_json = json.dumps(messages_dict)
@@ -433,9 +435,54 @@ def view_messages():
 @login_required
 def message_update_read():
     """update message as having been read."""
-    msg = Message.query.get(request.form.get('id'))
-    if msg is not None:
+    msg = RecipientData.query.get(request.form.get('id'))
+    if msg is not None and msg.user_id == current_user.id:
         msg.update(read=True)
         return jsonify({"status": "success"})
     else:
         return jsonify({"status" : "failure"})
+
+@bp.route('/message/move', methods=['POST'])
+@login_required
+def move_message():
+    message_ids = request.form.get('message_id').split(',')
+    status = request.form.get('status')
+    flash_status = {'trash': 'deleted', 'archive': 'archived'}
+    if status != 'trash' and status != 'archive':
+        flash("Invalid request.  Please try again.")
+    else:
+        moved = []
+        for id in message_ids:
+            msg = RecipientData.query.get(id)
+            if msg is not None and msg.user_id == current_user.id:
+                msg.update(status=status)
+                moved.append(True)
+        if len(moved) == 1:
+            flash(f"Message {flash_status[status]}.")
+        elif len(moved) > 1:
+            flash(f"Messages {flash_status[status]}.")
+        else:
+            flash("Unable to move message(s). Please try again.")
+    return redirect(url_for('main.view_messages', folder="inbox"))
+
+@bp.route('/message/friends', methods=['GET'])
+@login_required
+def get_friends():
+    """Searches db for groups to populate friend search autocomplete"""
+    name = parse.unquote_plus(request.args.get("name"))
+    #remove non alpha characters and spaces if present
+    a = re.compile('[^a-zA-Z]+')
+    name = f'%{a.sub("", name)}%'
+    users = db.session.query(User.id, User.first_name, User.last_name)\
+                      .filter(User.friends.contains(current_user))\
+                      .filter((User.first_name + User.last_name).ilike(name)
+                      |(User.last_name + User.first_name).ilike(name))\
+                      .order_by(User.last_name, User.first_name)\
+                      .limit(10)
+    users = users.all()
+    names = ([{"id": person.id, 
+            #   "first_name": person.first_name, 
+            #   "last_name": person.last_name,
+              "full_name": f"{person.first_name} {person.last_name}"}
+             for person in users])
+    return jsonify(names)

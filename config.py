@@ -55,7 +55,7 @@ class DevelopmentConfig(Config):
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_PROTECTION = "strong"
     REMEMBER_COOKIE_SECURE = True
-    PER_PAGE = 2
+    PER_PAGE = 5
 
 class TestConfig(Config):
     TESTING = True
