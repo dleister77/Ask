@@ -428,8 +428,10 @@ def view_messages(folder):
                       "subject": msg.subject,
                       "body": msg.body } for msg in messages]
     messages_json = json.dumps(messages_dict)
+    new_message_count = current_user.inbox_unread_count()
     return render_template("messages.html", title="messages", messages=messages,
-    pag_urls = pag_urls, new_message=new_message, messages_json=messages_json)
+    pag_urls = pag_urls, new_message=new_message, messages_json=messages_json,
+    new_message_count=new_message_count)
 
 @bp.route('/message/update/read', methods=["POST"])
 @login_required

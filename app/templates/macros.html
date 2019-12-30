@@ -485,12 +485,10 @@
 {% endmacro %}
 
 {% macro Navlink(link_endpoint, name) %}
-    {% if request.endpoint is none %}
+    {% if request.endpoint != link_endpoint %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
-    {% elif request.endpoint == link_endpoint %}
+    {% else %}
         <li class="active nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
-    {%  else %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for(link_endpoint, **kwargs) }}">{{name}}</a></li>
     {% endif %}
 {% endmacro %}  
 

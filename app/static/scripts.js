@@ -6,6 +6,52 @@ function is_equal(x, y){
     }
 }
 
+function Page(startingPage) {
+    this.active = startingPage,
+    this.previous_pages = [],
+    this.navigate_next = navigate_next,
+    this.navigate_back = navigate_back
+}
+
+function navigate_next(next_page_id){
+    toggle_visibility(next_page_id, this.active);
+    this.previous_pages.push(this.active);
+    this.active = next_page_id;
+    toggle_move_visibility();
+    toggle_new_message_visibility();
+}
+
+function navigate_back(previous_page_id){
+    toggle_visibility(previous_page_id, this.active);
+    this.active = previous_page_id;
+    if (page.active == 'inbox' && document.querySelectorAll('input.select:checked').length == 0){
+        messages.selected_ids = [];
+    }
+    toggle_move_visibility();
+    toggle_new_message_visibility();
+}
+
+function select_all_rows(select_all){
+    for (let row of messages.folder_rows){
+        row.querySelector(".select").checked = select_all.checked;
+    }
+}
+
+function toggle_move_visibility(){
+    let display_status = (messages.selected_ids.length > 0 && page.active != 'message_send') ? "block" : "none";
+    let links_to_hide = document.getElementsByClassName("action_move");
+    for (let link of links_to_hide){
+        link.style.display = display_status;
+    }
+}
+
+function toggle_new_message_visibility(){
+    let display_status = (page.active == 'inbox') ? "block" : "none"
+    let links_to_hide = document.getElementsByClassName("action_inbox");
+    for (let link of links_to_hide){
+        link.style.display = display_status;
+    }
+}
 
 function toggle_visibility(id_to_show, id_to_hide){
     document.getElementById(id_to_hide).hidden = true;

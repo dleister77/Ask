@@ -8,7 +8,7 @@
 {% block content_wide %}
 
 <nav class="navbar">
-    <ul class="nav">
+    <ul class="nav action_inbox">
         <li class="nav-item">
             <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Folders</a>
             <div class="dropdown-menu">
@@ -24,11 +24,11 @@
         <li class="nav-item">
             <button type="button" class="action_move btn btn-link nav-link" id="inbox_delete">Delete</button>
         </li>
-        <li>
+        <li class="nav-item">
             <button type="button" class="action_move btn btn-link nav-link" id="inbox_archive">Archive</button> 
         </li>
         <li class="nav-item">
-            <button type="button" class="btn btn-link nav-link" id="inbox_new">New Message</button> 
+            <button type="button" class="action_inbox btn btn-link nav-link" id="inbox_new">New Message</button> 
         </li>
     </ul>
 </nav>
@@ -69,35 +69,39 @@
     <nav class="navbar navbar-expand-lg">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-                <button type="button" class="back_navigate btn btn-link">back</button> 
+                <button type="button" class="back_navigate btn btn-link"
+                data-toggle="tooltip" data-placement="top" title="Navigate Back"><i class="fas fa-arrow-left fa-2x"></i></button> 
             </li>
         </ul>
         <ul class="nav justify-content-end">
             <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_prev">Previous</button>
+                <button type="button" class="btn btn-link nav-link" id="read_prev"
+                data-toggle="tooltip" data-placement="top" title="Previous Message"><i class="fas fa-arrow-left fa-lg"></i></button>
             </li>
             <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_next">Next</ 
+                <button type="button" class="btn btn-link nav-link" id="read_next"
+                data-toggle="tooltip" data-placement="top" title="Next Message"><i class="fas fa-arrow-right fa-lg"></i></button>
             </li>
             <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_reply">Reply</button>
+                <button type="button" class="btn btn-link nav-link" id="read_reply"
+                data-toggle="tooltip" data-placement="top" title="Reply"><i class="fas fa-reply fa-lg"></i></button>
             </li>
         </ul>
     </nav>
     <br>
-    <div class="row justify-content-between" id="msg_read_header">
+    <div class="row justify-content-between" id="read_header">
         <div class="col-8">
-            <p class="msg_read" id="msg_read_sender">From: </p>
-            <p class="msg_read" id="msg_read_subject">Subject: </p>
+            <p class="msg_read" id="read_sender">From: </p>
+            <p class="msg_read" id="read_subject">Subject: </p>
         </div>
-        <div class="col-3">
-            <p class="msg_read" id="msg_read_timestamp"></p>
+        <div class="col-4">
+            <p class="msg_read" id="read_timestamp"></p>
         </div>
     </div>
     <br>
     <div class="row">
         <div class="col-12">
-            <p class="msg_read" id="msg_read_body"></p>
+            <p class="msg_read" id="read_body"></p>
         </div>
     </div>
 
@@ -122,273 +126,100 @@
 
 
 {% block jsScripts %}
+<script type="text/javascript" src="{{url_for('static', filename='messages.js')}}"></script>
 <script>
 
-    let messages = {
-        list: {{ messages_json | safe }},
-        index: null,
-        active: null,
-        active_id: [],
-        folder_rows: [],
-        mark_as_read: mark_as_read,
-        format_read: format_read,
-        move: move_messages,
-        reset_active: reset_active_message,
-        next: read_next_message,
-        previous: read_previous_message,
-    }
+    let list = {{ messages_json | safe }}
+    let page = new Page('inbox');
+    let messages = new Messages(list);
+    messages.read_url = "{{url_for('main.message_update_read')}}";
+    messages.move_url = "{{ url_for('main.move_message') }}";
 
-    function mark_as_read(message_id=this.active.id){
-        let parameters = {
-            url: "{{url_for('main.message_update_read')}}",
-            type: "POST",
-            data: {id: message_id},
-            dataType: "json",
-            context: messages
-        };
-        addcsrf();
-        $.ajax(parameters).done(function(data){
-            if (data['status'] == "success"){
-                messages.list.find( ({id}) => id == this.active.id).read = true;
-                for (row of this.folder_rows) {
-                    if (row.getElementsByClassName("inbox_id")[0].innerHTML == message_id){
-                        for (let child of row.children){
-                            child.classList.remove("message_unread");
-                        }
-                        break;
-                    }
-                }
-            } else if (data['status'] == "failure") {
-                console.log("failed to update message as read");
-            }
-        });
-    }
-
-    function format_read(){
-        for (let row of this.folder_rows){
-            let row_id = row.getElementsByClassName("inbox_id")[0].innerHTML;
-            read = (this.list.find(({id}) => id == row_id)).read;
-            if (!read){
-                for (let child of row.children){
-                    child.classList.add("message_unread");
-                }
-            }
+    window.onload = function(){
+        messages.folder_rows = document.getElementsByClassName("clickable-row");
+        if (messages.list.length > 0){
+            messages.list.forEach(element => {
+                let d = new Date(element.timestamp);
+                element.timestamp = d.toLocaleString('en-us', {'dateStyle':"long", timeStyle: "long"});
+            });
         }
-    }
 
-    function move_messages(status){
-        let url =  "{{url_for('main.move_message')}}";
-        let form_data = {'message_id': this.active_id.toString(),
-                        'status': status};
-        post(url, form_data);
-    }
+        messages.format_read();
+        localize_inbox_datetimes(messages.folder_rows)
 
-    function reset_active_message(){
-        this.index = null;
-        this.active = null;
-        this.active_id = [];    
-    }
-
-    function read_previous_message(){
-        if (this.index > 0){
-            this.index -= 1;
-            this.active = this.list[this.index];
-            load_message_read(this.active);
-            this.mark_as_read();
-        }
-    }
-
-    function read_next_message(){
-        if (this.index < this.list.length){
-            this.index += 1;
-            this.active = this.list[this.index];
-            load_message_read(this.active);
-            this.mark_as_read();
-        }
-    }
-
-    let page = {
-        active: 'inbox',
-        previous_pages: [],
-        navigate_next: navigate_next,
-        navigate_back: navigate_back
-    }
-    
-    function navigate_next(next_page_id){
-        toggle_visibility(next_page_id, this.active);
-        this.previous_pages.push(this.active);
-        this.active = next_page_id;
-        toggle_move_visibility();
-    }
-
-    function navigate_back(previous_page_id){
-        toggle_visibility(previous_page_id, this.active);
-        this.active = previous_page_id;
-        if (page.active == 'inbox' && document.querySelectorAll('input.select:checked').length == 0){
-            messages.active_id = [];
-        }
-        toggle_move_visibility();
-    }
-
-    function select_all_rows(select_all){
         for (let row of messages.folder_rows){
-            row.querySelector(".select").checked = select_all.checked;
-        }
-    }
-
-    function toggle_move_visibility(){
-        let display_status = (messages.active_id.length > 0 && page.active != 'message_send') ? "block" : "none";
-        let links_to_hide = document.getElementsByClassName("action_move");
-        for (let link of links_to_hide){
-            link.style.display = display_status;
-        }
-    }
-
-    function load_message_read(message) {
-        document.getElementById("msg_read_sender").innerHTML = `From: ${message.sender_full_name}`;
-        document.getElementById("msg_read_timestamp").innerHTML = message.timestamp;
-        document.getElementById("msg_read_subject").innerHTML = `Subject: ${message.subject}`
-        document.getElementById("msg_read_body").innerHTML = message.body;
-    }
-
-
-    function localize_inbox_datetimes(inbox_rows){
-        let now = new Date()
-        for (let row of inbox_rows){
-            let element = row.getElementsByClassName("inbox_timestamp")[0]
-            let row_date = new Date(row.getElementsByClassName("inbox_timestamp")[0].innerHTML)
-            if (row_date.toDateString() == now.toDateString()){
-                element.innerHTML = row_date.toLocaleString('en-us', {timeStyle: "short"})
-            } else{
-                element.innerHTML = row_date.toLocaleString('en-us', {dateStyle: "medium"})
+            let clickable = row.getElementsByClassName("clickable");
+            for (let element of clickable){
+                element.addEventListener('click', function(event){
+                    messages.selected_ids = [row.getElementsByClassName("inbox_id")[0].innerHTML];
+                    messages.index = messages.list.findIndex(
+                    ({id}) => id == messages.selected_ids[0]
+                    );
+                    messages.active = messages.list[messages.index];
+                    load_message_read(messages.active);
+                    toggle_move_visibility();
+                    page.navigate_next('message_read');
+                    if (!messages.active.read){
+                        messages.mark_as_read();
+                    }
+                });
+            }
+            if (row != undefined){
+                row.getElementsByTagName('input')[0].addEventListener('change', function(event){
+                    update_active_ids(row);
+                    toggle_move_visibility();
+                });
             }
         }
-    }
 
-    function reply_to_message(event){
-        document.getElementById("msg_new_recipient_id").value = messages.active.sender_id;
-        document.getElementById("msg_new_conversation_id").value = messages.active.conversation_id
-        document.getElementById("msg_new_recipient").value = messages.active.sender_full_name;
-        if (messages.active.subject.startsWith("Re:")){
-            document.getElementById("msg_new_subject").value = messages.active.subject
-        } else {
-        document.getElementById("msg_new_subject").value = `Re: ${messages.active.subject}`
-        }
-        document.getElementById("msg_new_body").value = 
-                `\n\nOn ${messages.active.timestamp}, ${messages.active.sender_full_name} wrote:\n  ${messages.active.body}`;
-        page.navigate_next('message_send');
-    }
+        document.getElementById("read_reply").addEventListener('click', reply_to_message, false);
 
+        document.getElementById("read_prev").addEventListener('click', (event)=>messages.previous(),false);
 
-    function autocomplete_recipient_name(){
-            let url = '{{ url_for("main.get_friends") }}';
-            let selector_id = "#msg_new_recipient";
-            let label_fields = ['full_name'];
-            let value_field = "full_name";
-            let value_field_id = "#msg_new_recipient_id"
-            let filter_ids = [];
-            let submit_id = "submit_msg";
-            let validation_message = "Please choose a name from the list.";
-            autocomplete_by_id(selector_id, url, label_fields, value_field, 
-                            value_field_id, filter_ids, submit_id,
-                            validation_message);
-    }
+        document.getElementById("read_next").addEventListener('click', (event)=>messages.next(), false);
 
-    function update_active_ids(row){
-        let cell = row.getElementsByClassName("inbox_id")[0]
-        let id = cell.innerHTML;
-        if (row.getElementsByTagName('input')[0].checked){
-            messages.active_id.push(id);
-        } else if (messages.active_id.includes(id)){
-            messages.active_id = messages.active_id.filter( (element) => element != id);
-        }
-    }
-
-window.onload = function(){
-    messages.folder_rows = document.getElementsByClassName("clickable-row");
-    if (messages.list.length > 0){
-        messages.list.forEach(element => {
-            let d = new Date(element.timestamp);
-            element.timestamp = d.toLocaleString('en-us', {'dateStyle':"long", timeStyle: "long"});
+        document.getElementById("inbox_delete").addEventListener('click', function(event){
+            let status = 'trash';
+            messages.move(status);
         });
-    }
 
-    messages.format_read();
-    localize_inbox_datetimes(messages.folder_rows)
+        document.getElementById("inbox_archive").addEventListener('click', function(event){
+            let status = 'archive'
+            messages.move(status);
+        })
 
-    for (let row of messages.folder_rows){
-        let clickable = row.getElementsByClassName("clickable");
-        for (let element of clickable){
-            element.addEventListener('click', function(event){
-                messages.active_id = [row.getElementsByClassName("inbox_id")[0].innerHTML];
-                messages.index = messages.list.findIndex(
-                ({id}) => id == messages.active_id[0]
-                );
-                messages.active = messages.list[messages.index];
-                load_message_read(messages.active);
-                toggle_move_visibility();
-                page.navigate_next('message_read');
-                if (!messages.active.read){
-                    messages.mark_as_read();
-                }
+        let backlinks = document.getElementsByClassName("back_navigate");
+        for (link of backlinks){
+            link.addEventListener('click', function(event){
+                let last = page.previous_pages.pop();
+                page.navigate_back(last)
             });
-        }
-        if (row != undefined){
-            row.getElementsByTagName('input')[0].addEventListener('change', function(event){
-                update_active_ids(row);
-                toggle_move_visibility();
-            });
-        }
-    }
-
-    document.getElementById("read_reply").addEventListener('click', reply_to_message, false);
-
-    document.getElementById("read_prev").addEventListener('click', (event)=>messages.previous(),false);
-
-    document.getElementById("read_next").addEventListener('click', (event)=>messages.next(), false);
-
-    document.getElementById("inbox_delete").addEventListener('click', function(event){
-        let status = 'trash';
-        move_messages(status);
-    });
-
-    document.getElementById("inbox_archive").addEventListener('click', function(event){
-        let status = 'archive'
-        move_messages(status);
-    })
-
-    let backlinks = document.getElementsByClassName("back_navigate");
-    for (link of backlinks){
-        link.addEventListener('click', function(event){
-            let last = page.previous_pages.pop();
-            page.navigate_back(last)
+        };
+    
+        document.getElementById("submit_msg").addEventListener("click", function(event){
+            event.preventDefault();
+            ajaxSend("{{url_for('main.send_message')}}",
+                    "message_send_form");
+            page.navigate_next('inbox');
         });
-    };
-  
-    document.getElementById("submit_msg").addEventListener("click", function(event){
-        event.preventDefault();
-        ajaxSend("{{url_for('main.send_message')}}",
-                 "message_send_form");
-        page.navigate_next('inbox');
-    });
 
-    document.getElementById("inbox_new").addEventListener("click", function(event){
-        page.navigate_next('message_send')
-        msg_new_recipient_id.readOnly = false;
-        msg_new_recipient.readOnly = false;
+        document.getElementById("inbox_new").addEventListener("click", function(event){
+            page.navigate_next('message_send')
+            msg_new_recipient_id.readOnly = false;
+            msg_new_recipient.readOnly = false;
 
-        document.getElementById("message_send_form").reset();
-        
-        autocomplete_recipient_name();
-    });
+            document.getElementById("message_send_form").reset();
+            
+            autocomplete_recipient_name();
+        });
 
-    let select_all = document.getElementById("select_all");
-    select_all.addEventListener('change', function(event){
-        select_all_rows(select_all);
-        toggle_move_visibility();
-    })
- 
-}
+        let select_all = document.getElementById("select_all");
+        select_all.addEventListener('change', function(event){
+            select_all_rows(select_all);
+            toggle_move_visibility();
+        })
+    
+    }
 </script>
 
 {% endblock %}

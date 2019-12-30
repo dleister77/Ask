@@ -57,7 +57,20 @@
                         {{ Navlink('main.user', 'Profile', username=current_user.username)}}
                         {{ Navlink('relationship.network_friends', 'Friends')}}
                         {{ Navlink('relationship.network_groups', 'Groups')}}
-                        {{ Navlink('main.view_messages', "Messages", folder="inbox")}}
+
+                        {% set msg_view = 'main.view_messages' %}
+                        {% if new_message_count and new_message_count > 0 %}
+                            {% set msg_count_vis = "visible" %}
+                        {% else %}
+                            {% set msg_count_vis = "hidden" %}
+                        {% endif %}
+
+                        <li class="nav-item {% if request.endpoint != msg_view %}
+                        {% else %} active {% endif %}">
+                            <a class="nav-link" href="{{ url_for(msg_view, folder='inbox') }}">Messages
+                            <span id="message_count" class="badge badge-primary" style="visibility: {{ msg_count_vis }};">{{ new_message_count }}</span>
+                            </a>
+                        </li>
                         {{ Navlink('auth.logout', 'Logout') }}
 
                     {% else %}

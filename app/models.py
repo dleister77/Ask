@@ -401,12 +401,13 @@ class User(UserMixin, Model):
         else:
             pass
 
-    def unread_messages(self):
-        msgs = db.session.query(RecipientData)\
-                         .filter_by(user_id=self.id, status='inbox',
-                                 read=False)\
-                          .all()
-        return msgs
+    def inbox_unread_count(self):
+        count = db.session.query(func.count(RecipientData.id))\
+                         .filter(RecipientData.user_id==self.id,\
+                                 RecipientData.status=='inbox',\
+                                 RecipientData.read==False)\
+                         .scalar()
+        return count
     
     def get_messages(self, folder):
         if folder != "sent":

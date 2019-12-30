@@ -83,6 +83,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.message_count{
+  display: none;
+}
 .message_unread{
   font-weight: bold;
 }
