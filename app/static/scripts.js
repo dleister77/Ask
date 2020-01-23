@@ -6,6 +6,14 @@ function is_equal(x, y){
     }
 }
 
+function formDataFromObject(object){
+    let form = new FormData()
+    for (let [key, value] of Object.entries(object)){
+        form.append(key, value);
+    }
+    return form;
+}
+
 function Page(startingPage) {
     this.active = startingPage,
     this.previous_pages = [],
@@ -74,9 +82,6 @@ function post(path, params, method='post'){
     form.method = method;
     form.action = path;
     
-    const csrf_token = document.getElementById("csrf_token").value;
-    params['csrf_token'] = csrf_token;
-
     for (const key in params){
         if (params.hasOwnProperty(key)){
             const hidden_field = document.createElement('input');
@@ -205,32 +210,6 @@ function category_get(category_id="provider_category", sector_id="provider_secto
             }
         });
     });
-}
-function provider_get(){
-    var c = document.getElementById("provider_category");
-    c.addEventListener("click", function(event){
-        var url = '/providerlist'
-        var category = {"category": c.value}
-        if (c.required == true){
-            Object.assign(category, {"optional": true})
-        }
-        $.getJSON(url, category, function(data) {
-            d = data;
-            var provider_list = document.getElementById("provider_name");
-            //remove existing options
-            while (provider_list.hasChildNodes()){
-                provider_list.removeChild(provider_list.firstChild);
-            }
-            for (var i = 0; i < data.length; i++){
-                //append child option element to it with above as content
-                var option = document.createElement('option');
-                option.textContent = d[i].name;
-                option.value = d[i].id;
-                provider_list.appendChild(option);
-
-            }
-        });
-    });    
 }
 
 function auto_complete(selector_id, url,field_name, filter_ids){
@@ -532,276 +511,6 @@ function initGroups(jquery){
     auto_complete(id, url, displayField, filter_ids);
 }
 
-function initSearch(jquery){
-    var name, groups, friends;
-    $(".bizlink").on("click", function(event){
-        var name = this.text;
-        var category =$("#category_name").val();
-        var friends = $("#friends").prop("checked")
-        var groups =  $("#groups").prop("checked")
-        var zip = this.closest(".biz_rating").querySelector(".zip_code").innerText;
-        var info = {"name":name, "category_name":category, "friends":friends, "groups":groups,"zip_code":zip}
-        var query = "?"+$.param(info);
-        this.search = query;
-
-    });
-    //add category drop down functionality
-    category_id = "category"
-    sector_id = "sector"
-    category_get(category_id=category_id, sector_id=sector_id);
-    //add name autocomplete
-    url = '/provider/list/autocomplete'
-    id = "#provider_name"
-    filter_ids = ['sector', 'category', 'location', 'manual_location']
-    auto_complete(id, url, 'name', filter_ids);
-    //add location field toggles 
-    toCheck = document.getElementById("location")
-    checkValue = "manual"
-    toBeVisibleID = "manual_location_div"
-    toCheck.addEventListener("input", function(){
-        toggle_fields(toCheck, checkValue, toBeHiddenID=null, toBeVisibleID=toBeVisibleID);
-    });
-    toCheck.addEventListener("input", function(){
-        request_location(toCheck, "gps");
-    });
-    // viewMap();
-    // view results on map
-    listView = document.getElementById("businessList");
-    listLink = document.getElementById("viewList");
-    mapView = document.getElementById("mapView");
-    mapLink = document.getElementById("viewOnMap")
-    mapContainer = document.getElementById("viewDiv")
-    mapLink.addEventListener("click", function(){
-        // viewMap();
-        // let params = ['sector', 'category', 'name', 'reviewed_filter',
-        //               'friends_filter', 'groups_filter', 'sort', 'page'];
-        // let query_args = {};
-        // urlParams = new URLSearchParams(window.location.search);
-        // for (let param of params){
-        //     query_args[param] = urlParams.get(param);
-        // }
-        // let url = "/provider/search/json";
-        listView.hidden = true;
-        mapView.hidden = false;
-        if(mapContainer.childElementCount == 0){
-            viewMap(searchHome, searchResults);
-
-        }
-    });
-    listLink.addEventListener("click", function(){
-        listView.hidden = false;
-        mapView.hidden = true;
-    });
-
-
-}
-
-function viewMap(location, searchResults){
-    require(["esri/Map",
-             "esri/views/MapView",
-             "esri/layers/FeatureLayer",
-             "esri/Graphic"],
-              function(Map, MapView, FeatureLayer, Graphic) {
-                var map = new Map({
-                    basemap: "streets-navigation-vector"
-                });
-  
-                var view = new MapView({
-                    container: "viewDiv",
-                    map: map,
-                    center: [location.longitude, location.latitude], // longitude, latitude
-                    zoom: 10
-                });
-
-                var homeMarker = [new Graphic({
-                    attributes: {
-                        ObjectID: 1,
-                        address: location.address
-                    },
-                    geometry: {
-                        type: "point",
-                        longitude: location.longitude,
-                        latitude: location.latitude
-                    }
-                })];
-                var featureLayer = new FeatureLayer({
-                    source: homeMarker,
-                    renderer: {
-                        type: "simple",                    // autocasts as new SimpleRenderer()
-                        symbol: {                          // autocasts as new SimpleMarkerSymbol()
-                            type: "simple-marker",
-                            color: [56, 168, 0, 1],
-                            outline: {                       // autocasts as new SimpleLineSymbol()
-                                style: "none",
-                                color: [255, 255, 255, 0],
-                            },
-                            size: 8
-                        }
-                    },
-                    objectIdField: "ObjectID",           // This must be defined when creating a layer from `Graphic` objects
-                    fields: [
-                        {
-                            name: "ObjectID",
-                            alias: "ObjectID",
-                            type: "oid"
-                        },
-                        {
-                            name: "address",
-                            alias: "address",
-                            type: "string"
-                        }
-                    ]
-                });
-                map.layers.add(featureLayer);
-                createBusinessLayer(searchResults,map);
-    });
-}
-//create graphics and add to feature layer
-function createBusinessLayer(searchResults, map){
-    require(["esri/layers/FeatureLayer","esri/Graphic"],
-            function(FeatureLayer, Graphic){
-            var markers = searchResults.map(function(biz){
-                return new Graphic({
-                    attributes: {
-                        ObjectID: biz.id,
-                        nameLink: `<a href=` + `${document.getElementById(`${biz.name}-${biz.id}-link`).href}` + `>${biz.name}</a>`,
-                        name : biz.name,
-                        categories: biz.categories.replace(",", ", "),
-                        telephone: `(${biz.telephone.slice(0,3)}) ${biz.telephone.slice(3,6)}-${biz.telephone.slice(6,)}`,
-                        email: biz.email,
-                        address: `${biz.line1} \n ${biz.city}, ${biz.state_short}`, 
-                        rating: `${(biz.reviewAverage==null) ? 'N/A' : biz.reviewAverage}`,
-                        cost: `${(biz.reviewCost==null) ? 'N/A' : biz.reviewCost}`,
-                        count: biz.reviewCount
-                    },
-                    geometry: {
-                        type: "point",
-                        longitude: biz.longitude,
-                        latitude: biz.latitude
-                    }
-                });
-            });
-
-            var businessPopUp = {
-                "title": "Business Profile",
-                "content": [{
-                    "title": "{name}",
-                    "type": "fields",
-                    "fieldInfos": [
-                        {
-                            "fieldName": "nameLink",
-                            "label": "Name",
-                        },
-                        {
-                            "fieldName": "categories",
-                            "label": "Categories",
-                        },
-                        {
-                            "fieldName": "address",
-                            "label": "Address",
-                        },
-                        {
-                            "fieldName": "telephone",
-                            "label": "Telephone",
-                        },
-                        {
-                            "fieldName": "rating",
-                            "label": "Avg. Rating",
-                        },
-                        {
-                            "fieldName": "cost",
-                            "label": "Avg. cost",
-                        },
-                        {
-                            "fieldName": "count",
-                            "label": "# Reviews",
-                        },                                                 
-                    ]
-                }]
-            };
-
-            var businessLabels = {
-                // autocasts as new LabelClass()
-                symbol: {
-                    type: "text",
-                    color: [0,0,0,255],  // black
-                    font: { family: "sans-serif", size: 10, weight: "normal" }
-                },
-                labelPlacement: "center-right",
-                labelExpressionInfo: {
-                  expression: "$feature.name"
-                }
-            };
-
-            var featureLayer = new FeatureLayer({
-                source: markers,
-                renderer: {
-                    type: "simple",                    // autocasts as new SimpleRenderer()
-                    symbol: {                          // autocasts as new SimpleMarkerSymbol()
-                        type: "simple-marker",
-                        color: [255,0,0],
-                        outline: {                       // autocasts as new SimpleLineSymbol()
-                            style: "none",
-                            color: [255, 255, 255, 0]
-                        },
-                        size: 8
-                    }
-                },
-                objectIdField: "ObjectID",           // This must be defined when creating a layer from `Graphic` objects
-                fields: [
-                    {
-                        name: "ObjectID",
-                        alias: "ObjectID",
-                        type: "oid"
-                    },
-                    {
-                        name: "address",
-                        alias: "address",
-                        type: "string"
-                    },
-                    {
-                        name: "nameLink",
-                        alias: "nameLink",
-                        type: "string"
-                    },                    
-                    {
-                        name: "name",
-                        alias: "name",
-                        type: "string"
-                    },
-                    {
-                        name: "categories",
-                        alias: "categories",
-                        type: "string"
-                    },
-                    {
-                        name: "telephone",
-                        alias: "telephone",
-                        type: "string"
-                    },
-                    {
-                        name: "rating",
-                        alias: "rating",
-                        type: "string"
-                    },
-                    {
-                        name: "cost",
-                        alias: "cost",
-                        type: "string"               
-                    },
-                    {
-                        name: "count",
-                        alias: "count",
-                        type: "integer"               
-                    }
-                ],
-                popupTemplate: businessPopUp,
-                labelingInfo: [businessLabels]
-            });
-            map.layers.add(featureLayer)
-    });
-
-}
 //JS for provider add form
 function initProviderAdd(jquery){
     category_get(category_id="category", sector_id="sector")
@@ -830,9 +539,22 @@ $(document).ready(function(){
         $(document).ready(initGroups);
     } else if ($("#friendadd").length){
         $(document).ready(initFriends);
-    } else if ($("#providersearch").length){
-        $(document).ready(initSearch);
     } else if ($("#provideraddform").length){
         $(document).ready(initProviderAdd);
     } 
 });
+
+
+const debounce = (callback, time = 250) => (...args) => {
+    let interval;
+    clearTimeout(
+      interval,
+      (interval = setTimeout(() => callback(...args), time))
+    );
+  };
+
+function hello(){
+    console.log("hello world");
+}
+
+const delayedHello = debounce(hello, 10000);

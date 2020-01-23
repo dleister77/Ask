@@ -1,5 +1,11 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import renderInlineList, render_review, renderList, pagination, modal_render %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/common.html" import renderInlineList, renderList %}
+{% from "/macros/review.html" import render_review %}
+{% from "/macros/nav.html" import pagination %}
+{% from "/macros/modal.html" import modal_render %}
+
+
 
 {% block content_medium %}
 
@@ -7,37 +13,32 @@
 
 <div class="card pb-0" id="group_profile">
     <div class="card-header p-3 clearfix">
-            <div class="d-flex justify-content-between">
-                <!-- filler for flexbox -->
-                <h4>Profile Information</h4>
-                {% if current_user.id == group.admin_id %}    
-                    <a href="" class="btn btn-md btn-light ml-auto" data-toggle="modal" data-target="#groupUpdateForm">Edit</a>
-                {% elif not member %}
-                    <a href="{{url_for('relationship.groupadd', id=group.id)}}" class='btn btn-md btn-light float-right' role='button'>Join</a>
-                {% endif %}
-            </div>
+        <div class="d-flex justify-content-between">
+            <!-- filler for flexbox -->
+            <h4>Profile Information</h4>
+            {% if current_user.id == group.admin_id %}    
+                <a href="" class="btn btn-md btn-light ml-auto" data-toggle="modal" data-target="#groupUpdateForm">Edit</a>
+            {% elif not member %}
+                <a href="{{url_for('relationship.groupadd', id=group.id)}}" class='btn btn-md btn-light float-right' role='button'>Join</a>
+            {% endif %}
+        </div>
     </div>
     <div class="card-body">
         {# Only show group members if user is group member #} 
-
-        
-            <dl class="row">
-                    {{ renderInlineList("Name", (group.name))}}
-                    {{ renderInlineList("Description", group.description)}}
-                    {% if member %}
-                        {{ renderInlineList("Admin - name", 
-                        group.admin.first_name + " " + group.admin.last_name)}}
-                    {% else %}    
-                        {{ renderInlineList("Admin - username",
-                                             group.admin.username) }}
-                    {% endif %}                    
-            </dl>
-
+        <dl class="row">
+                {{ renderInlineList("Name", (group.name))}}
+                {{ renderInlineList("Description", group.description)}}
+                {% if member %}
+                    {{ renderInlineList("Admin - name", 
+                    group.admin.first_name + " " + group.admin.last_name)}}
+                {% else %}    
+                    {{ renderInlineList("Admin - username",
+                                            group.admin.username) }}
+                {% endif %}                    
+        </dl>
     </div>
 </div>
-
     <br>
-
 {% if member %}    
     <div class="card">
         <div class="card-header p-2">
@@ -56,15 +57,14 @@
 {% endif %}
 
 {% if reviews %}
-
-<h3>Recent Reviews</h3>
-<br>
-{%for review in reviews %}
-    {{render_review(review, current_user)}}
+    <h3>Recent Reviews</h3>
     <br>
-{% endfor %}
+    {%for review in reviews %}
+        {{render_review(review, current_user)}}
+        <br>
+    {% endfor %}
 
-{{pagination(pag_urls)}}
+    {{pagination(pag_urls)}}
 
 {% endif %}
 
@@ -76,7 +76,6 @@
 {% endblock %}
 
 {% block modal %}
-
     {% if modal_open %}
         <script>$(window).on('load', function(){
             $("#modal_id").modal('show');

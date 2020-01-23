@@ -1,5 +1,4 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import form_render, pagination %}
+{% extends "/layout/sub/single_column.html" %}
 
 {% block content_narrow_form %}
 
@@ -7,219 +6,114 @@
 
 {% block content_wide %}
 
-<nav class="navbar">
-    <ul class="nav action_inbox">
-        <li class="nav-item">
-            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Folders</a>
-            <div class="dropdown-menu">
-                <a class="dropdown-item" id="nav_inbox" href='{{url_for("main.view_messages", folder="inbox")}}'>Inbox</a>
-                <a class="dropdown-item" id="nav_sent" href='{{url_for("main.view_messages", folder="sent")}}'>Sent</a>
-                <a class="dropdown-item" id="nav_archive" href='{{url_for("main.view_messages", folder="archive")}}'>Archive</a>
-                <a class="dropdown-item" id="nav_trash" href='{{url_for("main.view_messages", folder="trash")}}'>Trash</a>
-            </div>
-        </li>
-    </ul>
 
-    <ul class="nav ml-auto justify-content-end">
-        <li class="nav-item">
-            <button type="button" class="action_move btn btn-link nav-link" id="inbox_delete">Delete</button>
-        </li>
-        <li class="nav-item">
-            <button type="button" class="action_move btn btn-link nav-link" id="inbox_archive">Archive</button> 
-        </li>
-        <li class="nav-item">
-            <button type="button" class="action_inbox btn btn-link nav-link" id="inbox_new">New Message</button> 
-        </li>
-    </ul>
-</nav>
-
-<div class="container-fluid p-1" id="inbox">
-    <div class="row">
-        <table id="messages" class="table table-hover d-flex flex-column">
-            <thead>
-                <tr class="d-flex">
-                    <th class="d-none d-md-block col-1" scope="col"><input id="select_all" type="checkbox"></th>
-                    <th class="" hidden scope = "col"></th>
-                    <th class="col-2" scope="col">From</th>
-                    <th class="col-2" scope="col">Subject</th>
-                    <th class="col-6" scope="col">Body</th>
-                    <th class="col-1" scope="col">Time Sent</th>
-                </tr>
-            </thead>
-            <tbody>
-                {%for message in messages %}
-                <tr class="clickable-row d-flex">
-                    <th class="d-none d-md-block col-1" scope="row"><input class="select" type="checkbox"></td>
-                    <td class="inbox_id" hidden>{{message.id}}</td>
-                    <td class="col-2 clickable inbox_sender">{{message.sender.full_name}}</td>
-                    <td class="col-2 clickable inbox_subject">{{message.subject}}</td>
-                    <td class="col-6 clickable inbox_body">{{message.body}}</td>
-                    <td class="col-1 clickable inbox_timestamp">{{message.timestamp}} GMT</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>    
-    </div>
-    {{pagination(pag_urls)}}
-</div>
-
-
-<div id="message_read" hidden>
-    <h3>Message</h3>
-    <nav class="navbar navbar-expand-lg">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-                <button type="button" class="back_navigate btn btn-link"
-                data-toggle="tooltip" data-placement="top" title="Navigate Back"><i class="fas fa-arrow-left fa-2x"></i></button> 
-            </li>
-        </ul>
-        <ul class="nav justify-content-end">
-            <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_prev"
-                data-toggle="tooltip" data-placement="top" title="Previous Message"><i class="fas fa-arrow-left fa-lg"></i></button>
-            </li>
-            <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_next"
-                data-toggle="tooltip" data-placement="top" title="Next Message"><i class="fas fa-arrow-right fa-lg"></i></button>
-            </li>
-            <li class="nav-item">
-                <button type="button" class="btn btn-link nav-link" id="read_reply"
-                data-toggle="tooltip" data-placement="top" title="Reply"><i class="fas fa-reply fa-lg"></i></button>
-            </li>
-        </ul>
-    </nav>
-    <br>
-    <div class="row justify-content-between" id="read_header">
-        <div class="col-8">
-            <p class="msg_read" id="read_sender">From: </p>
-            <p class="msg_read" id="read_subject">Subject: </p>
-        </div>
-        <div class="col-4">
-            <p class="msg_read" id="read_timestamp"></p>
-        </div>
-    </div>
-    <br>
-    <div class="row">
-        <div class="col-12">
-            <p class="msg_read" id="read_body"></p>
-        </div>
-    </div>
-
-</div>
-
-<div id="message_send" hidden>
-    <h3>Message</h3>
-    <nav class="navbar navbar-expand-lg">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-                <button type="button" class="back_navigate btn btn-link">back</button> 
-            </li>
-        </ul>
-    </nav>
-    <form action="" method="POST" id="message_send_form">
-        {{  form_render(new_message) }}
-    </form>
-</div>
-
-
-{% endblock %}
-
-
-{% block jsScripts %}
-<script type="text/javascript" src="{{url_for('static', filename='messages.js')}}"></script>
 <script>
 
-    let list = {{ messages_json | safe }}
-    let page = new Page('inbox');
-    let messages = new Messages(list);
-    messages.read_url = "{{url_for('main.message_update_read')}}";
-    messages.move_url = "{{ url_for('main.move_message') }}";
+    let list = {{ messages_json | safe }};
+    let links = {
+        view_inbox: '{{url_for("main.view_messages", folder="inbox")}}',
+        view_archive: '{{url_for("main.view_messages", folder="archive")}}',
+        view_trash: '{{url_for("main.view_messages", folder="trash")}}',
+        view_sent: '{{url_for("main.view_messages", folder="sent")}}',
+        send_message: '{{ url_for("main.send_message") }}',
+        move: '{{ url_for("main.move_message") }}',
+        updateMessageRead: '{{ url_for("main.message_update_read") }}',
+        autocomplete: '{{ url_for("main.get_friends") }}',
+    };
+    let csrf = '{{ csrf_token() }}';
+    let pagination_urls = {{ pagination_json | safe }}
 
-    window.onload = function(){
-        messages.folder_rows = document.getElementsByClassName("clickable-row");
-        if (messages.list.length > 0){
-            messages.list.forEach(element => {
-                let d = new Date(element.timestamp);
-                element.timestamp = d.toLocaleString('en-us', {'dateStyle':"long", timeStyle: "long"});
-            });
-        }
-
-        messages.format_read();
-        localize_inbox_datetimes(messages.folder_rows)
-
-        for (let row of messages.folder_rows){
-            let clickable = row.getElementsByClassName("clickable");
-            for (let element of clickable){
-                element.addEventListener('click', function(event){
-                    messages.selected_ids = [row.getElementsByClassName("inbox_id")[0].innerHTML];
-                    messages.index = messages.list.findIndex(
-                    ({id}) => id == messages.selected_ids[0]
-                    );
-                    messages.active = messages.list[messages.index];
-                    load_message_read(messages.active);
-                    toggle_move_visibility();
-                    page.navigate_next('message_read');
-                    if (!messages.active.read){
-                        messages.mark_as_read();
-                    }
-                });
-            }
-            if (row != undefined){
-                row.getElementsByTagName('input')[0].addEventListener('change', function(event){
-                    update_active_ids(row);
-                    toggle_move_visibility();
-                });
-            }
-        }
-
-        document.getElementById("read_reply").addEventListener('click', reply_to_message, false);
-
-        document.getElementById("read_prev").addEventListener('click', (event)=>messages.previous(),false);
-
-        document.getElementById("read_next").addEventListener('click', (event)=>messages.next(), false);
-
-        document.getElementById("inbox_delete").addEventListener('click', function(event){
-            let status = 'trash';
-            messages.move(status);
-        });
-
-        document.getElementById("inbox_archive").addEventListener('click', function(event){
-            let status = 'archive'
-            messages.move(status);
-        })
-
-        let backlinks = document.getElementsByClassName("back_navigate");
-        for (link of backlinks){
-            link.addEventListener('click', function(event){
-                let last = page.previous_pages.pop();
-                page.navigate_back(last)
-            });
-        };
-    
-        document.getElementById("submit_msg").addEventListener("click", function(event){
-            event.preventDefault();
-            ajaxSend("{{url_for('main.send_message')}}",
-                    "message_send_form");
-            page.navigate_next('inbox');
-        });
-
-        document.getElementById("inbox_new").addEventListener("click", function(event){
-            page.navigate_next('message_send')
-            msg_new_recipient_id.readOnly = false;
-            msg_new_recipient.readOnly = false;
-
-            document.getElementById("message_send_form").reset();
-            
-            autocomplete_recipient_name();
-        });
-
-        let select_all = document.getElementById("select_all");
-        select_all.addEventListener('change', function(event){
-            select_all_rows(select_all);
-            toggle_move_visibility();
-        })
-    
-    }
 </script>
 
+<link href="{{url_for('static', filename='components/typeahead.css')}}" rel="stylesheet"/>
+<script type="module" src="{{ url_for('static', filename='messages_vue.js') }}"></script>
+
+<div id="messageApp">
+    {% raw %}
+    <folder-nav v-bind:urls="urls"
+        v-bind:message-is-visible="messageIsVisible"
+        v-bind:folder-is-visible="folderIsVisible"
+        v-bind:new-message-is-visible="newMessageIsVisible"
+        v-bind:move-links-visible="moveLinksVisible"
+        v-bind:event-signal="eventSignal"
+        v-on:update-active-message="updateActiveMessage($event)"
+        v-on:new-message="showNewMessage"
+        v-on:back-to-last="showLastPage"
+        v-on:reply-to-message="replyToMessage"
+        v-on:move-message="moveMessage($event)">
+    </folder-nav>
+
+    <div v-if="folderIsVisible" class="container-fluid p-1" id="folder">
+        <div class="row">
+            <table class="table table-hover d-flex flex-column">
+                <thead>
+                    <tr class="d-flex folder-header">
+                        <th class="d-none d-md-block col-1" scope="col"><input id="select_all" type="checkbox"></th>
+                        <th class="" hidden scope = "col"></th>
+                        <th class="col-2" scope="col">From</th>
+                        <th class="col-2" scope="col">Subject</th>
+                        <th class="col-6" scope="col">Body</th>
+                        <th class="col-1" scope="col">Time Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr is="message-row"
+                        v-for="message in messages"
+                        v-bind:message="message"
+                        v-bind:key="message.id"
+                        v-on:show-message="showMessage(message)"
+                        v-on:selected-messages="updateSelectedMessages">
+                    </tr>
+                </tbody>
+            </table>    
+            <button v-on:click="reverseMessages">Reverse Messages</button>
+        </div>
+        <br>
+        <pagination-nav
+          v-bind:pagination_urls="pagination_urls"
+          v-bind:pages="pagination_urls.pages"/>
+    </div>
+
+    <div v-if="messageIsVisible">
+        <message-read v-bind:message="active_message"></message-read>
+    </div>
+
+    <div v-if="newMessageIsVisible">
+        <form
+        method="POST"
+        v-bind:action="urls.send_message"
+        id="message-form">
+            <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
+            <input v-model="newMessage.conversation_id" v-bind="{name: 'conversation_id', type:'hidden'}">
+            <input v-model="newMessage.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
+            <form-input-typeahead
+                v-if="!is_active"
+                v-model="newMessage.recipient"
+                v-bind="{name: 'recipient'}"
+                v-bind:url="urls.autocomplete"
+                v-on:id-change="newMessage.recipient_id=$event">To
+            </form-input-typeahead>
+            <form-input-group
+                v-if="is_active"
+                v-model="newMessage.recipient"
+                v-bind="{name: 'recipient', readonly: true}">To
+            </form-input-group>            
+            <form-input-group v-model="newMessage.subject" v-bind="{name: 'subject'}">Subject</form-input-group>
+            <form-textbox-group v-model="newMessage.body" v-bind="{name: 'body'}">Message Body</form-textbox-group>
+            <button
+                class="btn btn-primary btn-block submit"
+                type="submit"
+                v-on:click.prevent="sendMessage"
+                >
+                Submit
+            </button>
+        </form>
+
+    </div>
+    
+    {% endraw %}
+</div>
+
 {% endblock %}
+
+

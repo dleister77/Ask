@@ -404,7 +404,7 @@ class ProviderSearchForm(FlaskForm):
                        id="location")  
     manual_location = StringField("Enter New Location", validators=[],
                              id="manual_location",
-                             render_kw={"hidden":True, "placeholder":
+                             render_kw={"placeholder":
                              "Street address, city, state"})
     gpsLat = FloatField("New latitude", render_kw={"hidden":True}, id="gpsLat")
     gpsLong = FloatField("New longitude", render_kw={"hidden":True}, id="gpsLong")
@@ -416,7 +416,7 @@ class ProviderSearchForm(FlaskForm):
                                  coerce=int,
                                  id="sector",
                                  validators=[DataRequired("Sector is required.")]) 
-    category = SelectField("Category", choices=[], 
+    category = SelectField("Category", id="category", choices=[], 
                            validators=[InputRequired("Category is required.")],
                            coerce=int)
     name = StringField("Provider / Business Name", validators=[Optional()],

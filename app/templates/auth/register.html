@@ -1,5 +1,6 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import form_render %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render %}
 
 {% block content_narrow %}
     <form action="{{url_for('auth.register')}}" method="post">

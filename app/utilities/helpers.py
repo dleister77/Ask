@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 from urllib.parse import urlparse
 
-from flask import flash, Markup, session, url_for, current_app
+from flask import current_app, flash, Markup, request, session, url_for
 from flask_login import current_user
 from PIL import Image
 from wtforms.widgets.core import RadioInput
@@ -96,6 +96,13 @@ def email_verified(func):
         return func(*args, **kwargs)
     return wrapped_function
 
+def save_url(func):
+    """Saves current request data to allow redirect back upon sending message"""
+    @functools.wraps(func)
+    def wrapped_function(*args, **kwargs):      
+        session['referrer'] = [request.full_path]
+        return func(*args, **kwargs)
+    return wrapped_function
 
 def kw_update(field, new_kw):
     """Update render_kw in form."""

@@ -1,7 +1,4 @@
-
-.clickable-row {
-  cursor: pointer;
-}
+/* Global */
 
 .container-fluid {
   padding: 0;
@@ -10,138 +7,80 @@
   padding: 100px;
 
 }
-.error {
-  border: 2px solid red;
-}
 
- .italic{
-   font-style: italic;
-  }
-  
-  .modal-table{
-    width: 75%;
-    height: 85%;
-    position: fixed;
-    top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+/* Utility */
+.italic{
+  font-style: italic;
 }
-
-.action_move{
-  display: none;
-}
-.biz_rating_category{
-  font-style:italic;
-}
-.biz_rating_name{
-  font-size:2rem;
-  font-weight: bold;
-}
-.biz_rating_left{
-  border-top-style: solid;
- border-bottom-style: solid;
- border-left-style: solid;
- border-width: thin;
- border-color: grey;
- border-bottom-left-radius: 15px;
- border-top-left-radius: 15px;
- background-color: #f2f2f2;
-}
-.biz_rating_right{
-  border-right-style: solid;
-  border-width: thin;
- border-color: grey;
- border-top-right-radius: 15px;
- border-top-style: solid;
- border-bottom-right-radius: 15px;
- border-bottom-style:solid;
- background-color: #f2f2f2;
-}
-.card{
-  background-color: #f2f2f2;
-}
-
-.card-header{
-  background-color: navy;
-  color: white;
-}
-.card-item{
-  background-color: #f2f2f2
-}
-.h-15{
-  height: 15%!important;
-}
-.h-40{
-  height: 40%!important;
-}
- .inline{
+.inline{
   display:inline;
 }
-.inbox_body{
-  /* display: inline-block; */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.message_count{
-  display: none;
-}
-.message_unread{
-  font-weight: bold;
-}
-.msg_read{
-margin-bottom: 3px;
-}
-#msg_read_body{
-  white-space: pre-wrap;
-}
-.nobullets{
-  list-style:none
-}
-.prov-link{
-  color: white;
-}
-.search_grid_1{
-  display: block;
- width: 600px;
-}
-.star-full{
- color:maroon;
-}
-.star-half{
- color:maroon;
-}
-.subList{
-  padding: 0%;
-}
-.ui-autocomplete {
-  position: absolute;
-  cursor: default;
-  z-index:3000 !important;
-}
- .table_head{
-   background-color: darkblue;
-   color:white;
-  }
-.togglealert {
-  color: red;
-}
 
-#map {
-  /* The height is 400 pixels */
-  height: 400px;
-  /* The width is the width of the web page */
-  width: 100%;
-}
- .thumbnail{
-  height: 100px;
-  width: auto;
-}
-#viewDiv {
-  height: 600px;
-  width: 100%;
-}
-.welcomemsg{
-  background-color: #003366;
-  color: white
-}
+/* Components */
+  /* Card - reviews and business profiles */
+  .card{
+    background-color: #f2f2f2;
+  }
+
+  .card-header{
+    background-color:#003366;
+    color: white;
+  }
+  .card-header-item{
+    color: white;
+  }
+  .card-item{
+    background-color: #f2f2f2
+  }
+  .card-star{
+    color:maroon;
+  }
+  .card-thumbnail{
+    height: 100px;
+    width: auto;
+  }
+
+  /* Forms  */
+  .form-toggle-alert {
+    color: red;
+  }
+    /* jquery autocomplete */
+    .ui-autocomplete {
+      position: absolute;
+      cursor: default;
+      z-index:3000 !important;
+    }
+
+  /* Messages */
+  .message-read{
+  margin-bottom: 3px;
+  }
+  #message-read-body{
+    white-space: pre-wrap;
+  }
+  .folder-message-body{
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .folder-header{
+    background-color: #003366;
+    color:white;
+  }
+
+  /* Welcome Page */
+  .welcome {
+    background-color: #003366;
+    color: white
+  }
+
+  /* Map */
+  #mapContainer {
+    height: 600px;
+    width: 100%;
+  }
+
+
+
+

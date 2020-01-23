@@ -17,7 +17,7 @@ from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
                         User, Conversation, Message, RecipientData
 from app.utilities.geo import AddressError, Location, sortByDistance
-from app.utilities.helpers import disableForm, email_verified
+from app.utilities.helpers import disableForm, email_verified, save_url
 from app.utilities.pagination import Pagination
 from app.main import bp
 from app.extensions import db
@@ -158,9 +158,9 @@ def providerAutocomplete():
                    "location": searchLocation}
         sortCriteria = "name"
         providers = Provider.search(filters, sortCriteria, limit=10)
-        providers = [{"name": provider.name, "line1": provider.line1,
-                  "city": provider.city,
-                  "state": provider.state_short} for provider in providers]
+        providers = [{"id": provider.id, "name": provider.name,
+                     "line1": provider.line1, "city": provider.city,
+                      "state": provider.state_short} for provider in providers]
         return jsonify(providers)
     msg = {"status": "failed", "reason": "invalid form data"}
     return jsonify(msg),422
@@ -410,6 +410,7 @@ def send_message():
 
 @bp.route('/message/<folder>', methods=['GET'])
 @login_required
+@save_url
 def view_messages(folder):
     messages = current_user.get_messages(folder)
     page = request.args.get('page', 1, int)
@@ -428,10 +429,9 @@ def view_messages(folder):
                       "subject": msg.subject,
                       "body": msg.body } for msg in messages]
     messages_json = json.dumps(messages_dict)
-    new_message_count = current_user.inbox_unread_count()
+    pagination_json = json.dumps(pag_urls)
     return render_template("messages.html", title="messages", messages=messages,
-    pag_urls = pag_urls, new_message=new_message, messages_json=messages_json,
-    new_message_count=new_message_count)
+    pagination_json = pagination_json, new_message=new_message, messages_json=messages_json)
 
 @bp.route('/message/update/read', methods=["POST"])
 @login_required
@@ -450,7 +450,7 @@ def move_message():
     message_ids = request.form.get('message_id').split(',')
     status = request.form.get('status')
     flash_status = {'trash': 'deleted', 'archive': 'archived'}
-    if status != 'trash' and status != 'archive':
+    if status not in ['trash', 'archive']:
         flash("Invalid request.  Please try again.")
     else:
         moved = []
@@ -480,7 +480,7 @@ def get_friends():
                       .filter((User.first_name + User.last_name).ilike(name)
                       |(User.last_name + User.first_name).ilike(name))\
                       .order_by(User.last_name, User.first_name)\
-                      .limit(10)
+                      .limit(50)
     users = users.all()
     names = ([{"id": person.id, 
             #   "first_name": person.first_name, 
@@ -488,3 +488,9 @@ def get_friends():
               "full_name": f"{person.first_name} {person.last_name}"}
              for person in users])
     return jsonify(names)
+
+@bp.route('/message/unread_count')
+@login_required
+def get_message_unread_count():
+    count = current_user.get_inbox_unread_count()
+    return jsonify({'unread_count': count})

@@ -1,5 +1,7 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import form_render, field_render, modal_render, render_errors %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render, field_render, render_errors %}
+{% from "/macros/modal.html" import modal_render %}
 
 {% block content_narrow_form %}
 

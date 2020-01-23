@@ -1,5 +1,9 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import form_render, renderGroupShort, pagination %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render %}
+{% from "/macros/group.html" import renderGroupShort %}
+{% from "/macros/nav.html" import pagination %}
+
 
 {% block content_narrow_form %}
 

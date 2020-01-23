@@ -1,5 +1,6 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import form_render, field_render %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render, field_render %}
 {% block title %} {{ super() }} {% endblock %}
 
 {% block content_narrow_form %}

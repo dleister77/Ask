@@ -1,5 +1,9 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import renderInlineList, render_review, renderList, pagination, modal_render %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/common.html" import renderInlineList, renderList %}
+{% from "/macros/nav.html" import pagination %}
+{% from "/macros/review.html" import render_review %}
+{% from "/macros/modal.html" import modal_render %}
 
 {% block content_narrow_form %}
 

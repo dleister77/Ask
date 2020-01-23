@@ -401,7 +401,7 @@ class User(UserMixin, Model):
         else:
             pass
 
-    def inbox_unread_count(self):
+    def get_inbox_unread_count(self):
         count = db.session.query(func.count(RecipientData.id))\
                          .filter(RecipientData.user_id==self.id,\
                                  RecipientData.status=='inbox',\
@@ -412,11 +412,16 @@ class User(UserMixin, Model):
     def get_messages(self, folder):
         if folder != "sent":
             msgs = db.session.query(RecipientData)\
-                                .filter_by(user_id=self.id, status=folder)\
+                                .join(RecipientData.message)\
+                                .filter(RecipientData.user_id==self.id,
+                                        RecipientData.status==folder)\
+                                .order_by(Message.timestamp.desc())\
                                 .all()
         else:
             msgs = db.session.query(Message)\
-                             .filter_by(sender_id=self.id).all()
+                             .filter_by(sender_id=self.id)\
+                             .order_by(Message.timestamp.desc())\
+                             .all()
         return msgs
 
 

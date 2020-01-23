@@ -1,0 +1,36 @@
+{
+  "name": "ask",
+  "version": "1.0.0",
+  "description": "ask app",
+  "main": "app/static/main.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@vue/test-utils": "^1.0.0-beta.30",
+    "esm": "^3.2.25",
+    "jsdom": "^16.0.0",
+    "jsdom-global": "^3.0.2",
+    "mocha": "^7.0.0",
+    "vue": "^2.6.11",
+    "vue-template-compiler": "^2.6.11"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "esm": "^3.2.25",
+    "jest": "^24.9.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dleister77/Ask.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dleister77/Ask/issues"
+  },
+  "homepage": "https://github.com/dleister77/Ask#readme"
+}

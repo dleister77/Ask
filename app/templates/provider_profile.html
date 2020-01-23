@@ -1,5 +1,9 @@
-{% extends "single_column.html" %}
-{% from "macros.html" import render_provider_alt, render_review, pagination, field_render_inline, field_row_render %}
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/provider.html" import render_provider_alt %}
+{% from "/macros/review.html" import render_review %}
+{% from "/macros/nav.html" import pagination %}
+{% from "/macros/form.html" import field_row_render %}
 
 {% block content_medium %}
 
@@ -11,14 +15,14 @@
     <form class="form-inline" action='{{url_for("main.provider", 
     name=providerObject.name, id=providerObject.id)}}' method="get">
         {{form.hidden_tag()}}
-            <legend class="col-form-label">Applied Social Filter:</legend>
-            <div class="form-check mb-2 mr-sm-2">
-                {{field_row_render(form.friends_filter)}}
-            </div>
-            <div class="form-check mb-2 mr-sm-2">
-                {{field_row_render(form.groups_filter)}}
-            </div>       
-            {{form.submit(class_="btn btn-primary submit mb-2")}}
+        <legend class="col-form-label">Applied Social Filter:</legend>
+        <div class="form-check mb-2 mr-sm-2">
+            {{field_row_render(form.friends_filter)}}
+        </div>
+        <div class="form-check mb-2 mr-sm-2">
+            {{field_row_render(form.groups_filter)}}
+        </div>       
+        {{form.submit(class_="btn btn-primary submit mb-2")}}
     </form>
     <br>
     {{render_provider_alt(provider, reviewFilter)}}
