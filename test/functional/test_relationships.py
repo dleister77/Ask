@@ -7,7 +7,7 @@ from flask_login import current_user
 from app.models import User, Group, GroupRequest, FriendRequest
 from app.utilities.email import get_token
 
-from tests.conftest import scenarioUpdate, login, logout, FunctionalTest
+from test.conftest import scenarioUpdate, login, logout, FunctionalTest
 
 
 

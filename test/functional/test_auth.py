@@ -3,7 +3,7 @@ from flask_login import current_user
 import pytest
 
 from app.models import State, User
-from tests.conftest import login, logout, FunctionalTest
+from test.conftest import login, logout, FunctionalTest
 
 
 class TestLogin(FunctionalTest):

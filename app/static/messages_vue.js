@@ -13,7 +13,7 @@ const messageApp = new Vue({
     },
     data: {
         active_index: null,
-        messages: list,
+        messages: list,//defined in script tag
         csrf: csrf,
         eventSignal: {
             updateActive: "update-active-message",
@@ -29,12 +29,12 @@ const messageApp = new Vue({
             subject: "",
             body: "",
         },
-        pagination_urls: pagination_urls,
+        pagination_urls: pagination_urls,//from script tag
         selectedMessages: [],
         show: {
             newMessage: false,
         },
-        urls: links,
+        urls: links,//from script tag
     },
     computed: {
         active_message: function(){
@@ -158,7 +158,6 @@ const messageApp = new Vue({
     },
     mounted: function(){
         this.$nextTick();
-        console.log(this.$refs);
     }
 });
 

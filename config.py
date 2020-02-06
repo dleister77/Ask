@@ -52,20 +52,20 @@ class ProductionConfig(Config):
 class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
-    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_HTTPONLY = False
     SESSION_PROTECTION = "strong"
-    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = False
     PER_PAGE = 5
 
 class TestConfig(Config):
     TESTING = True
-    SERVER_NAME = 'localhost.localdomain'
+    SERVER_NAME = 'localhost.localdomain:5000'
     SQLALCHEMY_DATABASE_URI =  os.environ.get('TEST_DATABASE_URL')
     PER_PAGE = 2
     WTF_CSRF_ENABLED = False
     MEDIA_FOLDER = os.path.join(basedir, 'instance', 'tests', 'photos')
     TEST_STATES = [(2, "New York"),(1, "North Carolina")]
-    TEST_CATEGORIES = [(1, "Electrician"), (2, "Plumber")]
-    TEST_SECTOR = [(1, "Home Services")]
+    TEST_CATEGORIES = [(1, "Electrician"), (2, "Plumber"), (3, "Mexican Restaurant")]
+    TEST_SECTOR = [(1, "Home Services"), (2, 'Food & Drink')]
     TEST_USER = {"username": "jjones", "password": "password"}
     

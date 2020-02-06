@@ -7,7 +7,7 @@ import pytest
 from app.models import addressTuple
 from app.utilities.geo import geocode, _geocodeGEOCODIO, _geocodeTamu, getGeoRange, getDistance,\
                               Location, sortByDistance, AddressError
-from tests.conftest import assertEqualsTolerance
+from test.conftest import assertEqualsTolerance
 
 def test_geocode(test_app):
     address = "7708 Covey Chase Dr, Charlotte, NC 28210"

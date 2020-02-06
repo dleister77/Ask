@@ -20,7 +20,9 @@
 
     <form action="{{url_for('main.search')}}" method="get" id="providersearch">
         {{ field_render(form.location, **{'v-model':'form.location'}) }}
-        <div class = "form-group row" v-show="showManualLocation">
+        <div class = "form-group row"
+          v-show="showManualLocation"
+          id="manual_location">
             <div class = "col">
                 {{ form.manual_location.label() }}
                 {{ form.manual_location(class_="form-control",
@@ -37,6 +39,7 @@
                 {{ form.name.label() }}
                 {{ form.name(type="hidden", **{'v-bind:value':'form.name'} ) }}
                 <vue-bootstrap-typeahead
+                    id="name_typeahead"
                     v-bind:data="typeahead.suggestions"
                     v-model="form.name"
                     v-bind:serializer="b => b.name"
@@ -103,7 +106,7 @@
             </div>
         </div>
         
-        <div v-show="!map.show">
+        <div id="list_items" v-show="!map.show">
             {%for provider in providers %}
                 {{render_provider_alt(provider, reviewFilter)}}
                 <br>

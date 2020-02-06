@@ -16,12 +16,12 @@ const folder_nav = ('folder-nav', {
         
         <ul class="nav">
             <nav-list-button
-                 v-if="!folderIsVisible"
+                 ref="back-button"
+                 v-if="messageIsVisible || newMessageIsVisible"
                  v-bind:event-signal="eventSignal.backToLast"
                  v-on:back-to-last="$emit(eventSignal.backToLast)"
                  data-toggle="tooltip"
                  data-placement="top"
-                 id="backbutton
                  title="Navigate Back">
                     <i class="fas fa-arrow-left fa-lg"></i>
                 </nav-list-button>
@@ -88,8 +88,8 @@ const folder_nav = ('folder-nav', {
 
             <nav-list-button
              id="reply"
-             ref="replyto"
-             v-show="messageIsVisible"
+             ref="reply-to"
+             v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.replyToMessage"
              v-on:reply-to-message="$emit(eventSignal.replyToMessage)"
              data-toggle="tooltip"

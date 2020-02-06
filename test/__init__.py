@@ -1,3 +1,3 @@
-from tests import conftest
-import tests.unit
-import tests.functional
+from test import conftest
+import test.unit
+import test.functional

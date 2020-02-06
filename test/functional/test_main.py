@@ -9,7 +9,7 @@ from flask_login import current_user
 
 from app.models import Category, Provider, Review, User, State
 from .test_auth import login, logout
-from tests.conftest import FunctionalTest
+from test.conftest import FunctionalTest
 
 
 def addPicsToForm(client, form, test_app):

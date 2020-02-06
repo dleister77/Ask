@@ -14,7 +14,7 @@ from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
 									FriendDeleteForm, FriendApproveForm,
 									GroupDeleteForm, GroupMemberApproveForm)
 from app.utilities.geo import Location						
-from tests.conftest import login, scenarioUpdate
+from test.conftest import login, scenarioUpdate
 from config import TestConfig
 
 app = create_app(TestConfig)

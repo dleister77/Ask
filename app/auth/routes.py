@@ -15,6 +15,7 @@ from app.utilities.pagination import Pagination
 @bp.route('/')
 @bp.route('/welcome')
 def welcome():
+    print("welcome called")
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
@@ -200,3 +201,14 @@ def userupdate():
                            title="User Profile", modal_title=modal_title, 
                            user=current_user, modal_open=modal_open, pag_urls=pag_urls,
                            summary=summary),422
+
+@bp.route('/shutdown')
+def server_shutdown():
+    print("shutting down")
+    if not current_app.testing:
+        abort(404)
+    shutdown = request.environ.get('werkzeug.server.shutdown')
+    if not shutdown:
+        abort(500)
+    shutdown()
+    return 'Shutting down...'

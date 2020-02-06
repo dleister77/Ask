@@ -16,7 +16,7 @@ from app.models import User, Address, Group, Category, Review, Provider,\
                        FriendRequest, GroupRequest, Sector, Picture
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
-from tests.conftest import assertEqualsTolerance
+from test.conftest import assertEqualsTolerance
 
 
 def null_test(test_db, model_class, test_case, key):

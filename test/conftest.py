@@ -4,6 +4,8 @@ import math
 import os
 from pathlib import Path
 from shutil import rmtree
+import threading
+import time
 
 from flask import url_for, current_app
 from flask_login import current_user
@@ -21,6 +23,11 @@ import app.utilities.geo as geo
 from app.utilities.geo import AddressError, APIAuthorizationError, _geocodeGEOCODIO
 from app.utilities.helpers import thumbnail_from_buffer
 from config import TestConfig
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 
 Session = sessionmaker()
 
@@ -87,17 +94,20 @@ class FunctionalTest(object):
                             data=self.form, follow_redirects=True)    
 
 @pytest.fixture(scope='session')
-def test_app():
+def app():
     app = create_app(TestConfig)
     ctx = app.app_context()
     ctx.push()
     yield app
     ctx.pop()
 
+def start_app(*args, **kwargs):
+    app = create_app(TestConfig)
+    app.run()
 
 @pytest.fixture(scope='session')
-def testClient(test_app):
-    client = test_app.test_client()
+def testClient(app):
+    client = app.test_client()
     yield client
 
 
@@ -112,15 +122,17 @@ def activeClient(testClient, test_db):
 
 
 @pytest.fixture(scope='session')
-def test_db(test_app):
+def test_db(app):
     db.drop_all()
     db.create_all()
     #define categories
     s1 = State.create(id=1, name="North Carolina", state_short="NC")
     s2 = State.create(id=2, name="New York", state_short="NY")
     sect1 = Sector.create(id=1, name="Home Services")
+    sect2 = Sector.create(id=2, name="Food & Drink")
     c1 = Category.create(id=1, name="Electrician", sector_id=1)
     c2 = Category.create(id=2, name="Plumber", sector_id=1)
+    c3 = Category.create(id=3, name="Mexican Restaurant", sector_id=2)
     a1 = Address.create(line1="13 Brook St", city="Lakewood",
                         zip="14750", state_id = 2,
                         latitude=42.100201, longitude=-79.340303)
@@ -173,7 +185,7 @@ def test_db(test_app):
     # add test reviews
     r1 = Review.create(id=1, user=u2, provider=p1, category=c1, rating=3, cost=3,
      description="fIxed A light BULB", comments="satisfactory work.",
-     pictures=[Picture(path=os.path.join(test_app.config['MEDIA_FOLDER'], '2', 'test1.jpg'), name='test1.jpg')])
+     pictures=[Picture(path=os.path.join(app.config['MEDIA_FOLDER'], '2', 'test1.jpg'), name='test1.jpg')])
     r2 = Review.create(id=2, user=u3, provider=p1, category=c1, rating=5, cost=5, price_paid="", description="installed breaker Box", comments="very clean")
     r3 = Review.create(id=3, user=u1, provider=p1, category=c1, rating=1, cost=5, price_paid="", description="test", comments="Test")
     r4 = Review.create(id=4, user=u2, provider=p3, category=c1, rating=5, cost=2, price_paid="", description="test", comments="Test123", service_date=date(2019, 5, 1))
@@ -303,8 +315,8 @@ def testPicture(activeClient):
         
 
 @pytest.fixture()
-def search_form(test_app, dbSession):
-    with test_app.app_context():
+def search_form(app, dbSession):
+    with app.app_context():
         from app.main.forms import ProviderSearchForm
         form = ProviderSearchForm()
         c = Category.query.filter_by(name="Electrician").first().id
@@ -522,3 +534,4 @@ def mockGeocodioApiBad(monkeypatch):
         raise GeocodioAuthError
     
     monkeypatch.setattr('app.utilities.geo._get_client', mockGeoCode)
+

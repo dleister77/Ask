@@ -403,7 +403,6 @@ class ProviderSearchForm(FlaskForm):
                        validators=[InputRequired(message="Search location is required.")],
                        id="location")  
     manual_location = StringField("Enter New Location", validators=[],
-                             id="manual_location",
                              render_kw={"placeholder":
                              "Street address, city, state"})
     gpsLat = FloatField("New latitude", render_kw={"hidden":True}, id="gpsLat")
