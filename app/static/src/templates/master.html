@@ -1,0 +1,41 @@
+{% from "/macros/nav.html" import Navlink, Navdropdown %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <!-- global css and js imports -->
+        {% include "/layout/components/imports.html" %}
+
+        {% block title %}<title> Ask Your Peeps: {{title}} </title>{% endblock %}
+
+    </head>
+
+    <body>
+
+        {% include "/layout/components/header.html" %}
+
+        {% include "/layout/components/flash_message.html" %}
+
+        <main class="container-fluid">
+        
+            {% block main %} 
+            <!-- content block -->
+            {% endblock %}
+
+        </main>
+
+       
+        {%block jsScripts %}
+        <!-- block for page specific scripts -->
+        {% endblock %}
+
+        <br>
+        <br>
+
+        {% include "/layout/components/footer.html" %}
+
+    </body>
+
+</html>

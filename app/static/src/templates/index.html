@@ -162,6 +162,9 @@
 <script src="{{ url_for('static', filename='dist/search.bundle.js') }}"></script> -->
 <!-- <script type="module" src="{{ url_for('static', filename='search_vue.js') }}"></script> -->
 
- <script type="text/javascript" src="/static/dist/vendors.d3d12767a1e596fb9f78.js"></script><script type="text/javascript" src="/static/dist/runtime.acfdeda3904d25c72cbb.js"></script><script type="text/javascript" src="/static/dist/search.f4ce391f0750c6b4e1fe.js"></script>
+<!-- <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+<% } %> -->
 
 {% endblock %}
+
