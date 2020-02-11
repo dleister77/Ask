@@ -1,0 +1,22 @@
+<!-- renders group search result -->
+{% macro renderGroupShort(group, current_user, url, form) %}
+    <div class="d-flex flex-column align-items-start w-100 list-group-item">
+        <div class="d-flex flex-row w-100 justify-content-between">
+            <a href="{{url_for('relationship.group', name=group.name, id=group.id)}}">
+            <h5 class="mb-1">{{group.name}}</h5>
+            </a>
+        {% if group.membership == false %}
+            <form action="{{url}}" method=post>
+                {{ form.csrf_token }}
+                {{ form.id(value=group.id)}}
+                <button class="btn btn-secondary align-self-stretch">Join</button>
+            </form>
+            {% else %}
+            <p>Member</p>
+            {% endif %}
+        </div>
+            <p class="mb-1">{{group.description}}</p>
+        </div>
+        <br>
+    </div>
+{% endmacro %}

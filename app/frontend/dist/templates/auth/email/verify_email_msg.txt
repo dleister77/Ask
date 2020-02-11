@@ -1,0 +1,11 @@
+Dear {{user.first_name}}:
+
+To verify your email, please paste the below link into your browser:
+
+{{ url_for('auth.email_verify', token=token, _external=True) }}
+
+If you have not registered for an account with Ask Your Peeps, please disregard.
+
+Sincerely,
+
+The Ask Your Peeps Team

@@ -1,0 +1,154 @@
+
+<!--Macro to render row-->
+{% macro field_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check") %}
+  
+    <div class="form-group row">
+        <div class="col">
+            {% if field.type == "FormField" %}
+                {{form_render(field, classAdjust)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class_=(buttonClass))}}
+            {% elif field.type == "RadioField" %}
+                <legend class={{labelClass}}>{{field.label.text.capitalize()}}</legend>
+                {% if field.flags.optional %}
+                    <span class = "small italic"> optional</span>
+                {%endif %}
+                {% for subfield in field %}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
+                {{field.label(class_=labelClass)}}
+                {% if field.flags.optional %}
+                    <span class = "small italic"> optional</span>
+                {%endif %}
+                {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
+                    {% if field.flags.optional %}
+                        <span class = "small italic"> optional</span>
+                    {%endif %}
+            {%else%}
+                {% if not field.render_kw or "hidden" not in field.render_kw %}
+                    {{ field.label(class_=labelClass) }}
+                    {% if field.flags.optional %}
+                        <span class = "small italic"> optional</span>
+                    {%endif %}
+                {% endif %}
+                {{field(class_=fieldClass + " " + classAdjust, **kwargs)}}
+            {% endif %}
+            {{render_errors(field)}}
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro render_errors(field) %}
+    {% if field.errors|length == 1 %}
+        <span style="color:red;">{{field.errors}}</span>
+    {% elif field.errors|length > 1 %}
+        {% for error in field.errors %}
+            <span style="color:red;">{{error}}</span>
+        {% endfor %}
+    {% endif %}
+{% endmacro %}
+
+<!-- Macro to render form field in line, without creating new row. -->
+{% macro field_render_inline(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check" ) %}
+  
+        <div class="col">
+            {% if field.type == "FormField" %}
+                {{form_render(field, classAdjust)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class_=(buttonClass))}}
+            {% elif field.type == "RadioField" %}
+                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                {% for subfield in field %}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+            <div class="row">
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
+            </div>
+            {%else%}
+
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fieldClass + " " + classAdjust)}}
+
+            {% endif %}
+            {% if field.errors|length > 0 %}
+                <span style="color:red;">{{field.errors}}</span>
+            {% endif %}
+
+            {# {% if field.errors|length == 1 %}
+                <span style="color:red;">{{field.errors}}</span>
+                {% else %}
+                {% for error in field.errors %}
+                    <span style="color:red;">{{error}}</span>
+                {% endfor %}
+            {% endif %} #}
+        </div>
+{% endmacro %}
+
+<!-- render form fields in same row  -->
+{% macro field_row_render(field, classAdjust="", boolClass="form-check-input", boolLabel="form-check-label", labelClass="col-form-label", fieldClass="form-control",
+ buttonClass="btn btn-primary btn-block submit", fileClass="form-control-file",
+  radioLabelClass="form-check-label", radioInputClass="form-check-input", 
+  radioClass="form-check" ) %}
+  
+            {% if field.type == "FormField" %}
+                {{form_render(field, classAdjust)}}
+            {% elif field.type == "SubmitField" %}
+                {{field(class_=(buttonClass))}}
+            {% elif field.type == "RadioField" %}
+                <legend class={{labelClass}}>{{field.name.capitalize()}}</legend>
+                {% for subfield in field %}
+                    <div class={{radioClass}}>
+                        {{subfield(class_=radioInputClass + " " + classAdjust)}}
+                        {{subfield.label(class_=radioLabelClass)}}
+                    </div>
+                {% endfor %}
+            {% elif field.type == "FileField" or field.type == "MultipleFileField" %}
+                {{field.label(class_=labelClass)}}
+                {{field(class_=fileClass + " " + classAdjust)}}
+            {% elif field.type == "BooleanField" %}
+                    {{field(class_=boolClass + " " + classAdjust)}}
+                    {{field.label(class_=boolLabel)}}
+            {%else%}
+                <div class="col">
+                    {{field.label(class_=labelClass)}}
+                </div>
+                <div class="col">
+                    {{field(class_=fieldClass + " " + classAdjust)}}
+                </div>
+            {% endif %}
+            {% for error in field.errors %}
+                <span style="color:red;">{{error}}</span>
+            {% endfor %}
+{% endmacro %}
+<!--render form, calls render_field
+    form: form to be render
+    classAdjust: adjustment to field class specified in form_render.
+-->
+{% macro form_render(form, classAdjust="") %}
+    {{form.hidden_tag()}}
+    {% for field in form if (field.widget.input_type != "hidden")%}
+        {{field_render(field, classAdjust)}}
+    {% endfor %}
+{% endmacro %}
+            

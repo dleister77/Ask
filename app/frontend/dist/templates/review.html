@@ -1,0 +1,27 @@
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render, field_render %}
+{% block title %} {{ super() }} {% endblock %}
+
+{% block content_narrow_form %}
+    <h3>Add Review</h3>
+    <form action="{{url_for('main.review')}}" method="POST", id="review_form", enctype="multipart/form-data">
+        {{form.hidden_tag()}}
+        {{ field_render(form.name)}}
+        {{field_render(form.category)}}
+        {{field_render(form.rating)}}
+        {{field_render(form.cost)}}
+        {{field_render(form.description)}}
+        {{field_render(form.price_paid)}}
+        {{field_render(form.service_date)}}
+        {{field_render(form.comments)}}
+        {{field_render(form.picture)}}
+        {{field_render(form.certify)}}
+        {{field_render(form.submit)}}
+    </form>
+{% endblock %}
+
+
+
+
+

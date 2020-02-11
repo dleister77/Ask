@@ -1,0 +1,119 @@
+{% extends "/layout/sub/single_column.html" %}
+
+{% block content_narrow_form %}
+
+{% endblock %}
+
+{% block content_wide %}
+
+
+<script>
+
+    let list = {{ messages_json | safe }};
+    let links = {
+        view_inbox: '{{url_for("main.view_messages", folder="inbox")}}',
+        view_archive: '{{url_for("main.view_messages", folder="archive")}}',
+        view_trash: '{{url_for("main.view_messages", folder="trash")}}',
+        view_sent: '{{url_for("main.view_messages", folder="sent")}}',
+        send_message: '{{ url_for("main.send_message") }}',
+        move: '{{ url_for("main.move_message") }}',
+        updateMessageRead: '{{ url_for("main.message_update_read") }}',
+        autocomplete: '{{ url_for("main.get_friends") }}',
+    };
+    let csrf = '{{ csrf_token() }}';
+    let pagination_urls = {{ pagination_json | safe }}
+
+</script>
+
+<link href="{{url_for('static', filename='components/typeahead.css')}}" rel="stylesheet"/>
+<script type="module" src="{{ url_for('static', filename='messages_vue.js') }}"></script>
+
+<div id="messageApp">
+    {% raw %}
+    <folder-nav v-bind:urls="urls"
+        v-bind:message-is-visible="messageIsVisible"
+        v-bind:folder-is-visible="folderIsVisible"
+        v-bind:new-message-is-visible="newMessageIsVisible"
+        v-bind:move-links-visible="moveLinksVisible"
+        v-bind:event-signal="eventSignal"
+        v-on:update-active-message="updateActiveMessage($event)"
+        v-on:new-message="showNewMessage"
+        v-on:back-to-last="showLastPage"
+        v-on:reply-to-message="replyToMessage"
+        v-on:move-message="moveMessage($event)">
+    </folder-nav>
+
+    <div v-if="folderIsVisible" class="container-fluid p-1" id="folder">
+        <div class="row">
+            <table class="table table-hover d-flex flex-column">
+                <thead>
+                    <tr class="d-flex folder-header">
+                        <th class="d-none d-md-block col-1" scope="col"><input id="select_all" type="checkbox"></th>
+                        <th class="" hidden scope = "col"></th>
+                        <th class="col-2" scope="col">From</th>
+                        <th class="col-2" scope="col">Subject</th>
+                        <th class="col-6" scope="col">Body</th>
+                        <th class="col-1" scope="col">Time Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr is="message-row"
+                        v-for="message in messages"
+                        v-bind:message="message"
+                        v-bind:key="message.id"
+                        v-on:show-message="showMessage(message)"
+                        v-on:selected-messages="updateSelectedMessages">
+                    </tr>
+                </tbody>
+            </table>    
+            <button v-on:click="reverseMessages">Reverse Messages</button>
+        </div>
+        <br>
+        <pagination-nav
+          v-bind:pagination_urls="pagination_urls"
+          v-bind:pages="pagination_urls.pages"/>
+    </div>
+
+    <div v-if="messageIsVisible">
+        <message-read v-bind:message="active_message"></message-read>
+    </div>
+
+    <div v-if="newMessageIsVisible">
+        <form
+        method="POST"
+        v-bind:action="urls.send_message"
+        id="message-form">
+            <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
+            <input v-model="newMessage.conversation_id" v-bind="{name: 'conversation_id', type:'hidden'}">
+            <input v-model="newMessage.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
+            <form-input-typeahead
+                v-if="!is_active"
+                v-model="newMessage.recipient"
+                v-bind="{name: 'recipient'}"
+                v-bind:url="urls.autocomplete"
+                v-on:id-change="newMessage.recipient_id=$event">To
+            </form-input-typeahead>
+            <form-input-group
+                v-if="is_active"
+                v-model="newMessage.recipient"
+                v-bind="{name: 'recipient', readonly: true}">To
+            </form-input-group>            
+            <form-input-group v-model="newMessage.subject" v-bind="{name: 'subject'}">Subject</form-input-group>
+            <form-textbox-group v-model="newMessage.body" v-bind="{name: 'body'}">Message Body</form-textbox-group>
+            <button
+                class="btn btn-primary btn-block submit"
+                type="submit"
+                v-on:click.prevent="sendMessage"
+                >
+                Submit
+            </button>
+        </form>
+
+    </div>
+    
+    {% endraw %}
+</div>
+
+{% endblock %}
+
+

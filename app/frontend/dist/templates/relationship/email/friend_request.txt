@@ -1,0 +1,10 @@
+Dear {{user.first_name}}:
+
+{{friend.first_name}} {{friend.last_name}} would like to be friends with you on Ask Your Peeps.
+
+To verify the request, please paste the below link into your web browser.
+{{ url_for('relationship.friend_verify', token=token, _external=True) }}
+
+Sincerely,
+
+The Ask Your Peeps Team

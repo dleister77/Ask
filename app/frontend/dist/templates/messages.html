@@ -1,0 +1,39 @@
+{% extends "/layout/sub/single_column.html" %}
+
+{% block content_narrow_form %}
+
+{% endblock %}
+
+{% block content_wide %}
+
+
+<script>
+
+    let list = {{ messages_json | safe }};
+    let links = {
+        view_inbox: '{{url_for("main.view_messages", folder="inbox")}}',
+        view_archive: '{{url_for("main.view_messages", folder="archive")}}',
+        view_trash: '{{url_for("main.view_messages", folder="trash")}}',
+        view_sent: '{{url_for("main.view_messages", folder="sent")}}',
+        send_message: '{{ url_for("main.send_message") }}',
+        move: '{{ url_for("main.move_message") }}',
+        updateMessageRead: '{{ url_for("main.message_update_read") }}',
+        autocomplete: '{{ url_for("main.get_friends") }}',
+    };
+    let csrf = '{{ csrf_token() }}';
+    let pagination_urls = {{ pagination_json | safe }}
+
+</script>
+
+
+<div id="messageApp">
+    <!-- insert vue app -->
+</div>
+
+
+    <script src="../static/js/messages.98b63c17d3d1fcea6da2.js"></script>
+
+
+{% endblock %}
+
+

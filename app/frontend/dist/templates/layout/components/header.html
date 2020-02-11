@@ -1,0 +1,46 @@
+{% from "/macros/nav.html" import Navlink, Navdropdown %}
+
+<div id="topNavbar">
+    <nav class="navbar navbar-expand-sm navbar-light bg-light border">
+        <a class="navbar-brand h1" href="/">Ask Your Peeps</a>
+        <button aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler" data-target="#navbar" data-toggle="collapse" type="button">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbar">
+            <ul class="navbar-nav ml-auto mt-2">
+                {% if current_user.is_authenticated %}
+                    {{ Navlink('main.index', 'Search') }}
+                    {{ Navlink('main.user', 'Profile', username=current_user.username)}}
+                    {{ Navlink('relationship.network_friends', 'Friends')}}
+                    {{ Navlink('relationship.network_groups', 'Groups')}}
+
+                    {% set msg_view = 'main.view_messages' %}
+
+                    <li class="nav-item {% if request.endpoint != msg_view %}
+                    {% else %} active {% endif %}">
+                        <a class="nav-link" href="{{ url_for(msg_view, folder='inbox') }}">Messages
+                        <span
+                          class="badge badge-primary"
+                          v-bind:style="unreadCount > 0 ? 'visibility:visible' : 'visibility:hidden'">
+                          [[ unreadCount ]]
+                        </span>
+                        </a>
+                    </li>
+                    {{ Navlink('auth.logout', 'Logout') }}
+
+                {% else %}
+                    {{ Navlink('auth.register', 'Register') }}
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<script>
+
+let unread_url = "{{ url_for('main.get_message_unread_count') }}";
+let initial_unread_count = {{ 0 if not current_user.is_authenticated else current_user.get_inbox_unread_count() }};
+
+</script>
+
+<!-- TODO make src urls correctly work with flask static folder reference  --><script type="text/javascript" src="../../../static/js/header.39c7e1f87b71d65e7664.js"></script>

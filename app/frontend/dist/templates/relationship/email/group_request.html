@@ -1,0 +1,12 @@
+{% extends "/layout/email.html" %}
+
+{% block body %}
+<p>{{new_member.full_name}} would like to join {{group.name}} on Ask Your Peeps.</p>
+<br>
+<p>To verify the request, please click on the below link.</p>
+<p><a href="{{ url_for('relationship.group_verify', token=token, _external=True) }}">Click here to verify</a></p>
+<br>
+<p>Alternatively, you can paste the below link into your web browser or approve under pending requests on the network page.</p>
+<p>{{ url_for('relationship.friend_verify', token=token, _external=True) }}</p>
+<br>
+{% endblock %}

@@ -1,0 +1,29 @@
+
+
+{% macro modal_render_objectlist(objectlist, attributes, modal_title, action="", modalID="modal_id", classAdjust=" modalinput", submitAdjust="") %}
+<!-- Renders modal list-->
+<!-- Inputs: form object, modal id, class adjustment - used by javascript to select modal data-->
+    <div class="modal" id={{modalID}} tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{modal_title}}</h3>
+                </div>
+                <div class="modal-body px-5">
+                    <ul>
+                        {% for item in objectlist %}
+                        <li>
+                            {% for attribute in attributes %}
+                                {{item|attr(attribute)}}
+                            {% endfor %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}  

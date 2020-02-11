@@ -1,0 +1,14 @@
+{% extends "layout/master.html" %}
+
+{% block title %} {{ super() }} {% endblock %}
+
+{% block main %}
+    <div class="row">
+        <div class="col-10">
+            {% block error %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+{% endblock %}

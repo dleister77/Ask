@@ -1,0 +1,38 @@
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import form_render %}
+{% from "/macros/group.html" import renderGroupShort %}
+{% from "/macros/nav.html" import pagination %}
+
+
+{% block content_narrow_form %}
+
+<div id="groupSearch"></div>
+    <form action="{{url_for('relationship.groupSearch')}}" id="groupSearchForm" method="get">
+        {{form_render(form)}}
+        <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
+    </form>
+    <br>
+    <div class="row justify-content-center">
+        <h3>Group Search Results</h3>
+    </div>
+    <div class="list-group">
+        {% set joinUrl = url_for('relationship.groupadd') %}
+        {% for group in groups %}
+            {{renderGroupShort(group, current_user, joinUrl, addForm)}}
+
+        {% endfor %}
+    </div>
+        {{pagination(pag_urls)}}
+    <br>
+    <!-- url for js file -->
+<script> let url = "{{ url_for('relationship.groupSearchAutocomplete') }}" </script>
+
+{% endblock content_narrow_form %}
+
+
+{% block modal %}
+
+    
+{% endblock %}
+

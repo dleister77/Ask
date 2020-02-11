@@ -1,0 +1,5 @@
+Sender Name: {{form.first_name.data}} {{form.last_name.data}}
+
+Sender Email: {{form.email.data}}
+
+{{form.message.data}}
