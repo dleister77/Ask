@@ -453,79 +453,6 @@ function initReview (jquery) {
 
 }
 
-function initFriends(jquery){
-    //create function scope variables to be used for converting chosen name to user_id
-    var friend_array = [];
-    var friend_array_full = [];
-    var friend_array_values =[];
-    var friend_array_detailed =[];
-    //autocomplete friend name using jquery autocomplete ui: https://api.jqueryui.com/autocomplete/
-    $("#friend_name").autocomplete({
-        autoFocus: true,
-        minLength: 1,
-        delay: 200,
-        source: function(request, response){
-            friend_array=[];
-            friend_array_full = [];
-            friend_array_values = [];
-            friend_array_detailed = [];
-            $.getJSON(url, {"name":request.term}, function(data){
-                    $.each(data, function(key, value){
-                        var full_description = [];
-                        description = (value.first_name + " " + value.last_name + ", "+value.city +", "+ value.state);
-                        name = (value.first_name + " " + value.last_name);
-                        //label is what is shown in selector menu, value goes into input box
-                        friend_array.push({"label":description, "value":name});
-                        //used to check that values from list are selected in val check
-                        friend_array_values.push(name.toLowerCase());
-                        //used to find index of choice selected
-                        friend_array_full.push(description);
-                        //sets hidden input field to id
-                        friend_array_detailed.push({key:value});
-                    });
-                    response(friend_array);
-            });
-        },
-        //enter user_id into hidden input field
-        select: function(event, ui){
-            var i = friend_array_full.indexOf(ui.item.label);
-            $("#friend_value").val(friend_array_detailed[i].key.id);
-        }
-    });
-
-    //forces friend search input to use value from autocomplete dropdown
-    $("#submit-friend-add").on("click", function(event){
-        input = document.getElementById("friend_name")
-        valcheck(friend_array_values, input, "Please choose friend name from list");
-        $("#submit-friend-add").unbind("click");
-        $("#friend_name").on("blur", function(event){
-            valcheck(friend_array_values, input,"Please choose friend name from list");
-        });
-    });
-}
-
-function initGroups(jquery){
-    id = "#group_name"
-    displayField = 'name'
-    filter_ids = null
-    auto_complete(id, url, displayField, filter_ids);
-}
-
-//JS for provider add form
-function initProviderAdd(jquery){
-    category_get(category_id="category", sector_id="sector")
-    //select unknown, line1, line2, zip
-    toCheck = document.getElementById("addressUnknown");
-    toBeHiddenID = ["address-line1", "address-line2", "address-zip"]
-    toBeVisibleID="toggle_message"
-    checkValue = true
-    toCheck.addEventListener("input", function(){
-        toggle_fields(toCheck, checkValue, toBeHiddenID, toBeVisibleID);
-        toggle_fields_required(toCheck, checkValue, toBeHiddenID)
-    });
-
-}
-
 
 //execute when DOM loaded
 $(document).ready(function(){
@@ -534,14 +461,6 @@ $(document).ready(function(){
 
     } else if ( $("#review_form").length){
         $(document).ready(initReview);
-
-    } else if ($("#groupSearch").length){
-        $(document).ready(initGroups);
-    } else if ($("#friendadd").length){
-        $(document).ready(initFriends);
-    } else if ($("#provideraddform").length){
-        $(document).ready(initProviderAdd);
-    } 
 });
 
 

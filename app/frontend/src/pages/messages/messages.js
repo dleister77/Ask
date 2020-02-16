@@ -1,11 +1,10 @@
 import Vue from 'vue';
+import message_form from '../../components/message-form';
 import message_row from '../../components/message-row';
 import message_read from '../../components/message-read';
+
 import pagination_nav from '../../components/pagination-nav';
-import form_input_group from '../../components/form-input-group';
-import form_textbook_group from '../../components/form-textbox-group';
 import folder_nav from '../../components/folder-nav';
-import VueBootstrapTypeahead from 'VueBootstrapTypeahead';
 
 const messageApp = new Vue({
     el: '#messageApp',
@@ -14,10 +13,8 @@ const messageApp = new Vue({
         'message-row': message_row,
         'message-read': message_read,
         'pagination-nav': pagination_nav,
-        'form-input-group': form_input_group,
-        'form-textbox-group': form_textbook_group,
+        'message-form': message_form,
         'folder-nav': folder_nav,
-        'vue-boostrap-typeahead': VueBootstrapTypeahead,
         // 'form-input-typeahead': () => import('../../components/form-input-typeahead.js'),
     },
     data: {
@@ -31,6 +28,7 @@ const messageApp = new Vue({
             replyToMessage: "reply-to-message",
             moveMessage: 'move-message',
         },
+        is_reply: false,
         newMessage: {
             conversation_id: "",
             recipient_id: "",
@@ -93,38 +91,11 @@ const messageApp = new Vue({
             post(this.urls.move, form_data);
         },
         replyToMessage: function(){
-            this.newMessage.conversation_id = this.active_message.conversation_id;
-            this.newMessage.recipient_id = this.active_message.sender_id;
-            this.newMessage.recipient = this.active_message.sender_full_name;
-            if (this.active_message.subject.startsWith("Re:")){
-                this.newMessage.subject = this.active_message.subject;
-            } else {
-                this.newMessage.subject = `Re: ${this.active_message.subject}`;
-            }
-            this.newMessage.body = `\n\nOn ${this.active_message.timestamp}, ${this.active_message.sender_full_name} wrote:\n${this.active_message.body}`
             this.show.newMessage = true;
+            this.is_reply = true;
         },
         reverseMessages: function(){
             this.messages.reverse();
-        },
-        sendMessage: function(){
-            let self = this;
-            const f = new FormData(document.getElementById('message-form'));
-            axios.post(this.urls.send_message, f)
-            .then(function(response){
-                if (response.data.status == 'success'){
-                    self.show.newMessage = false;
-                    alert("Message sent");
-                } else {
-                    let message = "Unabled to send message. Please correct errors:\n"
-                    message += response.data.errorMsg.join('\n');
-                    alert(message);
-                }
-            })
-            .catch(function(error){
-                console.log(error);
-                alert("Error: Unable to send message.  Please reload and try again.")
-            })
         },
         showMessage: function(message){
             this.active_index = this.messages.indexOf(message);
@@ -143,9 +114,11 @@ const messageApp = new Vue({
                 this.selectedMessages = [];
             } else if (this.newMessageIsVisible && this.active_index != null){
                 this.show.newMessage = false;
+                this.is_reply = false;
             } else {
                 this.active_index = null;
                 this.show.newMessage = false;
+                this.is_reply = false;
             }
         },
         updateActiveMessage: function(adjust){
@@ -218,38 +191,15 @@ const messageApp = new Vue({
             <message-read v-bind:message="active_message"></message-read>
         </div>
 
-        <div v-if="newMessageIsVisible">
-            <form
-            method="POST"
-            v-bind:action="urls.send_message"
-            id="message-form">
-                <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
-                <input v-model="newMessage.conversation_id" v-bind="{name: 'conversation_id', type:'hidden'}">
-                <input v-model="newMessage.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
-                <!-- <form-input-typeahead
-                    v-if="!is_active"
-                    v-model="newMessage.recipient"
-                    v-bind="{name: 'recipient'}"
-                    v-bind:url="urls.autocomplete"
-                    v-on:id-change="newMessage.recipient_id=$event">To
-                </form-input-typeahead> -->
-                <form-input-group
-                    v-if="is_active"
-                    v-model="newMessage.recipient"
-                    v-bind="{name: 'recipient', readonly: true}">To
-                </form-input-group>            
-                <form-input-group v-model="newMessage.subject" v-bind="{name: 'subject'}">Subject</form-input-group>
-                <form-textbox-group v-model="newMessage.body" v-bind="{name: 'body'}">Message Body</form-textbox-group>
-                <button
-                    class="btn btn-primary btn-block submit"
-                    type="submit"
-                    v-on:click.prevent="sendMessage"
-                    >
-                    Submit
-                </button>
-            </form>
-
-        </div>
+        <message-form
+            id="message-form"
+            v-if="newMessageIsVisible"
+            v-bind:urls="urls"
+            v-bind:csrf="csrf"
+            v-bind:is_active="is_active"
+            v-bind:active_message="active_message"
+            v-bind:is_reply="is_reply"
+            v-on:message_sent="show.newMessage=false"/>
     </div>    
     `
 });

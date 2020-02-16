@@ -44,12 +44,14 @@
   .form-toggle-alert {
     color: red;
   }
-    /* jquery autocomplete */
-    .ui-autocomplete {
-      position: absolute;
-      cursor: default;
-      z-index:3000 !important;
-    }
+  .form-error{
+    border: 2px solid red;  
+  }
+  .form-error-message{
+    color: red;
+    font-size: smaller;
+  }
+
 
   /* Messages */
   .message-read{

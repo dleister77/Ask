@@ -25,9 +25,9 @@
 
 {% block jsScripts %}
 
-
-    <script src="../static/js/review.e3de8ae0a0469a43994b.js"></script>
-
+<% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+<% } %>
 
 {% endblock %}
 

@@ -1,11 +1,75 @@
 {% extends "/layout/sub/single_column.html" %}
 
-{% from "/macros/form.html" import form_render %}
+{% from "/macros/form.html" import field_render %}
 
 {% block content_narrow %}
-    <form action="{{url_for('auth.register')}}" method="post">
-        {{ form_render(form) }}
+<div id="app">
+    <form id="register-form"
+        action="{{url_for('auth.register')}}"
+        method="post"
+        @click.prevent="checkForm">
+        {{form.hidden_tag()}}
+        {{ field_render(form.first_name) }}
+        {{ field_render(form.last_name) }}
+        {{ field_render(form.address.line1) }}
+        {{ field_render(form.address.line2) }}
+        {{ field_render(form.address.city) }}
+        {{ field_render(form.address.state) }}
+        {{ field_render(form.address.zip) }}
+        {{ field_render(form.email) }}
+        {{ field_render(form.username) }}
+
+        <div class="form-group row">
+            <div class="col">
+                <label for="password">password</label>
+                <input id="password"
+                   name="password"
+                   required="required"
+                   type="password"
+                   value=""
+                   class="form-control"
+                   :class="{'form-error':$v.form.password.$error}"
+                   v-model="$v.form.password.$model">
+                <span v-if="!$v.form.password.required && $v.form.password.$dirty"
+                 :class="{'form-error-message':$v.form.password.$error}">
+                 Password is required.</span>
+            </div>
+        </div>        
+        
+        <div class="form-group row">
+            <div class="col">
+                <label for="confirmation">Confirmation</label>
+                <input id="confirmation"
+                   name="confirmation"
+                   required="required"
+                   type="password"
+                   value=""
+                   class="form-control"
+                   :class="{'form-error':$v.form.confirmation.$error}"
+                   v-model="$v.form.confirmation.$model">
+                <span v-if="!$v.form.confirmation.required && $v.form.confirmation.$dirty"
+                 :class="{'form-error-message':$v.form.confirmation.$error}">
+                 Password confirmation is required.</span>
+                <span v-if="!$v.form.confirmation.matches && $v.form.confirmation.$dirty"
+                :class="{'form-error-message':$v.form.confirmation.$error}">
+                Password confirmation must be same as password</span>
+            </div>
+        </div>
+
+
+        
+        {{ field_render(form.submit) }}
+
     </form>
+</div>
+{% endblock %}
+
+{% block jsScripts %}
+
+
+    <script src="../../static/js/register.3f2c047e036e02a16f62.js"></script>
+    
+
 {% endblock %}
 
 

@@ -1,6 +1,5 @@
-import _ from 'lodash';
 import Vue from 'vue';
-import VueBootstrapTypeahead from 'VueBootstrapTypeahead';
+import typeahead_mixin from '../../components/typeahead_mixin';
 import makeMap from '../../scripts/maps.js';
 import {categoryGet} from '../../scripts/forms.js'
 import { getCurrentLocation } from '../../scripts/geo.js';
@@ -53,8 +52,7 @@ const searchPage = new Vue({
         },
         searchResults: searchResults,
         typeahead: {
-            suggestions: [],
-            selected: null,
+            include_id: false,
         },
         views: ['list', 'map'],
         urls: links,
@@ -76,12 +74,8 @@ const searchPage = new Vue({
         makeQueryUrl: function(){
             return this.urls.autocomplete + this.makeQueryString();
         },
-        getSuggestions: async function(){
-            const res = await fetch(this.makeQueryUrl());
-            const suggestions = await res.json();
-            this.typeahead.suggestions = suggestions;
-        } 
     },
+    mixins: [typeahead_mixin],
     mounted: function(){
         const select = document.getElementById("category");
         this.form.category = select.firstElementChild.value;
@@ -102,12 +96,7 @@ const searchPage = new Vue({
                 this.form.gpsLong = "";
             }
         },
-        'form.name': function(val){
-            const debouncedGetSuggestions = _.debounce(this.getSuggestions, 500);
-            debouncedGetSuggestions();
-        }
     }
 });
-console.log("starting vue?")
 
 export default searchPage;

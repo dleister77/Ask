@@ -86,8 +86,7 @@ def friendadd():
         "  Awaiting confirmation.")
         return redirect(url_for('relationship.network_friends'))
     else:
-        form.name.errors.append(form.id.errors.pop())
-        flash("Friend request unsucessful.  Please correct errors and resubmit.")
+        flash(f"Friend request unsucessful.  {' '.join(form.id.errors)}  Please correct errors and resubmit.")
         return friends_render(form, 422)
 
 @bp.route('/network/friends/approve', methods=['POST'])

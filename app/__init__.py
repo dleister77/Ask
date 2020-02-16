@@ -85,6 +85,8 @@ def configure_logging(app):
 def create_app(configClass=None):
     """Application factor."""
     app = Flask(__name__)
+    app.template_folder = "frontend/dist/templates"
+    app.static_folder = "frontend/dist/static"
     if configClass is None:
         if app.config['ENV'] == 'production':
             app.config.from_object(config.ProductionConfig)

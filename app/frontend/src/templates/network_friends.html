@@ -119,8 +119,8 @@
     <script> let links = {'autocomplete': "{{ url_for('relationship.friendsearch') }}"} </script>
 
 
-    
-        <script src="../../static/js/friendAdd.270c1b35a8ae5207499b.js"></script>
-    
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+        <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
 
 {% endblock %}

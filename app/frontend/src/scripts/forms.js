@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 function categoryGet(url, sector, category_id){
     axios.get(url, {
         params: {

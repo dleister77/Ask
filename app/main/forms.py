@@ -202,7 +202,7 @@ class ReviewForm(FlaskForm):
                         (2, "** (Below Average)"),
                         (1, "* (Stay away from!)")],
                         coerce=int,
-                        validators=[InputRequired(message="Rating is required.")] 
+                        validators=[InputRequired(message="Rating is required.")], 
                         )
     cost = RadioField("Cost- rating", choices=[
                         (5, "$$$$$ (Much higher than competitors)"),

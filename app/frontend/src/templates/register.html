@@ -1,0 +1,49 @@
+{% extends "/layout/sub/single_column.html" %}
+
+{% from "/macros/form.html" import field_render %}
+
+{% block content_narrow %}
+<div id="app">
+    <form id="register-form"
+        action="{{url_for('auth.register')}}"
+        method="post"
+        @click.prevent="checkForm">
+        {{form.hidden_tag()}}
+        {{ field_render(form.first_name) }}
+        {{ field_render(form.last_name) }}
+        {{ field_render(form.address.line1) }}
+        {{ field_render(form.address.line2) }}
+        {{ field_render(form.address.city) }}
+        {{ field_render(form.address.state) }}
+        {{ field_render(form.address.zip) }}
+        {{ field_render(form.email) }}
+        {{ field_render(form.username) }}
+        {{ field_render(form.password, **{"v-model":"$v.form.password.$model", "v-bind:class":"{'form-error': $v.form.password.$error}"}) }}
+        <div v-if="!$v.form.password.required">Password is required.</div>
+        
+      
+        <div class="col">
+            {{ form.confirmation.label() }}
+            {{ form.confirmation(class_="form-control", **{"v-model":"$v.form.confirmation.$model", "v-bind:class":"{'form-error':$v.form.confirmation.$error}") }}
+            <span v-if="!$v.form.confirmation.required" class="form-error-message">2Password confirmation is required.</span>
+            <span v-if="!$v.form.confirmation.matches" class="form-error-message">2Password confirmation must be same as password</span>
+        </div>
+
+        
+        {{ field_render(form.submit) }}
+
+    </form>
+</div>
+{% endblock %}
+
+{% block jsScripts %}
+
+<% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
+
+{% endblock %}
+
+
+
+

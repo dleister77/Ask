@@ -48,9 +48,9 @@
 
 </script>
 
-
-<script src="../static/js/providerAdd.022702164c24f97ad0f0.js"></script>
-
+<% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+<script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+<% } %>
 
 {% endblock %}
 

@@ -49,9 +49,9 @@
     <script> let links = {'autocomplete': "{{ url_for('relationship.groupSearchAutocomplete') }}"} </script>
 
 
-    
-        <script src="../../static/js/groupSearch.7b0db807b5059cc4c50e.js"></script>
-    
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+        <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
         
 
 
