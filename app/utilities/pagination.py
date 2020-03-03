@@ -22,11 +22,12 @@ class Pagination:
             data
                
     """
-    def __init__(self, data, page, per_page):
+    def __init__(self, data, page, per_page, pages_to_display=5):
         self.data = data
         self.page = page
         self.per_page = per_page
-        self.pages = math.ceil(len(data) / per_page)
+        self.pages = max(1, math.ceil(len(data) / per_page))
+        self.pages_to_display = pages_to_display
 
     @property
     def has_next(self):
@@ -81,7 +82,15 @@ class Pagination:
         pag_dict['prev'] = url_for(endpoint, page=self.prev_num, **pag_args)\
                         if self.has_prev else None
         pag_dict['pages'] = []
-        for i in range(self.pages):
+        
+        if self.page - 0 > (self.pages_to_display // 2):
+            start = self.page - (self.pages_to_display // 2) - 1
+            end = start + min(self.pages_to_display, self.pages)
+        else:
+            start = 0
+            end = min(self.pages_to_display, self.pages)
+
+        for i in range(start, end):
             pag_dict['pages'].append((i + 1, url_for(endpoint, page=i + 1, 
                                                     **pag_args)
                                     ))

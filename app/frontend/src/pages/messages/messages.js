@@ -15,7 +15,6 @@ const messageApp = new Vue({
         'pagination-nav': pagination_nav,
         'message-form': message_form,
         'folder-nav': folder_nav,
-        // 'form-input-typeahead': () => import('../../components/form-input-typeahead.js'),
     },
     data: {
         active_index: null,

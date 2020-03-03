@@ -72,14 +72,18 @@
 {% endblock %}
 
 {% block content_medium %}
-        <div id = "reviews">
-                {%for review in reviews %}
-                    {{render_review(review, current_user)}}
-                    <br>
-                {% endfor %}
-        </div>
 
-        {{pagination(pag_urls)}}
+        {% if reviews | length > 0 %}
+            <div id = "reviews">
+                    {%for review in reviews %}
+                        {{render_review(review, current_user)}}
+                        <br>
+                    {% endfor %}
+            </div>
+
+            {{pagination(pag_urls)}}
+
+        {% endif %}
         
 {% endblock %}
 

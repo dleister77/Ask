@@ -437,10 +437,12 @@ class ProviderSearchForm(FlaskForm):
     def populate_choices(self):
         """populates category and location choices prior to form validation."""
         self.sector.choices = Sector.list()
+        self.sector.choices.insert(0, (0, "Choose from list"))
         if self.sector.data:
             self.category.choices = Category.list(self.sector.data)
         else:
             self.category.choices = Category.list(1)
+            self.category.choices.insert(0, (0, "Choose from list"))
         self.location.choices = [("home", f"Home - "
                                            f"{current_user.address.line1}, "
                                            f"{current_user.address.city}, "
@@ -461,7 +463,16 @@ class ProviderSearchForm(FlaskForm):
                                          f"{location['address']}"))
             self.location.data = self.location.choices[0]    
             self.manual_location.data = ""
-        return self 
+        return self
+    
+    def set_default_values(self):
+        self.sector.data = 0
+        self.category.data = 0
+        if self.location.data in [None, 'None']:
+            self.location.data = "home"
+        self.searchRange.data = 30
+        return self
+        
 
 
 class ProviderFilterForm(FlaskForm):

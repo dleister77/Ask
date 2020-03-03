@@ -29,7 +29,10 @@ from app.extensions import db
 def index():
     form = ProviderSearchForm()
     form.populate_choices()
-    return render_template("index.html", form=form,title="Search")
+    form.set_default_values()
+    form_dict = json.dumps(form.data)
+    return render_template("index.html", form=form, form_dict=form_dict,
+                           title="Search")
 
 
 @bp.route('/categorylist', methods=['GET'])
@@ -264,6 +267,7 @@ def search():
     form = ProviderSearchForm(request.args)
     form.populate_choices()
     page = request.args.get('page', 1, int)
+    form_dict = json.dumps(form.data)
     if form.validate() or request.args.get('page') is not None:
         try:
             searchLocation = Location(form.location.data, form.manual_location.data,
@@ -272,7 +276,8 @@ def search():
             flash("Invalid address submitted. Please re-enter and try again.")
             if form.manual_location.data not in [None, ""]:
                 form.manual_location.errors.append("Invalid Address. Please updated.")
-            return render_template("index.html", form=form, title="Search"),422
+            return render_template("index.html", form_dict=form_dict, form=form,
+                                   title="Search"),422
 
         searchLocation.setRangeCoordinates(form.searchRange.data)     
         filters = {"name": form.name.data,
@@ -308,11 +313,13 @@ def search():
             locationDict = None
         return render_template("index.html", form=form, title="Search", 
                                providers=providers, pag_urls=pag_urls,
+                               form_dict=form_dict,
                                reviewFilter=reviewFilter,
                                locationDict=locationDict,
                                providersDict=providersDict,
                                summary=summary)
-    return render_template("index.html", form=form, title="Search"), 422
+    return render_template("index.html", form=form, form_dict=form_dict,
+                           title="Search"), 422
 
 @bp.route('/provider/search/json', methods=['GET'])
 @login_required
@@ -387,7 +394,10 @@ def send_message():
                         subject=form.subject.data,
                         body=form.body.data,
                         msg_type="user2user",
-                        recipient_data=[RecipientData(user=User.query.filter_by(id=form.recipient_id.data).first())]
+                        recipient_data=[RecipientData
+                           (user=User.query.filter_by(id=form.recipient_id.data)
+                                           .first()
+                            )]
                     )
                 ]
             )
@@ -431,7 +441,8 @@ def view_messages(folder):
     messages_json = json.dumps(messages_dict)
     pagination_json = json.dumps(pag_urls)
     return render_template("messages.html", title="messages", messages=messages,
-    pagination_json = pagination_json, new_message=new_message, messages_json=messages_json)
+        pagination_json = pagination_json, new_message=new_message,
+        messages_json=messages_json)
 
 @bp.route('/message/update/read', methods=["POST"])
 @login_required
@@ -451,7 +462,7 @@ def move_message():
     status = request.form.get('status')
     flash_status = {'trash': 'deleted', 'archive': 'archived'}
     if status not in ['trash', 'archive']:
-        flash("Invalid request.  Please try again.")
+        flash("Invalid request.  Please choose a valid folder.")
     else:
         moved = []
         for id in message_ids:

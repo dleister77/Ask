@@ -9,7 +9,7 @@ from string import capwords
 from flask import current_app, render_template, session
 from flask_login import UserMixin, current_user
 import jwt
-from sqlalchemy import CheckConstraint, func as saFunc, or_, and_, select
+from sqlalchemy import CheckConstraint, UniqueConstraint, func as saFunc, or_, and_, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -104,7 +104,9 @@ user_group = db.Table('user_group', db.Model.metadata,
 # many to many table linking providers to multiple categories
 category_provider = db.Table('category_provider', db.Model.metadata,
     db.Column('category_id', db.Integer, db.ForeignKey('category.id')),
-    db.Column('provider_id', db.Integer, db.ForeignKey('provider.id')))
+    db.Column('provider_id', db.Integer, db.ForeignKey('provider.id',
+                                            ondelete="CASCADE")),
+    UniqueConstraint('category_id', 'provider_id', name='unique_cat_prov'))
 
 
 # many to many table linking pictures with users with friends
@@ -156,6 +158,7 @@ class Address(Model):
         state_id (int): foreign key, id of address's state
         latitude (flt): latitude of address coordinates
         longitude (flt): longitude of address coordinates
+        low_accuracy (bool): whether lat/long were based on low accuracy score
     
     Methods:
         update: overrides superclass update method.  calls get_coordinates if
@@ -173,13 +176,16 @@ class Address(Model):
     _line2 = db.Column(db.String(128))
     zip = db.Column(db.String(20), index=True)
     _city = db.Column(db.String(64), index=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id",
-                                                  ondelete="CASCADE"))
-    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id",
-                                                      ondelete="CASCADE"))
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey("user.id", ondelete="CASCADE"),
+                        unique=True)
+    provider_id = db.Column(db.Integer, 
+                            db.ForeignKey("provider.id", ondelete="CASCADE"),
+                            unique=True)
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
     latitude = db.Column(db.Float(precision='8,6'), index=True)
     longitude = db.Column(db.Float(precision='9,6'), index=True)
+    low_accuracy = db.Column(db.Boolean, default=False)
 
 
     def __init__(self, **kwargs):
@@ -899,7 +905,7 @@ class Provider(Model):
     _name = db.Column(db.String(64), index=True, nullable=False)
     email = db.Column(db.String(120), unique=True)
     _telephone = db.Column(db.String(24), unique=True, nullable=False)
-    website = db.Column(db.String(30))
+    website = db.Column(db.String(120))
 
     address = db.relationship("Address", backref="provider", uselist=False,
                               passive_deletes=True,
@@ -1167,6 +1173,19 @@ class Provider(Model):
         summary = q.getQuery().first()
         return (self, summary.average, summary.cost, summary.count)
     
+    @staticmethod
+    def import_file(filename):
+        biz = namedtuple('biz', ['name', 'category', 'line1', 'city', 'state', 'zip','website'])
+        base_dir = os.path.dirname(current_app.instance_path)
+        file = os.path.join(base_dir, 'supporting', filename)
+        with open(file, 'r') as f:
+            business = f.readline().strip()
+            biz = business.split(', ')
+            name, category, line1, city, state, zip, telephone, website = biz
+            return (name, category, line1, city, state, zip, telephone, website)
+            
+
+
     def __repr__(self):
         return f"<Provider {self.name}>"
 
@@ -1500,7 +1519,20 @@ class Group(Model):
         return groups
 
 class Message(Model):
-    """User to user messages"""
+    """User to user messages
+    
+    Attributes:
+      id (int): message id
+      conversation_id (int): id of conversation that message belongs to
+      sender_id (int): id of person sending the message
+      timestamp (Datetime): date/time when message sent
+      msg_type (str): type of message, either user2user or admin
+      body (str): text of message
+      status (str): folder message stored in
+      read (boolean): whether message has been read by the sender, default to true
+      sender (User): User that sent the message
+      conversation: Conversation to which message belongs to
+      """
 
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer,
@@ -1511,7 +1543,7 @@ class Message(Model):
     timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
     msg_type = db.Column(db.String(25), index=True)
     subject = db.Column(db.String(50), index=True)
-    body = db.Column(db.String(1000))
+    body = db.Column(db.String(5000))
     status = db.Column(db.String(20), default="sent", index=True)
     read = db.Column(db.Boolean, default=True, index=True)
 
@@ -1519,6 +1551,17 @@ class Message(Model):
     conversation = db.relationship("Conversation", backref="messages")
 
 class RecipientData(Model):
+    """Message specific information relating to the receiver of the message
+
+    Attributes:
+       id (int): recipient data id
+       user_id (int): id of user that receives the message
+       read (boolean): whether receiver has read the message
+       status (str): folder message stored in
+       message (Message): Message object that recipient data pertains to
+       user (User): User that receives the message
+    
+    """
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     message_id = db.Column(db.Integer, db.ForeignKey("message.id",

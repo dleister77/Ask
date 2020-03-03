@@ -35,20 +35,19 @@ const searchPage = new Vue({
     data: {
         activeView: 'list',
         form:{
-            location: "home",
-            manual_location: "",
-            gpsLat: "",
-            gpsLong: "",
-            searchRange: 30,
-            sector: 1,
-            category:"",
-            name: "",
+            location: form_json.location,
+            manual_location: form_json.manual_location,
+            gpsLat: form_json.gpsLat,
+            gpsLong: form_json.gpsLong,
+            searchRange: form_json.searchRange,
+            sector: form_json.sector,
+            category: form_json.category,
+            name: form_json.name,
         },
         map: {
             show: false,
             center: mapCenter,
             container: "mapContainer",
-            isRendered: false,
         },
         searchResults: searchResults,
         typeahead: {
@@ -60,8 +59,10 @@ const searchPage = new Vue({
     methods: {
         renderMap: function(){
             this.map.show = true;
-            this.map.isRendered = true,
-            makeMap(this.map, this.searchResults);
+            let self = this;
+            Vue.nextTick(function() {
+                    makeMap(self.map, self.searchResults);
+                });
         },
         updateCategory: function(){
             categoryGet(this.urls.categoryList, this.form.sector, 'category');
@@ -76,10 +77,6 @@ const searchPage = new Vue({
         },
     },
     mixins: [typeahead_mixin],
-    mounted: function(){
-        const select = document.getElementById("category");
-        this.form.category = select.firstElementChild.value;
-    },
     watch: {
         'form.location': function(locationSource){
             if (locationSource == "gps"){

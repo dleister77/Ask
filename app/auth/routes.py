@@ -1,4 +1,6 @@
-from flask import flash, redirect, render_template, request, url_for, \
+import json
+
+from flask import flash, jsonify, redirect, render_template, request, url_for, \
                   current_app, session
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.urls import url_parse
@@ -9,13 +11,12 @@ from app.auth.forms import LoginForm, RegistrationForm, PasswordChangeForm, \
                            UserUpdateForm
 from app.extensions import db
 from app.models import User, Address
-from app.utilities.helpers import email_verified
+from app.utilities.helpers import email_verified, form_to_dict
 from app.utilities.pagination import Pagination
 
 @bp.route('/')
 @bp.route('/welcome')
 def welcome():
-    print("welcome called")
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     form = LoginForm()
@@ -140,10 +141,8 @@ def passwordupdate():
                            modal_title_2=modal_title_2, pword_open=pword_open,
                            pag_urls=pag_urls, summary=summary)
 
-
-
-@bp.route('/register', methods=["GET", "POST"])
-def register():
+@bp.route('/register2', methods=["GET", "POST"])
+def register2():
     if current_user.is_authenticated:
         flash("You are already registered.")
         return redirect(url_for("main.index"))
@@ -164,6 +163,34 @@ def register():
         flash("Please check your email for an email verification message.")
         return redirect(url_for('auth.welcome'))
     return render_template("auth/register.html", title='Register', form=form), 422
+
+@bp.route('/register', methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated:
+        flash("You are already registered.")
+        return redirect(url_for("main.index"))
+    form = RegistrationForm().populate_choices()
+    if request.method == "GET":
+        form = json.dumps(form_to_dict(form))
+        return render_template("auth/register.html", title='Register', form=form)
+    if form.validate_on_submit():
+        address = Address(line1=form.address.line1.data, 
+                          line2=form.address.line2.data, 
+                          city=form.address.city.data, 
+                          state_id=form.address.state.data,
+                          zip=form.address.zip.data)
+        user = User.create(first_name=form.first_name.data, 
+                           last_name=form.last_name.data, email=form.email.data, 
+                           username=form.username.data, address=address)
+        user.set_password(form.password.data)
+        user.send_email_verification()
+        session['email_verification_sent'] = True
+        flash("Congratulations! You've successfully registered.")
+        flash("Please check your email for an email verification message.")
+        return redirect(url_for('auth.welcome'))
+    else:
+        form = json.dumps(form_to_dict(form))
+        return render_template("auth/register.html", title='Register', form=form), 422
 
     
 @bp.route('/userupdate', methods=["POST"])

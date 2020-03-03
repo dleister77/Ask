@@ -21,6 +21,7 @@
     <form action="{{url_for('main.search')}}" method="get" id="providersearch">
         {{ field_render(form.location, **{'v-model':'form.location'}) }}
         <div class = "form-group row"
+          hidden
           v-show="showManualLocation"
           id="manual_location">
             <div class = "col">
@@ -74,7 +75,7 @@
 {% block content_medium %}
 
     {% if providers and providers != none %}
-  
+        {% if summary.count > 0 %}
         <div class="row">
             <div class="d-flex flex-column w-100 align-items-center list-group">
                 <h5>Search Review Summary Statistics</h5>
@@ -85,6 +86,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <br>
         <div class="row justify-content-end mx-2">
@@ -92,6 +94,7 @@
                 class="btn btn-link"
                 id="viewOnMap"
                 type="button"
+                v-if="!map.show"
                 v-on:click="renderMap">
                 View Map
             </button>
@@ -100,6 +103,7 @@
                   class="btn btn-link"
                   id="viewList"
                   type="button"
+                  v-if="map.show"
                   v-on:click="map.show=false">View List</button>
             </div>
         </div>
@@ -112,16 +116,12 @@
         </div>
 
     {% endif %}
-    <!-- <div id="mapView"> -->
         <keep-alive>
             <map-view
                 v-if="map.show"
                 id="mapContainer"> 
-                <!-- <p> where map should go</p>     -->
             </map-view>
         </keep-alive>
-        <!-- </div> -->
-   
     
     {% if pag_urls %}
         {{ pagination(pag_urls) }}
@@ -135,7 +135,10 @@
 
 {% block jsScripts %}
 
-<script> 
+<script>
+    let form_dict = '{{ form_dict|safe }}';
+    form_json = JSON.parse(form_dict);
+
     let links = {
         autocomplete: "{{ url_for('main.providerAutocomplete') }}",
         categoryList: "{{ url_for('main.category_list') }}",
@@ -152,16 +155,8 @@
     
 </script>
 
-<!-- link to ArcGis map API -->
-<!-- <link rel="stylesheet" href="https://js.arcgis.com/4.12/esri/themes/light/main.css">
-<script src="https://js.arcgis.com/4.12/"></script> -->
 
-<!-- <script src="{{ url_for('static', filename='dist/vendors~search.bundle.js') }}"></script>
-<script src="{{ url_for('static', filename='dist/search.bundle.js') }}"></script> -->
-<!-- <script type="module" src="{{ url_for('static', filename='search_vue.js') }}"></script> -->
-
-
-    <script src="../static/js/search.601bc02205380df3a738.js"></script>
+    <script src="../static/js/search.bf4682fd7fc4a83f7975.js"></script>
 
 
 {% endblock %}

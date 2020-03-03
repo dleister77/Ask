@@ -42,5 +42,3 @@ let unread_url = "{{ url_for('main.get_message_unread_count') }}";
 let initial_unread_count = {{ 0 if not current_user.is_authenticated else current_user.get_inbox_unread_count() }};
 
 </script>
-
-<!-- TODO make src urls correctly work with flask static folder reference  -->

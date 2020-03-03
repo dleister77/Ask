@@ -6,68 +6,161 @@
 <div id="app">
     <form id="register-form"
         action="{{url_for('auth.register')}}"
+        @submit.prevent="submit"
         method="post"
-        @click.prevent="checkForm">
-        {{form.hidden_tag()}}
-        {{ field_render(form.first_name) }}
-        {{ field_render(form.last_name) }}
-        {{ field_render(form.address.line1) }}
-        {{ field_render(form.address.line2) }}
-        {{ field_render(form.address.city) }}
-        {{ field_render(form.address.state) }}
-        {{ field_render(form.address.zip) }}
-        {{ field_render(form.email) }}
-        {{ field_render(form.username) }}
-
-        <div class="form-group row">
-            <div class="col">
-                <label for="password">password</label>
-                <input id="password"
-                   name="password"
-                   required="required"
-                   type="password"
-                   value=""
-                   class="form-control"
-                   :class="{'form-error':$v.form.password.$error}"
-                   v-model="$v.form.password.$model">
-                <span v-if="!$v.form.password.required && $v.form.password.$dirty"
-                 :class="{'form-error-message':$v.form.password.$error}">
-                 Password is required.</span>
-            </div>
-        </div>        
+        novalidate>
         
-        <div class="form-group row">
-            <div class="col">
-                <label for="confirmation">Confirmation</label>
-                <input id="confirmation"
-                   name="confirmation"
-                   required="required"
-                   type="password"
-                   value=""
-                   class="form-control"
-                   :class="{'form-error':$v.form.confirmation.$error}"
-                   v-model="$v.form.confirmation.$model">
-                <span v-if="!$v.form.confirmation.required && $v.form.confirmation.$dirty"
-                 :class="{'form-error-message':$v.form.confirmation.$error}">
-                 Password confirmation is required.</span>
-                <span v-if="!$v.form.confirmation.matches && $v.form.confirmation.$dirty"
-                :class="{'form-error-message':$v.form.confirmation.$error}">
-                Password confirmation must be same as password</span>
-            </div>
+      <input type="hidden"
+        :value="form.csrf_token"
+        name="csrf_token">
+
+        <div class="form-group">
+          <form-input
+            name="first_name"
+            v-model.trim="$v.form.first_name.value.$model"
+            :validator="$v.form.first_name.value"
+            :server_side_errors="form.first_name.errors">
+            First Name
+          </form-input>
+        </div>         
+
+        <div class="form-group">
+          <form-input
+            name="last_name"
+            v-model.trim="$v.form.last_name.value.$model"
+            :validator="$v.form.last_name.value"
+            :server_side_errors="form.last_name.errors">
+            Last Name
+          </form-input>
+        </div>    
+
+        <div class="form-group">
+          <form-input
+            name="address-line1"
+            v-model.trim="$v.form.address.line1.value.$model"
+            :validator="$v.form.address.line1.value"
+            :server_side_errors="form.address.line1.errors">
+            Street Address
+          </form-input>
+        </div>       
+
+        <div class="form-group">
+          <form-input
+            name="address-line2"
+            :required="false"
+            v-model.trim="form.address.line2.value"
+            :server_side_errors="form.address.line2.errors">
+            Address Line 2
+          </form-input>
+        </div>    
+
+        <div class="form-group">
+          <form-input
+            name="address-city"
+            v-model.trim="$v.form.address.city.value.$model"
+            :validator="$v.form.address.city.value"
+            :server_side_errors="form.address.city.errors">
+            City
+          </form-input>
+        </div>          
+
+        <div class="form-group">
+          <form-input-select
+            name="address-state"
+            v-bind:options="states"
+            v-bind:validator="$v.form.address.state.value"
+            v-bind:value="form.address.state.value"
+            v-model.trim="$v.form.address.state.value.$model"
+            v-bind:server_side_errors="form.address.state.errors">
+            State
+          </form-input-select>
+        </div>        
+
+        <div class="form-group">
+          <form-input
+            name="address-zip"
+            v-model.trim="$v.form.address.zip.value.$model"
+            :validator="$v.form.address.zip.value"
+            :server_side_errors="form.address.zip.errors">
+          Zip Code
+        </form-input>
+          <error-message v-bind:field="$v.form.address.zip.value" validator="length">
+            Zip code must be 5 characters in length.
+          </error-message>
+        </div>            
+
+        <div class="form-group">
+          <form-input
+            name="email"
+            v-model.trim="$v.form.email.value.$model"
+            :validator="$v.form.email.value"
+            :server_side_errors="form.email.errors">
+            Email
+          </form-input>
+        </div>           
+
+        <div class="form-group">
+          <form-input
+            name="username"
+            v-model.trim="$v.form.username.value.$model"
+            :validator="$v.form.username.value"
+            :server_side_errors="form.username.errors">
+            Username
+          </form-input>
+        </div>          
+
+        <div class="form-group">
+          <form-input
+            name="password"
+            type="password"
+            v-model.trim="$v.form.password.value.$model"
+            :validator="$v.form.password.value"
+            :server_side_errors="form.password.errors">
+            Password
+          </form-input>
+          <error-message 
+            :field="$v.form.password.value"
+            validator="between">
+            Password must be between 7 & 15 characters in length.
+          </error-message>
+        </div>
+        
+        <div class="form-group">
+          <form-input
+            name="confirmation"
+            type="password"
+            v-model.trim="$v.form.confirmation.value.$model"
+            :validator="$v.form.confirmation.value"
+            :server_side_errors="form.confirmation.errors">
+            Confirmation
+          </form-input>
+          <error-message 
+            :field="$v.form.confirmation.value"
+            validator="matches">
+            Confirmation does not match entered password.
+          </error-message>
         </div>
 
-
-        
-        {{ field_render(form.submit) }}
+        <button
+          type="submit"
+          class="btn btn-primary btn-block"
+          @click="$v.$touch">
+          Submit
+        </button> 
 
     </form>
 </div>
 {% endblock %}
 
 {% block jsScripts %}
+<script>
+
+  let server_form = {{ form | safe }}
+
+</script>
 
 
-    <script src="../../static/js/register.3f2c047e036e02a16f62.js"></script>
+    <script src="../../static/js/register.6f321b8d917ef39fe0fd.js"></script>
     
 
 {% endblock %}

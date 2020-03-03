@@ -167,3 +167,17 @@ def url_check(url):
         print(e)
         return False
 
+def form_to_dict2(form):
+
+    return {"csrf_token": form.csrf_token.current_token, "data": form.data, "errors": form.errors}
+
+def form_to_dict(form):
+    form_dict = {}
+    for field in form:
+        if field.type == 'FormField':
+            form_dict[field.short_name] = form_to_dict(field)
+        elif field.short_name == 'csrf_token':
+            form_dict[field.short_name] = {"value": field.current_token}
+        else:
+            form_dict[field.short_name] = {"data": field.data, "errors": field.errors}
+    return form_dict

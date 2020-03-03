@@ -222,6 +222,7 @@ class FriendSearchForm(FlaskForm):
         id (int): hidden, id of friend being added.  
     
     """
+
     name = StringField("Friend Name", id="friend_name", 
                        validators=[InputRequired(message="Name is required.")])
     id = HiddenField("Friend ID", id="friend_value", 
