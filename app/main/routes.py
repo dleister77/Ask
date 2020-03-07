@@ -15,7 +15,7 @@ from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            UserMessageForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
-                        User, Conversation, Message, RecipientData
+                        User, Conversation, Message, Message_User
 from app.utilities.geo import AddressError, Location, sortByDistance
 from app.utilities.helpers import disableForm, email_verified, save_url
 from app.utilities.pagination import Pagination
@@ -374,7 +374,7 @@ def user(username):
                                 modal_title=modal_title, pform=pform, 
                                 modal_title_2=modal_title_2, pag_urls=pag_urls)
     
-    message = UserMessageForm(recipient = user.full_name, recipient_id=user.id)
+    message = UserMessageForm(Message_User = user.full_name, recipient_id=user.id)
     return render_template("user.html", title="User Profile", user=user,
                             reviews=reviews, pag_urls=pag_urls,
                             summary=summary, message=message)
@@ -386,30 +386,20 @@ def send_message():
     """send message to another user"""
     form = UserMessageForm()
     if form.validate_on_submit():
-        if form.conversation_id.data == "" or form.conversation_id.data is None:
-            Conversation.create(
-                messages=[
-                    Message(
-                        sender=current_user,
-                        subject=form.subject.data,
-                        body=form.body.data,
-                        msg_type="user2user",
-                        recipient_data=[RecipientData
-                           (user=User.query.filter_by(id=form.recipient_id.data)
-                                           .first()
-                            )]
-                    )
-                ]
-            )
-        else:
-            Message.create(
-                conversation_id = form.conversation_id.data,
-                sender=current_user,
+        if form.message_user_id.data == "" or form.message_user_id.data is None:
+            Message.send_new(
+                sender_dict=dict(user_id=current_user.id),
+                recipient_dict=dict(user_id=form.recipient_id.data),
                 subject=form.subject.data,
-                body=form.body.data,
-                msg_type="user2user",
-                recipient_data=[RecipientData(user=User.query.filter_by(id=form.recipient_id.data).first())]
-            )            
+                body=form.body.data
+            )
+
+        else:
+            existing_message = Message_User.query.get(form.message_user_id.data).message
+            existing_message.send_reply(
+                subject=form.subject.data,
+                body=form.body.data
+            )
         return jsonify(dict(status="success"))
     return jsonify(
         dict(
@@ -429,15 +419,14 @@ def view_messages(folder):
     messages = pagination.paginatedData
     new_message = UserMessageForm()
     messages_dict = [{"id": msg.id,
-                      "conversation_id": msg.conversation_id,
-                      "timestamp": msg.timestamp,
+                      "timestamp": msg.message.timestamp,
                       "read": msg.read,
-                      "sender_id": msg.sender.id,
-                      "sender_full_name": msg.sender.full_name,
-                      "sender_user_name": msg.sender.username,
-                      "status": msg.status,
-                      "subject": msg.subject,
-                      "body": msg.body } for msg in messages]
+                      "sender_id": msg.message.sender.user_id,
+                      "sender_full_name": msg.message.sender.full_name,
+                      "sender_user_name": msg.message.sender.user.username,
+                      "status": msg.tag,
+                      "subject": msg.message.subject,
+                      "body": msg.message.body } for msg in messages]
     messages_json = json.dumps(messages_dict)
     pagination_json = json.dumps(pag_urls)
     return render_template("messages.html", title="messages", messages=messages,
@@ -448,7 +437,7 @@ def view_messages(folder):
 @login_required
 def message_update_read():
     """update message as having been read."""
-    msg = RecipientData.query.get(request.form.get('id'))
+    msg = Message_User.query.get(request.form.get('id'))
     if msg is not None and msg.user_id == current_user.id:
         msg.update(read=True)
         return jsonify({"status": "success"})
@@ -459,21 +448,21 @@ def message_update_read():
 @login_required
 def move_message():
     message_ids = request.form.get('message_id').split(',')
-    status = request.form.get('status')
-    flash_status = {'trash': 'deleted', 'archive': 'archived'}
-    if status not in ['trash', 'archive']:
+    tag = request.form.get('tag')
+    flash_status = {'trash': 'deleted', 'archive': 'archived', 'inbox': 'moved to inbox'}
+    if tag not in ['trash', 'archive', 'inbox']:
         flash("Invalid request.  Please choose a valid folder.")
     else:
         moved = []
         for id in message_ids:
-            msg = RecipientData.query.get(id)
+            msg = Message_User.query.get(id)
             if msg is not None and msg.user_id == current_user.id:
-                msg.update(status=status)
+                msg.update(tag=tag)
                 moved.append(True)
         if len(moved) == 1:
-            flash(f"Message {flash_status[status]}.")
+            flash(f"Message {flash_status[tag]}.")
         elif len(moved) > 1:
-            flash(f"Messages {flash_status[status]}.")
+            flash(f"Messages {flash_status[tag]}.")
         else:
             flash("Unable to move message(s). Please try again.")
     return redirect(url_for('main.view_messages', folder="inbox"))
@@ -494,8 +483,6 @@ def get_friends():
                       .limit(50)
     users = users.all()
     names = ([{"id": person.id, 
-            #   "first_name": person.first_name, 
-            #   "last_name": person.last_name,
               "full_name": f"{person.first_name} {person.last_name}"}
              for person in users])
     return jsonify(names)

@@ -1,10 +1,14 @@
+import axios from 'axios';
 import Vue from 'vue';
+
+import {postForm, makeForm} from '../../scripts/forms.js';
+
 import message_form from '../../components/message-form';
 import message_row from '../../components/message-row';
 import message_read from '../../components/message-read';
-
 import pagination_nav from '../../components/pagination-nav';
 import folder_nav from '../../components/folder-nav';
+
 
 const messageApp = new Vue({
     el: '#messageApp',
@@ -29,7 +33,7 @@ const messageApp = new Vue({
         },
         is_reply: false,
         newMessage: {
-            conversation_id: "",
+            message_user_id: "",
             recipient_id: "",
             recipient: "",
             subject: "",
@@ -68,7 +72,8 @@ const messageApp = new Vue({
         markAsRead: function(){
             let self = this;
             let data = {id: this.active_message.id, csrf_token: this.csrf};
-            axios.post(this.urls.updateMessageRead, formDataFromObject(data))
+            let form = makeForm(data)
+            axios.post(this.urls.updateMessageRead, form)
             .then(function(response){
                 if (response.data.status == "success"){
                     self.active_message.read = true;
@@ -84,10 +89,10 @@ const messageApp = new Vue({
         moveMessage: function(status){
             let form_data = {
                 'message_id': this.selectedMessages.toString(),
-                'status': status,
+                'tag': status,
                 'csrf_token': this.csrf
             };
-            post(this.urls.move, form_data);
+            postForm(this.urls.move, form_data);
         },
         replyToMessage: function(){
             this.show.newMessage = true;

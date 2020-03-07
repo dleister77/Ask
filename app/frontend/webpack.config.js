@@ -12,12 +12,15 @@ module.exports = {
         groupSearch: './src/pages/group/groupSearch.js',
         friendAdd: './src/pages/friend/friendAdd.js',
         review: './src/pages/review/review.js',
-        register: './src/pages/register/register.js'
+        register: './src/pages/register/register.js',
+        providerProfile: './src/pages/provider/providerProfile.js',
+        userProfile: './src/pages/user/userProfile.js'
     },
     mode: 'development',
     output: {
         filename: 'static/js/[name].[contenthash].js',
-        path: path.resolve(__dirname, 'dist'),
+        path: path.resolve(__dirname, './dist'),
+        publicPath: "/"
     },
     externals: {
         'VueBootstrapTypeahead': "VueBootstrapTypeahead",
@@ -33,7 +36,8 @@ module.exports = {
                     chunks: 'all',
                 }
             }
-        }
+        },
+        usedExports: true,
     },
     plugins: [
         new CleanWebpackPlugin({
@@ -92,6 +96,18 @@ module.exports = {
             chunks: ["register"],
             inject: false,
         }),
+        new HtmlWebpackPlugin({
+            filename: "templates/provider_profile.html",
+            template: "src/templates/provider_profile.html",
+            chunks: ["providerProfile"],
+            inject: false,
+        }),
+        new HtmlWebpackPlugin({
+            filename: "templates/user.html",
+            template: "src/templates/user.html",
+            chunks: ["userProfile"],
+            inject: false,
+        }),        
 
     ],
     resolve: {

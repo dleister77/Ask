@@ -19,9 +19,24 @@
                 {% if review.user_id == current_user.id %}
                 <div class="col-5 col-md-4">
                     <ul class="nav justify-content-end">
-                        <a class="card-header-item nav-link" href="{{ url_for('main.reviewEdit', id=review.id) }}">
+                        <a class="card-header-item nav-link" href="{{ url_for('main.reviewEdit', id=review.id) }}">                          
                         Edit
                         </a>
+                    </ul>
+                </div>
+                {% else %}
+                <div class="col-5 col-md-4">
+                    <ul class="nav justify-content-end">
+                        <button
+                        type="button"
+                        class="btn btn-link"
+                        data-toggle="modal"
+                        data-target="#message-modal"
+                        data-id="{{ review.user_id }}"
+                        data-name="{{ review.user.full_name }}"
+                        data-subject="{{ review.provider.name }}"
+                        @click="setRecipient"
+                        >Message Reviewer</button>
                     </ul>
                 </div>
                 {% endif %}

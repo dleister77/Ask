@@ -154,9 +154,9 @@ Send Message:
     let csrf = "{{ csrf_token() }}"
 </script>
 
-
-    <script src="/static/js/userProfile.a87e2c92c23be620c213.js"></script>
-
+<% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+    <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+<% } %>
 
 
 {% endblock %}

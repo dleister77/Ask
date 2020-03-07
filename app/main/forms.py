@@ -16,7 +16,7 @@ from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
 from app.models import Address, Category, Provider, Sector, State, Review,\
-                       Picture, User, Conversation
+                       Picture, User, Message_User
 from app.utilities.forms import MultiCheckboxField
 from app.utilities.helpers import url_check, url_parse
 
@@ -490,7 +490,7 @@ class UserMessageForm(FlaskForm):
     recipient_id = IntegerField("to_id", id="msg_new_recipient_id",
                    render_kw = {"readonly": True, "hidden": True},
                    validators=[InputRequired("Recipient ID is required.")])
-    conversation_id = IntegerField("conversation_id", id="msg_new_conversation_id",
+    message_user_id = IntegerField("message_user_id", id="message_user_id",
                       render_kw = {"readonly": True, "hidden": True},
                       validators=[Optional(strip_whitespace=True)]
                       )
@@ -508,11 +508,11 @@ class UserMessageForm(FlaskForm):
         if recipient is None:
             raise ValidationError(f"User ({form.recipient.data}) does not exist.")
 
-    def validate_conversation_id(form, field):
+    def validate_message_user_id(form, field):
         if field.data is None:
             pass
         else:
-            conversation = Conversation.query.filter_by(id=field.data).first()
-            if conversation is None:
-                raise ValidationError("Message conversation does not exist. "
+            message = Message_User.query.get(field.data).message
+            if message is None or message.recipient.user_id != current_user.id:
+                raise ValidationError("Not a valid message to reply to. "
                                        "Please refresh and try again")

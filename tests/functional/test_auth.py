@@ -39,9 +39,9 @@ class TestLogin(FunctionalTest):
     
     def test_alreadyLoggedIn(self, activeClient):
         self.form = {"username": "jjones", 'password': 'password'}
-        response = self.postRequest(activeClient)
         check = activeClient.get(url_for('main.index', _external=False))
-        assert response.data == check.data
+        assert b'Search for Business' in check.data
+
 
     def test_alreadyLoggedIn2(self, testClient, testUser2):
         self.form = {"username": "jjones", 'password': 'badpassword'}

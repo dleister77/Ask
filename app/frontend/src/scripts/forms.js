@@ -1,5 +1,3 @@
-import axios from 'axios'
-
 function categoryGet(url, sector, category_id){
     axios.get(url, {
         params: {
@@ -28,4 +26,31 @@ function updateSelectFieldOptions(response, id){
         selectField.appendChild(option);
     }    
 }
-export {categoryGet};
+
+function makeForm(object){
+    let form = new FormData();
+    Object.entries(object).forEach(([k,v]) => form.set(k,v));
+    return form;
+}
+
+function postForm(path, params, method='post'){
+    const form = document.createElement('form');
+    form.method = method;
+    form.action = path;
+    
+    for (const key in params){
+        if (params.hasOwnProperty(key)){
+            const hidden_field = document.createElement('input');
+            hidden_field.type = "hidden";
+            hidden_field.name = key;
+            hidden_field.value = params[key];
+
+            form.append(hidden_field);
+        }
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+export {categoryGet, makeForm, postForm};

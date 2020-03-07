@@ -15,7 +15,7 @@ let message_form = {
     data: function(){
         return {
             form: {
-                conversation_id: "",
+                message_user_id: "",
                 recipient_id: "",
                 recipient: "",
                 subject: "",
@@ -47,7 +47,7 @@ let message_form = {
     },
     methods:{
         replyToMessage: function(){
-            this.form.conversation_id = this.active_message.conversation_id;
+            this.form.message_user_id = this.active_message.id;
             this.form.recipient_id = this.active_message.sender_id;
             this.form.recipient = this.active_message.sender_full_name;
             if (this.active_message.subject.startsWith("Re:")){
@@ -98,7 +98,7 @@ let message_form = {
     v-bind:action="urls.send_message"
     id="message-form">
         <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
-        <input v-model="form.conversation_id" v-bind="{name: 'conversation_id', type:'hidden'}">
+        <input v-model="form.message_user_id" v-bind="{name: 'message_user_id', type:'hidden'}">
         <input v-model="form.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
         <input v-model="form.recipient" name='recipient' type='hidden'>
         <div class="form-group">

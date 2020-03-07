@@ -42,7 +42,7 @@ const folder_nav = ('folder-nav', {
               ref="move-links-delete"
               v-if="moveLinksVisible"
               v-bind:event-signal="eventSignal.moveMessage"
-              v-on:move-message="$emit(eventSignal.moveMessage, 'delete')">
+              v-on:move-message="$emit(eventSignal.moveMessage, 'trash')">
               Delete
             </nav-list-button>
             <nav-list-button

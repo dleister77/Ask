@@ -19,7 +19,7 @@ from app import create_app
 from app import db
 from app.models import User, Address, State, Category, Group, Provider, Review,\
                        FriendRequest, GroupRequest, addressTuple, Sector, Picture,\
-                       Conversation, Message, RecipientData
+                       Message, Message_User
 import app.utilities.geo as geo
 from app.utilities.geo import AddressError, APIAuthorizationError, _geocodeGEOCODIO
 from app.utilities.helpers import thumbnail_from_buffer
@@ -205,37 +205,9 @@ def test_db(app):
 
 
     #set starting messages
-    convo_1 = Conversation.create(id=1,
-        messages=[
-            Message(
-                id=1,
-                sender=u1,
-                subject="initial test subject",
-                body="this is a test message from u1 to u2",
-                msg_type="user2user",
-                recipient_data=[RecipientData(user=u2)]
-            )
-        ])
-    convo_2 = Conversation.create(id=2,
-        messages=[
-            Message(
-                id=2,
-                sender=u1,
-                subject="another test subject",
-                body="this is another boring test message from u1 to u2",
-                msg_type="user2user",
-                recipient_data=[RecipientData(user=u2)]
-            )
-        ])
-    msg_3 = Message.create(
-        conversation_id=2,
-        sender_id=2,
-        subject="hello",
-        body="how is your day today?",
-        msg_type="user2user",
-        recipient_data=[RecipientData(user=u1)]
-    )
-
+    m1 = Message.send_new(dict(user_id=1), dict(user_id=2), "test subject", "test body")
+    m2 = Message.send_new(dict(user_id=2), dict(full_name="admin"),"test admin subject", "test adminbody", msg_type="admin")
+    m3 = Message.send_new(dict(user_id=1), dict(user_id=2), "yet another test subject", " yet another test body")
 
     yield db
 
@@ -347,7 +319,21 @@ def testPicture(activeClient):
         rmtree(path.parent)
     except FileNotFoundError:
         raise
-        
+
+@pytest.fixture()
+def test_recipient(dbSession):
+    r = Message_User.query.filter_by(role="recipient").first()
+    return r
+
+@pytest.fixture()
+def test_sender(dbSession):
+    s = Message_User.query.filter_by(role="sender").first()
+    return s
+
+@pytest.fixture()
+def test_message(dbSession):
+    m = Message.query.get(1)
+    return m
 
 @pytest.fixture()
 def search_form(app, dbSession):

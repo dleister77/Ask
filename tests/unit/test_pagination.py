@@ -51,11 +51,7 @@ class TestPagination(object):
     def test_get_urls(self):
         p = Pagination(self.testIterable, 2, current_app.config['PER_PAGE'])
         u = p.get_urls('main.index', self.testArgs)
-        assert len(u['pages']) == 6
         assert u['next'] == '/index?page=3&name=testName'
         assert u['pages'][0] == (1, '/index?page=1&name=testName')
         num_pages = len(u['pages'])
-        print(num_pages)
-        # assert num_pages == 5
         assert u['prev'] == '/index?page=1&name=testName'
-        assert False

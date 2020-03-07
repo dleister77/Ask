@@ -13,7 +13,8 @@ from werkzeug.datastructures import FileStorage, MultiDict
 from app import db, mail
 from app.main.forms import ReviewForm
 from app.models import User, Address, Group, Category, Review, Provider,\
-                       FriendRequest, GroupRequest, Sector, Picture
+                       FriendRequest, GroupRequest, Sector, Picture, Message,\
+                           Message_User, Conversation
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
 from tests.conftest import assertEqualsTolerance
@@ -819,3 +820,118 @@ class TestPicture(object):
         assert testPicture.is_file()       
         Picture.deletePictures(testform)
         assert not testPicture.is_file()
+
+@pytest.mark.usefixtures("dbSession")
+class TestMessageUser(object):
+    def test_recipient(self, test_recipient, testUser, test_message):
+        assert test_recipient.tag =='inbox'
+        assert test_recipient.read == False
+        assert test_recipient.role == 'recipient'
+        assert test_recipient.user_id == 2
+        assert test_recipient.message_id == 1
+        assert test_recipient.full_name == testUser.full_name
+
+    def test_sender(self, test_sender, testUser2, test_message):
+        assert test_sender.tag =='sent'
+        assert test_sender.read == True
+        assert test_sender.role == 'sender'
+        assert test_sender.user_id == 1
+        assert test_sender.message_id == 1
+        assert test_sender.full_name == testUser2.full_name
+
+    def test_delete_user(self, test_sender, testUser2, test_message):
+        test_name = f'{testUser2.full_name}'
+        assert test_sender.user_id == 1
+        assert test_sender.message_id == 1
+        assert test_sender.full_name == test_name
+        testUser2.delete()
+        assert test_sender.user_id == None
+        assert test_sender.message_id == 1
+        assert test_sender.full_name == test_name
+
+@pytest.mark.usefixtures("dbSession")
+class TestMessage(object):
+    def test_attributes(self, test_message, test_sender, test_recipient):
+        assert test_message.conversation_id == 1
+        assert test_message.subject == "test subject"
+        assert test_message.body == "test body"
+        assert test_message.sender == test_sender
+        assert test_message.recipient == test_recipient
+
+    def test_send_new(self, testUser, testUser2):
+        check = Message.send_new(dict(user_id=testUser2.id), dict(user_id=testUser.id), "test1", "test2")
+        assert check.subject == "test1"
+        assert check.body == "test2"
+        assert check.sender.user == testUser2
+        assert check.sender.full_name == testUser2.full_name
+        assert check.recipient.user == testUser
+        assert check.recipient.full_name == testUser.full_name
+
+    def test_delete_1_user(self, test_message, testUser2):
+        assert test_message is not None
+        assert test_message.sender.user == testUser2
+        testUser2.delete()
+        assert test_message is not None
+        assert test_message.sender is not None
+        assert test_message.sender.user is None
+
+    def test_reply(self, test_message):
+        m = test_message.send_reply("Re: Test", "Sending a reply")
+        assert m.conversation_id == 1
+        assert m.subject == "Re: Test"
+        assert m.body == "Sending a reply"
+        assert m.sender.user_id == test_message.recipient.user_id
+        assert m.sender.full_name == test_message.recipient.full_name
+        assert m.recipient.user_id == test_message.sender.user_id
+        assert m.recipient.full_name == test_message.sender.full_name
+    
+    def test_send_admin(self, testUser):
+        m = Message.send_admin(dict(user_id=2), "admin subject", "admin body")
+        assert m.subject == "admin subject"
+        assert m.sender.user == testUser
+        assert m.msg_type == "admin"
+        assert m.recipient.full_name == "AYP Admin"
+
+    def test_send_admin_email(self, testUser):
+        m = Message.send_admin(dict(full_name="John Smith", email="jsmith@smith.com"),
+                               "another admin subject", "more admin tests")
+        assert m.subject == "another admin subject"
+        assert m.sender.email == "jsmith@smith.com"
+        assert m.sender.full_name == "John Smith"
+        assert m.msg_type == "admin"
+        assert m.sender.user == None
+        assert m.recipient.full_name == "AYP Admin"
+        assert m.recipient.email == current_app.config['ADMINS'][0]
+
+    def test_message_delete_cascade(self, test_message):
+        s = test_message.sender
+        r = test_message.recipient
+        assert test_message is not None
+        assert s is not None
+        assert r is not None
+        test_message.delete()
+        assert Message.query.get(test_message.id) is None
+        assert Message_User.query.get(s.id) is None
+        assert Message_User.query.get(r.id) is None
+
+@pytest.mark.usefixtures("dbSession")
+class TestConversation(object):
+    def test_attributes(self, test_message):
+        c = test_message.conversation_id
+        assert c is not None
+
+    def test_delete_cascade(self, test_message):
+        assert test_message is not None
+        c = test_message.conversation
+        c.delete()
+        c = Conversation.query.get(1)
+        assert c is None
+        m = Message.query.get(test_message.id)
+        assert m is None
+        # assert Message.query.get(1) is None
+
+
+
+    
+
+
