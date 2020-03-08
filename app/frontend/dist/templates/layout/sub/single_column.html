@@ -3,9 +3,8 @@
 {% block title %} {{ super() }} {% endblock %}
 
 {% block main %}
-
-    {% block full %}{% endblock %}
     <div id="appContent">
+        {% block full %}{% endblock %}
         <div class="row justify-content-center">
             <div class="col-12 col-sm-10 col-md-7 col-lg-5 pt-1 pt-md-3 pt-lg-5">
                 <div class="mx-3">
@@ -31,11 +30,9 @@
                 </div>
             </div>
         </div>
+        {%block modal %}
+        {% endblock %}
     </div>
-
-    {%block modal %}
-    {% endblock %}
-
 {% endblock %}
 
 {% block jsScripts %}

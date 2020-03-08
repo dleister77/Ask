@@ -40,10 +40,10 @@
         {{pagination(pag_urls)}}
 
         <modal-message
-            v-bind:recipient="recipient"
-            v-bind:csrf="csrf"
-            v-bind:url="urls.send_message">
-        Send Message
+            modal_id="message-modal"
+            :recipient="recipient"
+            :csrf="csrf"
+            :url="urls.send_message">
         </modal-message>
     {% endif %}
 

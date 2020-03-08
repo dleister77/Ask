@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Vuelidate from 'vuelidate';
 
+import modal_mixin from './modal-mixin';
 import form_input_group from './form-input-group';
 import form_textbox from './form-textbox';
 import FormInput from './form-input';
@@ -18,6 +19,7 @@ let modal_message = {
         'form-input-group': form_input_group,
         'form-textbox': form_textbox,
     },
+    mixins: [modal_mixin],
     data: function(){
         return {
             form: {
@@ -91,14 +93,6 @@ let modal_message = {
                 })
             }
         },
-        toggleModal: function(){
-            this.show = !this.show;
-            jQuery('#message-modal').modal('toggle');
-        },
-    },
-    mounted: function(){
-        $(this.$refs.vuemodal).on('hide.bs.modal', this.resetMessage);
-        $(this.$refs.vuemodal).on('show.bs.modal', this.setMessageValues);
     },
     watch: {
         'recipient.name': function(new_val) {
@@ -109,39 +103,36 @@ let modal_message = {
         },
     },
     template: `
-    <div class="modal fade" ref="vuemodal" id="message-modal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-md" role="document">
-            <div class="modal-content">
+    <div>
+        <modal
+            title="Send Message"
+            :modal_id="modal_id"
+            @modal_hide="resetMessage"
+            @modal_show="setMessageValues">
+            <template v-slot:body>
                 <form id = "message-form" v-bind:action="url" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><slot></slot></h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                    <input name="csrf_token" type="hidden" :value="csrf">
+                    <input name='recipient_id' type="hidden" :value="recipient.id">
+                    <div class="form-group">
+                        <form-input
+                        name="recipient"
+                            v-model.trim="$v.form.recipient_name.$model"
+                            :readonly=true
+                            :value=recipient.name
+                            :validator=$v.form.recipient_name>
+                            To
+                        </form-input>
                     </div>
-                    <div class="modal-body px-5">
-                        <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
-                        <input v-bind="{name: 'recipient_id', value: recipient.id, type:'hidden'}">
-                        
-                        <div class="form-group">
-                            <form-input
-                            name="recipient"
-                                v-model.trim="$v.form.recipient_name.$model"
-                                :readonly=true
-                                :value=recipient.name
-                                :validator=$v.form.recipient_name>
-                                To
-                            </form-input>
-                        </div>
-                        <div class="form-group">
-                            <form-input
-                                name='subject'
-                                v-model.trim="$v.form.subject.$model"
-                                :validator="$v.form.subject"
-                                :value=recipient.subject>
-                                Subject
-                            </form-input>
-                        </div>
+                    <div class="form-group">
+                        <form-input
+                            name='subject'
+                            v-model.trim="$v.form.subject.$model"
+                            :validator="$v.form.subject"
+                            :value=recipient.subject>
+                            Subject
+                        </form-input>
+                    </div>
+                    <div class="form-group">
                         <form-textbox
                             name='body'
                             v-model.trim="$v.form.body.$model"
@@ -149,17 +140,17 @@ let modal_message = {
                             Message Body
                         </form-textbox>
                     </div>
-                    <div class="modal-footer">
-                        <button
-                            class="btn btn-primary btn-block submit"
-                            type="submit"
-                            v-on:click.prevent="sendMessage">
-                            Submit
-                        </button>
-                    </div>
                 </form>
-            </div>
-        </div>
+            </template>
+            <template v-slot:footer>           
+                <button
+                    class="btn btn-primary btn-block submit"
+                    type="submit"
+                    v-on:click.prevent="sendMessage">
+                    Submit
+                </button>
+            </template>
+        </modal>
     </div>
     
     `

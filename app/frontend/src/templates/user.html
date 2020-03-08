@@ -95,17 +95,18 @@
 
 {% block content_wide %}
 
-<modal-message
-v-bind:recipient="recipient"
-v-bind:csrf="csrf"
-v-bind:url="urls.send_message">
-Send Message:
-</modal-message>
 
 {% endblock %}
 
 {% block modal %}
 
+<modal-message
+    modal_id="message-modal"
+    :recipient="recipient"
+    :csrf="csrf"
+    :url="urls.send_message"
+    title="Send Message:">
+</modal-message>
 
     {% if modal_open %}
         <script>$(window).on('load', function(){
@@ -118,20 +119,6 @@ Send Message:
         {{modal_render(form, modal_title, action="/userupdate")}}
     {% endif %}
 
-
-    {% if message %}
-        {{modal_render(message, "Message", action="#", modalID = "modal_message") }}
-        <script>
-            let submit_msg = document.getElementById("submit_msg")
-            submit_msg.addEventListener("click", function(event){
-                event.preventDefault();
-                ajaxModalPost("{{url_for('main.send_message')}}",
-                            "modal_message",
-                            "Message sent",
-                            "Message send failed.");
-            })
-        </script>
-        {% endif %}
 
     {% if pword_open %}
         <script>$(window).on('load', function(){
