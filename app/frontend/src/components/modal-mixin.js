@@ -20,8 +20,8 @@ let modal_mixin = {
     methods: {
         toggleModal: function(){
             this.show = !this.show;
-            id = `#${this.modal_id}`
-            jQuery(modal_id).modal('toggle');
+            let id = `#${this.modal_id}`;
+            jQuery(id).modal('toggle');
         },
     },
 }

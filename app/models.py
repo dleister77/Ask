@@ -108,11 +108,17 @@ category_provider = db.Table('category_provider', db.Model.metadata,
                                             ondelete="CASCADE")),
     UniqueConstraint('category_id', 'provider_id', name='unique_cat_prov'))
 
+# many to many table linking provider suggestions to multiple categories
+cat_prov_suggestion = db.Table('cat_prov_suggest', db.Model.metadata,
+    db.Column('category_id', db.Integer, db.ForeignKey('category.id')),
+    db.Column('provider_suggestion_id', db.Integer, db.ForeignKey('provider_suggestion.id',
+                                            ondelete="CASCADE")))
 
 # many to many table linking pictures with users with friends
 user_friend = db.Table('user_friend', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('friend_id', db.Integer, db.ForeignKey('user.id')))
+
 
 class State(Model):
     """States used in db.
@@ -123,6 +129,7 @@ class State(Model):
     name = db.Column(db.String(64), index=True)
     state_short = db.Column(db.String(24), index=True)
     addresses = db.relationship("Address", backref="state")
+    address_suggestions = db.relationship("Address_Suggestion", backref="state")
 
     @staticmethod
     def list():
@@ -293,6 +300,44 @@ class Address(Model):
     def __repr__(self):
         return f"<Address {self.line1}, {self.city}, {self.state}>"
 
+class Address_Suggestion(Model):
+    """Address update suggestion provided by users.
+
+    Args:
+        id (int): id set by db
+        line1 (str): 1st address line
+        line2 (str): 2nd address line
+        zip (str): zip code
+        city (str): city name
+        provider_id (int): foreign key, provider id if business assoc with
+                           address
+        state_id (int): foreign key, id of address's state
+        is_coordinates_error: user says map coordinates do not match location
+    
+    Methods:
+        None
+        
+    Relationships:
+        Parent of:
+        Child of: State, Provider_Correction
+    """
+
+    __tablename__ = "address_suggestion"
+
+    id = db.Column(db.Integer, primary_key=True)
+    line1 = db.Column(db.String(128))
+    line2 = db.Column(db.String(128))
+    zip = db.Column(db.String(20), index=True)
+    city = db.Column(db.String(64), index=True, nullable=False)
+    provider_suggestion_id = db.Column(db.Integer, 
+                            db.ForeignKey("provider_suggestion.id", ondelete="CASCADE"),
+                            unique=True)
+    state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
+    is_coordinate_error = db.Column(db.Boolean, index=True)
+
+    def __repr__(self):
+        return f"<Address Suggestion {self.line1}, {self.city}, {self.state}>"    
+
 
 class User(UserMixin, Model):
     """Creates user class.
@@ -362,6 +407,10 @@ class User(UserMixin, Model):
 
     sentgrouprequests = db.relationship("GroupRequest", backref="requestor",
                                         passive_deletes=True)
+
+    suggestions = db.relationship("Provider_Suggestion", backref="user", 
+                            passive_deletes=True,
+                            cascade="all, delete-orphan")  
     _email_token_key = 'verify_email'
     _password_token_key = 'reset_password'
 
@@ -840,9 +889,10 @@ class Category(Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True)
     sector_id = db.Column(db.Integer, db.ForeignKey("sector.id"), nullable=False)
-    # service_area_required = db.Column(db.Boolean, default=False)
-
     providers = db.relationship("Provider", secondary=category_provider,
+                                backref="categories")
+    provider_suggestions = db.relationship("Provider_Suggestion",
+                          secondary=cat_prov_suggestion,
                                 backref="categories")
     reviews = db.relationship("Review", backref="category")
 
@@ -881,12 +931,13 @@ class Provider(Model):
         name (str): hybrid property, name of business
         email (str): optional, email address of business.  must be unique
         telephone (str): 10 digit telephone number, must be unique
+        is_active (Bool): True if business is active/open, False if inactive/closed
         address (Address): address of business
         reviews (List): list of Reviews for the business
         categories (list): list of categories that business serves
 
     Relationship:
-        Parent of: review
+        Parent of: review, provider_correction
         Child of: address
         Many to Many: category
     
@@ -902,12 +953,16 @@ class Provider(Model):
     email = db.Column(db.String(120), unique=True)
     _telephone = db.Column(db.String(24), unique=True, nullable=False)
     website = db.Column(db.String(120))
+    is_active = db.Column(db.Boolean, default=True)
 
     address = db.relationship("Address", backref="provider", uselist=False,
                               passive_deletes=True,
                               cascade="all, delete-orphan")
     reviews = db.relationship("Review", cascade="all, delete-orphan", 
                               backref="provider", passive_deletes=True)
+    suggestions = db.relationship("Provider_Suggestion", backref="provider", 
+                              passive_deletes=True,
+                              cascade="all, delete-orphan")                              
 
     @hybrid_property
     def name(self):
@@ -1024,7 +1079,7 @@ class Provider(Model):
         q.limit = limit
         q.group_by = [Provider.id, Provider.name, Provider.email,
                       Provider.telephone, Address.line1, Address.line2,
-                      Address.city, State.state_short, Address.zip,
+                      Address.city, State.state_short, State.name, State.id, Address.zip,
                       Address.latitude, Address.longitude]
         q.join_args = [Provider.address, Address.state, Provider.categories]
         q.outerjoin_args = [Provider.reviews, Review.user]
@@ -1036,10 +1091,14 @@ class Provider(Model):
                         Address.line2.label('line2'),
                         Address.city.label('city'),
                         State.state_short.label('state_short'),
+                        State.name.label('state'),
+                        State.id.label('state_id'),
                         Address.zip.label('zip'),
                         Address.latitude.label('latitude'),
                         Address.longitude.label('longitude'),
                         saFunc.group_concat(Category.name.distinct()).label("categories"),
+                        saFunc.group_concat(Category.id.distinct()).label("category_ids"),
+                        saFunc.group_concat(Category.sector_id.distinct()).label("sector_ids"),
                         func.avg(Review.rating).label('reviewAverage'),
                         func.avg(Review.cost).label('reviewCost'),
                         func.count(Review.id.distinct()).label('reviewCount'),
@@ -1184,6 +1243,48 @@ class Provider(Model):
 
     def __repr__(self):
         return f"<Provider {self.name}>"
+
+class Provider_Suggestion(Model):
+    """Suggestions from users to correct provider information.
+
+    Attributes:
+        id (int): db primary key for record
+        provider_id (int): id of provider suggestion is for
+        user_id (int): id of user that made suggestion
+        name (str): name of business
+        email (str): optional, email address of business.
+        telephone (str): 10 digit telephone number
+        address (Address): address of business
+        categories (list): list of categories that business serves
+        is_active (bool): status of suggestion
+        other (str): additional suggestions or provided clarifications
+
+    Relationship:
+        Child of: address
+        Many to Many: category
+    
+    Methods:
+        None
+    
+    """
+    __tablename__ = "provider_suggestion"
+
+    id = db.Column(db.Integer, primary_key=True)
+    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    name = db.Column(db.String(64), index=True)
+    email = db.Column(db.String(120))
+    telephone = db.Column(db.String(24))
+    website = db.Column(db.String(120))
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    other = db.Column(db.String(1000))
+
+    address = db.relationship("Address_Suggestion", backref="provider_suggestion", uselist=False,
+                              passive_deletes=True,
+                              cascade="all, delete-orphan")
+  
+    def __repr__(self):
+        return f"<Provider Suggestion {self.provider.name}>" 
 
 class Review(Model):
 

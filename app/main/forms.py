@@ -20,7 +20,6 @@ from app.models import Address, Category, Provider, Sector, State, Review,\
 from app.utilities.forms import MultiCheckboxField
 from app.utilities.helpers import url_check, url_parse
 
-
 def Picture_Upload_Check(form, field):
     """Validate picture upload.
     
@@ -72,6 +71,29 @@ def NotEqualTo(comparisonField):
         if field.data is True and compare_field.data is True:
             raise ValidationError(message)
     return _notEqualTo
+
+def requiredIf(checkField, checkValue=True):
+    """Validator to require field if check Field equals set value"""
+
+    def _requiredIf(form, field):
+        field_to_check = getattr(form, checkField)
+        message = f"{field.label.text} is required."
+        if field_to_check.data == checkValue and field.data is None:
+            raise ValidationError(message)
+        elif field_to_check.data != checkValue:
+            field.errors = []
+    return _requiredIf
+
+def validate_zip(form, field):
+    if len(field.data) != 5:
+        raise ValidationError('Please enter a 5 digit zip code.')
+    elif not field.data.isdigit():
+        raise ValidationError('Only include numbers in zip code.')
+
+def validate_website(form, field):
+    """check that url is valid."""
+    if field.data != "" and not url_check(field.data):
+        raise ValidationError("Invalid website url")
 
 def unique_check(modelClass, columnName):
     """validate that no other entity in class registered for field.
@@ -484,6 +506,86 @@ class ProviderFilterForm(FlaskForm):
     groups_filter = BooleanField("Groups")
     submit = SubmitField("Update")
 
+class ProviderSuggestionForm(FlaskForm):
+    """Form to add new provider.
+    
+    Fields:
+        name (str): name of business
+        sector (select): macro sector that business belongs to
+        category (select): categories (w/in sector) that business belongs to
+        email (str): optional, email address of business
+        website (str): optional, website of business
+        telepohone (str): telephone number of business
+        address-unknown (bool): checked if street address (line1/line2) and zip
+            are unknown (i.e. service provider without phyiscal location).  If 
+            unchecked, line1 and zip are required. 
+        address-line1 (str): 1st address line
+        address-line2 (str): optional, 2nd address line
+        address-city (str): city name
+        address-state (select): address state, select is combination of id,name
+        address-zip (str): zip/postal code
+    
+    Methods:
+        validate_name: validator, checks that provider does not already exist by
+            checking to see if another provider exists with same name and address
+    
+    """
+    id = IntegerField("Business ID", validators=[InputRequired(message="Business ID is required.")])
+    name = StringField("Business Name", validators=[InputRequired(message="Business name is required.")])
+    is_not_active = BooleanField("Is Not Active", validators=[InputRequired(message="Business status is required.")])
+    category_updated = BooleanField("Category Updated", validators=[Optional()])
+    sector = SelectField("Sector",
+                                 choices=Sector.list(), 
+                                 validators=[requiredIf('category_updated')],
+                                 coerce=int,
+                                 id="sector")   
+    category = SelectMultipleField("Category",
+                                   choices=Category.list(None),
+                                   validators=[requiredIf('category_updated')],
+                                   coerce=int,
+                                   id="category")
+
+    contact_info_updated = BooleanField("Email/Website/Telephone Updated", validators=[Optional()])
+    email = StringField("Email Address", validators=[Email(), requiredIf('contact_info_updated')])
+    website = StringField("Website", validators=[validate_website, requiredIf('contact_info_updated')])
+    telephone = StringField("Telephone",
+                validators=[Regexp("[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"),
+                 requiredIf('contact_info_updated'),])
+
+    address_updated = BooleanField("Address Updated", validators=[Optional()])
+    line1 = StringField("Street Address", validators=[requiredIf('address_updated')])
+    line2 = StringField("Address Line 2", validators=[Optional()])
+    city = StringField("City", validators=[requiredIf('address_updated')])
+    state = SelectField("State", choices=State.list(), coerce=int,
+                         validators=[requiredIf('address_updated')])
+    zip = StringField("Zip Code", validators=[validate_zip, requiredIf('address_updated')])
+    is_coordinate_error = BooleanField("Coordinate_Error", validators=[Optional()])
+    other = StringField("other", validators=[Optional()])
+
+
+    def validate_name(self, name):
+        """Verify business does not already exist.
+        Checks to see if business with same name and address already entered.
+        """
+        p = Provider.query.join(Provider.address)\
+                           .filter(Provider.name == self.name.data,
+                                   Address.line1 == self.line1.data,
+                                   Address.line2 == self.line2.data,
+                                   Address.city == self.city.data,
+                                   Address.state_id == self.state.data,
+                                   Address.zip == self.zip.data)\
+                           .first()
+        if p:
+            raise ValidationError("Business already exists, please look up "
+                "business or use a different name/address.")
+    
+
+    def populate_choices(self, sector=None):
+        """Populate choices for sector and category drop downs."""
+        self.sector.choices = Sector.list()
+        self.category.choices = Category.list(sector)
+        self.state.choices = State.list()
+        return self    
 
 class UserMessageForm(FlaskForm):    
     """Form for users to send each other messages."""

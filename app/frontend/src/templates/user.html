@@ -15,7 +15,7 @@
             data-target="#message-modal"
             data-id="{{ user.id }}"
             data-name="{{ user.full_name }}"
-            @click="setRecipient">(message)</a></small>
+            @click="setMessagePresets">(message)</a></small>
         {% if user == current_user %}    
         <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
         {% endif %}
@@ -100,13 +100,13 @@
 
 {% block modal %}
 
-<modal-message
+<modal-message-user
     modal_id="message-modal"
-    :recipient="recipient"
-    :csrf="csrf"
+    :form_presets="form_presets"
     :url="urls.send_message"
-    title="Send Message:">
-</modal-message>
+    title="Send Message:"
+    @reset_form_presets="resetFormPresets">
+</modal-message-user>
 
     {% if modal_open %}
         <script>$(window).on('load', function(){

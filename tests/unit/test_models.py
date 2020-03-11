@@ -14,7 +14,8 @@ from app import db, mail
 from app.main.forms import ReviewForm
 from app.models import User, Address, Group, Category, Review, Provider,\
                        FriendRequest, GroupRequest, Sector, Picture, Message,\
-                           Message_User, Conversation
+                           Message_User, Conversation, Provider_Suggestion,\
+                               Address_Suggestion
 from app.utilities.email import get_token
 from app.utilities.geo import geocode, AddressError, Location
 from tests.conftest import assertEqualsTolerance
@@ -929,6 +930,62 @@ class TestConversation(object):
         m = Message.query.get(test_message.id)
         assert m is None
         # assert Message.query.get(1) is None
+
+@pytest.mark.usefixtures("dbSession", "activeClient")
+class TestProviderSuggestion(object):
+    def test_create(self, testProvider):
+        c = Category.query.get(3)
+        address = Address_Suggestion.create(
+            line1 = "7708 Covey Chase Dr",
+            line2 = "",
+            city = "Charlotte",
+            state_id = 1,
+            zip = "28210"
+        )
+        suggestion = Provider_Suggestion.create(
+            provider_id=testProvider.id,
+            is_active=True,
+            user_id=current_user.id,
+            name="Joe's Electric",
+            email="new_email_address@yahoo.com",
+            address=address,
+            categories = [c]
+        )
+        assert suggestion is not None
+        assert suggestion.provider == testProvider
+        assert suggestion.user == current_user
+        assert suggestion.name == "Joe's Electric"
+        assert suggestion.email == "new_email_address@yahoo.com"
+        assert suggestion.is_active == True
+        assert address.provider_suggestion_id == suggestion.id
+        assert suggestion.address.line1 == "7708 Covey Chase Dr"
+        assert suggestion.categories == [c]
+
+    def test_delete_cascade(self, testProvider):
+        c = Category.query.get(3)
+        address = Address_Suggestion.create(
+            line1 = "7708 Covey Chase Dr",
+            line2 = "",
+            city = "Charlotte",
+            state_id = 1,
+            zip = "28210"
+        )
+        suggestion = Provider_Suggestion.create(
+            provider_id=testProvider.id,
+            is_active=True,
+            user_id=current_user.id,
+            name="Joe's Electric",
+            email="new_email_address@yahoo.com",
+            address=address,
+            categories = [c]
+        )
+        suggestions = Provider_Suggestion.query.all()
+        assert len(suggestions) == 1
+        testProvider.delete()
+        suggestions = Provider_Suggestion.query.all()
+        assert len(suggestions) == 0
+               
+
 
 
 

@@ -133,11 +133,29 @@
 
 {% endblock %}
 
+{% block modal %}
+
+<modal-message-correction
+    modal_id="message-correction-modal"
+    :form_presets="form_presets"
+    :url="urls.send_message"
+    title="Suggest a Correction:"
+    @reset_form_presets="resetFormPresets">
+</modal-message-correction>
+
+{% endblock %}
+
 {% block jsScripts %}
+
+<script>
+</script>
+
+
 
 <script>
     let form_dict = '{{ form_dict|safe }}';
     form_json = JSON.parse(form_dict);
+    let csrf = "{{ csrf_token() }}"
 
     let links = {
         autocomplete: "{{ url_for('main.providerAutocomplete') }}",
@@ -156,7 +174,7 @@
 </script>
 
 
-    <script src="/static/js/search.f5f5892ec35e5d2cca76.js"></script>
+    <script src="/static/js/search.1453c2e60f274c144d89.js"></script>
 
 
 {% endblock %}

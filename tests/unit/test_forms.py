@@ -20,7 +20,8 @@ from config import TestConfig
 app = create_app(TestConfig)
 with app.app_context():
 	from app.main.forms import ProviderAddForm, ProviderSearchForm, ReviewForm,\
-		                       ProviderFilterForm, ProviderAddress, ReviewEditForm
+		                       ProviderFilterForm, ProviderAddress, ReviewEditForm,\
+							   ProviderSuggestionForm
 	from app.auth.forms import UserUpdateForm, PasswordChangeForm,\
 							   RegistrationForm, LoginForm, AddressField,\
 							   PasswordResetForm, PasswordResetRequestForm
@@ -882,3 +883,76 @@ class TestPasswordResetRequest(FormTest):
 		self.make_form(testCase)
 		self.assertNot(key, errorMsg)
 
+@pytest.mark.usefixtures("activeClient")
+class TestProviderSuggestion(FormTest):
+
+	formType = ProviderSuggestionForm
+
+	def test_new(self):
+		test_case = dict(
+			id=1,
+			name="Douthit Electrical",
+			is_not_active="true",
+			category_updated=True,
+			sector=1,
+			category=2,
+			contact_info_updated=False,
+			address_updated=False,
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert check
+
+	def test_new_full(self):
+		test_case = dict(
+			id=1,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=True,
+			sector=1,
+			category=2,
+			contact_info_updated=True,
+			telephone="7044103875",
+			website="www.test.com",
+			email="test@testing.com",
+			address_updated=True,
+			line1="1000 Test St",
+			line2="",
+			city="Charlotte",
+			state="1",
+			zip="28209",
+			is_coordinate_error="false",
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert check
+
+	def test_new_missing_line1(self):
+		test_case = dict(
+			id=1,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=True,
+			sector=1,
+			category=2,
+			contact_info_updated=True,
+			telephone="7044103875",
+			website="www.test.com",
+			email="test@testing.com",
+			address_updated=True,
+			line1=None,
+			line2="",
+			city="Charlotte",
+			state="1",
+			zip="28209",
+			is_coordinate_error="false",
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert not check

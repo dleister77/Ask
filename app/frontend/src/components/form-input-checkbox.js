@@ -1,6 +1,6 @@
 import ErrorMessage from "./error-message";
 
-let FormInput = {
+let FormInputCheckbox = {
     components: {
         'error-message': ErrorMessage,
     },
@@ -9,24 +9,15 @@ let FormInput = {
             type: String,
             required: true,
         },
-        placeholder: {
-            type: String,
-            required: false,
-        },
         readonly: {
             type: Boolean,
             required: false,
             default: false,
         },
         value: {
-            type: String,
+            type: Boolean,
             required: false,
-            default: "",
-        },
-        type: {
-            type: String,
-            required: false,
-            default: "text"
+            default: false,
         },
         required: {
             type: Boolean,
@@ -66,32 +57,40 @@ let FormInput = {
     },
     template: `
     <div class="form-group">
-        <label
-          v-bind:for="name">
-          <slot></slot>
-        </label>
-        <small v-if="!required" class="text-muted font-italic">optional</small>
-        <input
-          class="form-control"
-          :class="error_class"
-          v-bind="$props"
-          v-bind:id="name"
-          v-on:change="updateValue($event.target.value)">
-        </input>
-        <error-message
-            v-if="required"
-            :field="validator"
-            validator="required">
-            <slot></slot> is required.
-        </error-message>
-        <slot name="errors"></slot>
-        <template v-for="error in filtered_server_side_errors">
-          <small class="form-error-message">
-          {{ error }}
-          </small>
-        </template>
+    <div class="form-check">
+      <input
+        type="checkbox"
+        class="form-check-input"
+        :class="error_class"
+        :checked="value"
+        v-bind="$props"
+        v-bind:id="name"
+        v-on:change="updateValue($event.target.checked)">
+      </input>
+      <label
+        :for="name"
+        class="form-check-label">
+        <slot></slot>
+      </label>
+      <small v-if="!required" class="text-muted font-italic">optional</small>
+
+      <error-message
+          v-if="required"
+          :field="validator"
+          validator="required">
+          <slot></slot> is required.
+
+      </error-message>
+          <template v-for="error in filtered_server_side_errors">
+            <small class="form-error-message">
+            {{ error }}
+            </small>
+          </template>
+
+      <slot name="errors"></slot>
+    </div>
     </div>
     `,
 }
 
-export default FormInput;
+export default FormInputCheckbox;

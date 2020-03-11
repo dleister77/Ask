@@ -7,7 +7,7 @@ from shutil import rmtree
 from flask import url_for, json, current_app
 from flask_login import current_user
 
-from app.models import Category, Provider, Review, User, State, Message_User
+from app.models import Category, Provider, Review, User, State, Message_User, Provider_Suggestion
 from .test_auth import login, logout
 from tests.conftest import FunctionalTest
 
@@ -591,4 +591,77 @@ class TestMessageGetFriends(FunctionalTest):
         response = self.getRequest(activeClient, name=test_case)
         assert response.status_code == 200
         assert b'[]' in response.data
-        
+
+class TestProviderSuggestion(FunctionalTest):
+
+    routeFunction = "main.make_provider_suggestion"
+
+    def test_success(self, activeClient):
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 0
+        self.form = dict(
+            id=1,
+            name="Douthit Electrical",
+            is_not_active="true",
+            category_updated="true",
+            sector="1",
+            category="2",
+            contact_info_updated="true",
+            email="doug@test.com",
+            website="www.test.com",
+            telephone="1234567890",
+            address_updated="true",
+            line1="7708 Covey Chase Dr",
+            line2="",
+            city="charlotte",
+            state="1",
+            zip="28210",
+            is_coordinate_error="false",
+        )
+        response = self.postRequest(activeClient)
+        assert response.status_code == 200
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 1
+
+
+    def test_success_no_address(self, activeClient):
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 0        
+        self.form = dict(
+            id=1,
+            name="Douthit Electrical",
+            is_not_active="false",
+            category_updated="true",
+            sector="1",
+            category="2",
+            contact_info_updated="true",
+            email="doug@test.com",
+            website="www.test.com",
+            telephone="1234567890",
+            address_updated="false",
+        )
+        response = self.postRequest(activeClient)
+        assert response.status_code == 200
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 1
+
+    def test_failed_missing_address(self, activeClient):
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 0        
+        self.form = dict(
+            id=1,
+            name="Douthit Electrical",
+            category_updated="true",
+            sector="1",
+            category="2",
+            contact_info_updated="true",
+            email="doug@test.com",
+            website="www.test.com",
+            telephone="1234567890",
+            address_updated="true",
+
+        )
+        response = self.postRequest(activeClient)
+        assert response.status_code == 422
+        num_suggestions = len(Provider_Suggestion.query.all())
+        assert num_suggestions == 0

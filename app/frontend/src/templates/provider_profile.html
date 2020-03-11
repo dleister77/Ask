@@ -39,12 +39,13 @@
 
         {{pagination(pag_urls)}}
 
-        <modal-message
-            modal_id="message-modal"
-            :recipient="recipient"
-            :csrf="csrf"
-            :url="urls.send_message">
-        </modal-message>
+        <modal-message-user
+             modal_id="message-modal"
+            :form_presets="form_presets"
+            title="Send Message:"
+            :url="urls.send_message"
+            @reset_form_presets="resetFormPresets">
+        </modal-message-user>
     {% endif %}
 
 {% endblock content_wide %}

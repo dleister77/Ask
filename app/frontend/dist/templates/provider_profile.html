@@ -39,12 +39,13 @@
 
         {{pagination(pag_urls)}}
 
-        <modal-message
-            modal_id="message-modal"
-            :recipient="recipient"
-            :csrf="csrf"
-            :url="urls.send_message">
-        </modal-message>
+        <modal-message-user
+             modal_id="message-modal"
+            :form_presets="form_presets"
+            title="Send Message:"
+            :url="urls.send_message"
+            @reset_form_presets="resetFormPresets">
+        </modal-message-user>
     {% endif %}
 
 {% endblock content_wide %}
@@ -58,7 +59,7 @@
 </script>
 
 
-    <script src="/static/js/providerProfile.252b35c98bd82d2eed1a.js"></script>
+    <script src="/static/js/providerProfile.03d96bb0de75280ed65a.js"></script>
 
 
 {% endblock %}

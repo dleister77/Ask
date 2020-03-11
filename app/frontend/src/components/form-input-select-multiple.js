@@ -1,6 +1,6 @@
 import ErrorMessage from "./error-message";
 
-let FormInputSelect = {
+let FormInputSelectMultiple = {
     components: {
         'error-message': ErrorMessage,
     },
@@ -30,7 +30,7 @@ let FormInputSelect = {
             required: false,
         },
         value: {
-          type: Number,
+          type: Array,
           required: true,
         },
         options: {
@@ -54,6 +54,7 @@ let FormInputSelect = {
         </label>
         <small v-if="!required" class="text-muted font-italic">optional</small>
         <select
+          multiple
           class="form-control"
           :class="{'form-error':validator.$error}"
           v-bind="$props"
@@ -78,4 +79,4 @@ let FormInputSelect = {
     `,
 }
 
-export default FormInputSelect;
+export default FormInputSelectMultiple;

@@ -18,6 +18,15 @@
                     <ul class="nav justify-content-end">
                         <a class="card-header-item nav-link" href="{{ url_for('main.review', name=provider.name, id=provider.id) }}">
                         Add Review</a>
+                        <button
+                        type="button"
+                        class="btn btn-link nav-link"
+                        data-toggle="modal"
+                        data-target="#message-correction-modal"
+                        data-id="{{ provider.id }}"
+                        data-subject="{{ provider.name }}"
+                        @click="setMessagePresets"
+                        >Suggest Correction</button>
                     </ul>
                 </div>
             </div>    

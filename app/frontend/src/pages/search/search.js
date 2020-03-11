@@ -3,6 +3,7 @@ import typeahead_mixin from '../../components/typeahead_mixin';
 import makeMap from '../../scripts/maps.js';
 import {categoryGet} from '../../scripts/forms.js'
 import { getCurrentLocation } from '../../scripts/geo.js';
+import modal_message_correction_mixin from '../../components/modal-message-correction-mixin';
 
 var mapboxgl = require('mapbox-gl/dist/mapbox-gl.js');
 
@@ -75,8 +76,12 @@ const searchPage = new Vue({
         makeQueryUrl: function(){
             return this.urls.autocomplete + this.makeQueryString();
         },
+        setActiveBusiness: function(id) {
+            let b = this.searchResults.filter((business)=> business.id == id)[0]
+            this.activeBusiness = b;
+        }
     },
-    mixins: [typeahead_mixin],
+    mixins: [typeahead_mixin, modal_message_correction_mixin],
     watch: {
         'form.location': function(locationSource){
             if (locationSource == "gps"){

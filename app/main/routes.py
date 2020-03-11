@@ -12,10 +12,11 @@ import simplejson
 
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            ProviderFilterForm, ReviewEditForm,\
-                           UserMessageForm
+                           UserMessageForm, ProviderSuggestionForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import  Address, Category, Picture, Provider, Review, Sector,\
-                        User, Conversation, Message, Message_User
+                        User, Conversation, Message, Message_User,\
+                            Provider_Suggestion, Address_Suggestion
 from app.utilities.geo import AddressError, Location, sortByDistance
 from app.utilities.helpers import disableForm, email_verified, save_url
 from app.utilities.pagination import Pagination
@@ -40,13 +41,26 @@ def index():
 def category_list():
     """Pulls list of categories matching sector from db."""
     sector_id = request.args.get('sector')
-    sector = Sector.query.get(sector_id)
-    category_list = (Category.query.filter(Category.sector == sector)
-                                   .order_by(Category.name)).all()
+    if sector_id is not None:
+        sector = Sector.query.get(sector_id)
+        category_list = (Category.query.filter(Category.sector == sector)
+                                    .order_by(Category.name)).all()
+    else:
+        category_list = Category.query.order_by(Category.name).all()
     category_list = [{"id": category.id, "name": category.name} for category
                      in category_list]
     category_list = jsonify(category_list)
     return category_list
+
+@bp.route('/sectorlist', methods=['GET'])
+@login_required
+def sector_list():
+    """Pulls list of sectors from db."""
+    sector_list = Sector.query.order_by(Sector.name).all()
+    sector_list = [{"id": sector.id, "name": sector.name} for sector
+                     in sector_list]
+    sector_list_json = jsonify(sector_list)
+    return sector_list_json
 
 
 @bp.route('/photos/<int:id>/<path:filename>')
@@ -348,6 +362,46 @@ def searchJSON():
         providersDict = [provider._asdict() for provider in providers]
         return jsonify (providersDict, location)
 
+@bp.route('/provider/suggestion', methods=['POST'])
+@login_required
+def make_provider_suggestion():
+    form = ProviderSuggestionForm().populate_choices()
+    if form.validate_on_submit():
+        
+        if form.category.data != []:
+            categories = [Category.query.get(cat) for cat in form.category.data]
+        else:
+            categories = []
+
+        if form.address_updated.data is True:
+            address = Address_Suggestion(
+                line1 = form.line1.data,
+                line2 = form.line2.data,
+                city = form.city.data,
+                state_id = form.state.data,
+                zip = form.zip.data,
+                is_coordinate_error = form.is_coordinate_error.data
+            )
+        else:
+            address = None
+
+        suggestion = Provider_Suggestion.create(
+            name = form.name.data,
+            provider_id = form.id.data,
+            user_id = current_user.id,
+            email = form.email.data,
+            telephone = form.telephone.data,
+            is_active = not form.is_not_active.data,
+            website = form.website.data,
+            categories = categories,
+            address = address
+        )
+        code = 200
+        msg = {"status":"success"}
+    else:
+        code = 422
+        msg = {"status":"failure"}
+    return jsonify(msg), code
 
 @bp.route('/user/<username>')
 @login_required

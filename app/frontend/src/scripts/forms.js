@@ -1,3 +1,9 @@
+import axios from 'axios';
+
+let category_get_url = '/categorylist';
+let sector_get_url = '/sectorlist';
+
+
 function categoryGet(url, sector, category_id){
     axios.get(url, {
         params: {
@@ -10,6 +16,26 @@ function categoryGet(url, sector, category_id){
     .catch(function(error){
         console.log(error);
     });
+}
+
+async function categoryGetList(sector=null){
+    try {
+        let response = await axios.get(category_get_url, {
+                        params: {
+                            sector: sector,
+                        },
+        });
+        return response.data;
+    } catch (error){
+        console.log(`error: ${error}`);
+    }
+}
+
+async function getSectorList(){
+
+    let response = await fetch(sector_get_url)
+    let list = await response.json()
+    return list;
 }
 
 function updateSelectFieldOptions(response, id){
@@ -53,4 +79,4 @@ function postForm(path, params, method='post'){
     form.submit();
 }
 
-export {categoryGet, makeForm, postForm};
+export {categoryGet, categoryGetList, getSectorList, makeForm, postForm};
