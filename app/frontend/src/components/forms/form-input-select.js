@@ -1,36 +1,20 @@
-import ErrorMessage from "./error-message";
+import form_element_mixin from './form-element-mixin'
 
-let FormInputSelectMultiple = {
-    components: {
-        'error-message': ErrorMessage,
+let FormInputSelect = {
+    mixins: [form_element_mixin],
+    computed: {
+      options_start_at_0: function() {
+        return this.options[0].id == 0;
+      }
     },
     data: function(){
       return {
         selected: "",
       }
     },
-    delimiters: [ '[[', ']]'],
     props: {
-        name: {
-            type: String,
-            required: true,
-        },
-        readonly: {
-            type: Boolean,
-            required: false,
-            default: false,
-        },
-        required: {
-            type: Boolean,
-            required: false,
-            default: true,
-        },
-        validator: {
-            type: Object,
-            required: false,
-        },
         value: {
-          type: Array,
+          type: Number,
           required: true,
         },
         options: {
@@ -54,13 +38,16 @@ let FormInputSelectMultiple = {
         </label>
         <small v-if="!required" class="text-muted font-italic">optional</small>
         <select
-          multiple
           class="form-control"
           :class="{'form-error':validator.$error}"
           v-bind="$props"
           v-bind:id="name"
           v-model="selected">
-          <option :value="null" selected>Choose from list</option>
+          <option
+            v-if="options[0].id != 0"
+            value=0>
+            <-- Select from list -->
+          </option>
           <template v-for="option in options">
             <option 
                 :value="option.id">
@@ -75,8 +62,13 @@ let FormInputSelectMultiple = {
             <slot></slot>is required.
         </error-message>
         <slot name="errors"></slot>
+        <template v-for="error in filtered_server_side_errors">
+        <small class="form-error-message">
+        [[ error ]]
+        </small>
+      </template>
     </div>
     `,
 }
 
-export default FormInputSelectMultiple;
+export default FormInputSelect;

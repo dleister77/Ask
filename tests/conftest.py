@@ -222,6 +222,7 @@ def dbSession(test_db):
     session = db.create_scoped_session(options)
     db.session = session
     yield session
+    print("closing db")
     db.session.close()
     transaction.rollback()
     connection.close()

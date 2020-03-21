@@ -15,7 +15,7 @@
             data-target="#message-modal"
             data-id="{{ user.id }}"
             data-name="{{ user.full_name }}"
-            @click="setMessagePresets">(message)</a></small>
+            @click="setFormPresets">(message)</a></small>
         {% if user == current_user %}    
         <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
         {% endif %}
@@ -100,13 +100,24 @@
 
 {% block modal %}
 
-<modal-message-user
-    modal_id="message-modal"
-    :form_presets="form_presets"
-    :url="urls.send_message"
-    title="Send Message:"
-    @reset_form_presets="resetFormPresets">
-</modal-message-user>
+<modal-form-wrapper
+modal_id="message-modal"
+:form_presets="form_presets"
+:url="urls.send_message"
+title="Send Message:">
+    <template v-slot:default="fp">
+        <form-usermessage
+            form_id="usermessage_form"
+            :form_presets="fp.form_presets"
+            :reset_form_values="fp.reset_form_values"
+            :set_form_values="fp.set_form_values"
+            :url="fp.url"
+            @form_is_set="fp.mark_form_set"
+            @form_is_reset="fp.mark_form_reset"
+            @form_is_submitted="fp.do_hide_modal">
+        </form-usermessage>
+    </template>
+</modal-form-wrapper>
 
     {% if modal_open %}
         <script>$(window).on('load', function(){
@@ -142,7 +153,7 @@
 </script>
 
 
-    <script src="/static/js/userProfile.b50c470cc4082cf24d14.js"></script>
+    <script src="/static/js/userProfile.b340dd5ce15d08980105.js"></script>
 
 
 

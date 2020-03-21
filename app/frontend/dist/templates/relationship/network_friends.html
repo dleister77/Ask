@@ -9,7 +9,9 @@
     <h3>Search For Friends</h3>
     <form action="{{url_for('relationship.friendadd')}}" id="friendadd" method="post">
         <div class = "form-group row">
-            {{ FriendSearch.csrf_token() }}
+            {% if config['TESTING'] == False %}
+                {{ FriendSearch.csrf_token() }}
+            {% endif %}
             <input v-model="form.id" name='id' type='hidden'>
             <div class = "col">
                 {{ FriendSearch.name.label() }}
@@ -120,7 +122,7 @@
 
 
     
-        <script src="/static/js/friendAdd.5ddcd5715f4b09103b9c.js"></script>
+        <script src="/static/js/friendAdd.eb9372140832de9c9c16.js"></script>
     
 
 {% endblock %}

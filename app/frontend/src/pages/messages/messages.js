@@ -3,9 +3,9 @@ import Vue from 'vue';
 
 import {postForm, makeForm} from '../../scripts/forms.js';
 
-import message_form from '../../components/message-form';
-import message_row from '../../components/message-row';
-import message_read from '../../components/message-read';
+import message_form from '../../components/messages/message-form';
+import message_row from '../../components/messages/message-row';
+import message_read from '../../components/messages/message-read';
 import pagination_nav from '../../components/pagination-nav';
 import folder_nav from '../../components/folder-nav';
 

@@ -38,14 +38,25 @@
         {% endfor %}
 
         {{pagination(pag_urls)}}
-
-        <modal-message-user
-             modal_id="message-modal"
-            :form_presets="form_presets"
-            title="Send Message:"
-            :url="urls.send_message"
-            @reset_form_presets="resetFormPresets">
-        </modal-message-user>
+        <modal-form-wrapper
+        modal_id="message-modal"
+        :form_presets="form_presets"
+        :url="urls.send_message"
+        title="Send Message:">
+            <template v-slot:default="fp">
+                <form-usermessage
+                    form_id="usermessage_form"
+                    :form_presets="fp.form_presets"
+                    :reset_form_values="fp.reset_form_values"
+                    :set_form_values="fp.set_form_values"
+                    :submit_form="fp.submit_form"
+                    :url="fp.url"
+                    @form_is_set="fp.mark_form_set"
+                    @form_is_reset="fp.mark_form_reset"
+                    @form_is_submitted="fp.mark_form_submitted">
+                </form-usermessage>
+            </template>
+        </modal-form-wrapper>
     {% endif %}
 
 {% endblock content_wide %}
@@ -59,7 +70,7 @@
 </script>
 
 
-    <script src="/static/js/providerProfile.03d96bb0de75280ed65a.js"></script>
+    <script src="/static/js/providerProfile.d0733cacd07dec29039b.js"></script>
 
 
 {% endblock %}

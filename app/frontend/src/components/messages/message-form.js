@@ -1,15 +1,15 @@
-import form_input_group from './form-input-group';
-import form_textbox_group from './form-textbox-group';
+import form_input from '../forms/form-input';
+import form_textbox from '../forms/form-textbox';
 
 import axios from 'axios';
 import _ from 'lodash';
-import typeahead_mixin from './typeahead_mixin';
+import typeahead_mixin from '../forms/typeahead_mixin';
 
 
 let message_form = {
     components: {
-        'form-input-group': form_input_group,
-        'form-textbox-group': form_textbox_group,
+        'form-input': form_input,
+        'form-textbox': form_textbox,
     },
     mixins: [typeahead_mixin],
     data: function(){
@@ -98,30 +98,51 @@ let message_form = {
     v-bind:action="urls.send_message"
     id="message-form">
         <input v-bind="{name: 'csrf_token', value: csrf, type:'hidden'}">
+        
         <input v-model="form.message_user_id" v-bind="{name: 'message_user_id', type:'hidden'}">
+        
         <input v-model="form.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
+        
         <input v-model="form.recipient" name='recipient' type='hidden'>
+        
         <div class="form-group">
-        <label
-          for="recipient_typeahead"
-          v-if="!is_active">To</label>
-        <vue-bootstrap-typeahead
-            id="recipient_typeahead"
-            name="recipient_typeahead"
-            v-if="!is_active"
-            v-bind:data="typeahead.suggestions"
-            v-model="form.recipient"
-            v-bind:serializer="suggestionSerializer"
-            placeholder="Enter name of friend..."
-            @hit="typeahead.selected=$event"/>
+            <label
+            for="recipient_typeahead"
+            v-if="!is_active">To</label>
+            <vue-bootstrap-typeahead
+                id="recipient_typeahead"
+                name="recipient_typeahead"
+                v-if="!is_active"
+                v-bind:data="typeahead.suggestions"
+                v-model="form.recipient"
+                v-bind:serializer="suggestionSerializer"
+                placeholder="Enter name of friend..."
+                @hit="typeahead.selected=$event"/>
         </div>
-        <form-input-group
+
+        <form-input
             v-if="is_active"
             v-model="form.recipient"
-            v-bind="{name: 'recipient', readonly: true}">To
-        </form-input-group>            
-        <form-input-group v-model="form.subject" v-bind="{name: 'subject'}">Subject</form-input-group>
-        <form-textbox-group v-model="form.body" v-bind="{name: 'body'}">Message Body</form-textbox-group>
+            :name='recipient'
+            :readonly=true
+            :required=false>
+            To
+        </form-input>
+
+        <form-input
+            v-model="form.subject"
+            name='subject'
+            :required=false>
+            Subject
+        </form-input>
+
+        <form-textbox
+            v-model="form.body"
+            name='body'
+            :required=false>
+            Message Body
+        </form-textbox>
+
         <button
             class="btn btn-primary btn-block submit"
             type="submit"

@@ -1,9 +1,10 @@
-import modal_message_user from './modal-message-user';
+import modal_form_wrapper from './modals/modal-form-wrapper';
+import form_usermessage from './form-usermessage';
 
-
-const modal_message_user_mixin = {
+const modal_form_usermessage_mixin = {
     components: {
-        "modal-message-user": modal_message_user,
+        "modal-form-wrapper": modal_form_wrapper,
+        'form-usermessage': form_usermessage
     },
     delimiters: ['[[', ']]'],
     data: {
@@ -18,19 +19,12 @@ const modal_message_user_mixin = {
         },
     },
     methods: {
-        setMessagePresets: function(event){
+        setFormPresets: function(event){
             let source = event.target
             this.form_presets.recipient_id = source.dataset.id
             this.form_presets.recipient_name = source.dataset.name
             this.form_presets.subject = source.dataset.subject
         },
-        resetFormPresets: function() {
-            Object.keys(this.form_presets).forEach(function(key) {
-                if (key != "csrf_token"){
-                    this.form_presets[key] = "";
-                }
-            }, this);
-        }
     },
 }
-export default modal_message_user_mixin;
+export default modal_form_usermessage_mixin;

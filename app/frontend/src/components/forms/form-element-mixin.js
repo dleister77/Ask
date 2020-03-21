@@ -1,17 +1,16 @@
 import ErrorMessage from "./error-message";
 
-let FormInput = {
+let sse_empty_vals = [undefined, [] ]
+
+let form_element_mixin = {
     components: {
         'error-message': ErrorMessage,
     },
+    delimiters: [ '[[', ']]'],
     props: {
         name: {
             type: String,
             required: true,
-        },
-        placeholder: {
-            type: String,
-            required: false,
         },
         readonly: {
             type: Boolean,
@@ -22,11 +21,6 @@ let FormInput = {
             type: String,
             required: false,
             default: "",
-        },
-        type: {
-            type: String,
-            required: false,
-            default: "text"
         },
         required: {
             type: Boolean,
@@ -43,8 +37,21 @@ let FormInput = {
         }
     },
     computed: {
+      has_sse: function() {
+        let not_empty_array = JSON.stringify(this.server_side_errors) != JSON.stringify(Array(0))
+        let not_undefined = this.server_side_errors != undefined
+        return not_empty_array && not_undefined;
+      },
+      has_vuelidate: function() {
+        return this.validator != undefined;
+      },
+      is_invalid: function() {
+        let vuelidate_invalid = this.has_vuelidate && this.validator.$error
+        let sse_invalid = this.has_sse
+        return vuelidate_invalid || sse_invalid;
+      },
       filtered_server_side_errors() {
-        if (this.value != "" && this.server_side_errors != undefined){
+        if (this.has_sse){
           let errors = this.server_side_errors.filter(function(error){
             return !error.includes("require")
           });
@@ -54,7 +61,9 @@ let FormInput = {
         }
       },
       error_class: function() {
-        if (this.validator != undefined && this.validator.$error){
+        let validator_invalid = this.validator != undefined && this.validator.$error;
+        let server_side_invalid = !(sse_empty_vals.includes(this.server_side_errors))
+        if (this.is_invalid){
           return 'form-error'
         }
       }
@@ -64,34 +73,6 @@ let FormInput = {
             this.$emit('input', value);
         },
     },
-    template: `
-    <div class="form-group">
-        <label
-          v-bind:for="name">
-          <slot></slot>
-        </label>
-        <small v-if="!required" class="text-muted font-italic">optional</small>
-        <input
-          class="form-control"
-          :class="error_class"
-          v-bind="$props"
-          v-bind:id="name"
-          v-on:change="updateValue($event.target.value)">
-        </input>
-        <error-message
-            v-if="required"
-            :field="validator"
-            validator="required">
-            <slot></slot> is required.
-        </error-message>
-        <slot name="errors"></slot>
-        <template v-for="error in filtered_server_side_errors">
-          <small class="form-error-message">
-          {{ error }}
-          </small>
-        </template>
-    </div>
-    `,
 }
 
-export default FormInput;
+export default form_element_mixin;

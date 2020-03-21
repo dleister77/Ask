@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import typeahead_mixin from '../../components/typeahead_mixin';
+import typeahead_mixin from '../../components/forms/typeahead_mixin';
 
 
 const friendAdd = new Vue({
@@ -9,7 +9,7 @@ const friendAdd = new Vue({
     data: {
         urls: links,
         typeahead: {
-            include_id: false,
+            include_id: true,
         }
     },
     methods: {

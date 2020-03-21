@@ -1,36 +1,15 @@
-import ErrorMessage from "./error-message";
+import form_element_mixin from './form-element-mixin'
 
-let FormInputSelect = {
-    components: {
-        'error-message': ErrorMessage,
-    },
+let FormInputSelectMultiple = {
+    mixins: [form_element_mixin],
     data: function(){
       return {
         selected: "",
       }
     },
-    delimiters: [ '[[', ']]'],
     props: {
-        name: {
-            type: String,
-            required: true,
-        },
-        readonly: {
-            type: Boolean,
-            required: false,
-            default: false,
-        },
-        required: {
-            type: Boolean,
-            required: false,
-            default: true,
-        },
-        validator: {
-            type: Object,
-            required: false,
-        },
         value: {
-          type: Number,
+          type: Array,
           required: true,
         },
         options: {
@@ -54,6 +33,7 @@ let FormInputSelect = {
         </label>
         <small v-if="!required" class="text-muted font-italic">optional</small>
         <select
+          multiple
           class="form-control"
           :class="{'form-error':validator.$error}"
           v-bind="$props"
@@ -78,4 +58,4 @@ let FormInputSelect = {
     `,
 }
 
-export default FormInputSelect;
+export default FormInputSelectMultiple;

@@ -1,9 +1,10 @@
 import Vue from 'vue';
-import typeahead_mixin from '../../components/typeahead_mixin';
+import typeahead_mixin from '../../components/forms/typeahead_mixin';
 import makeMap from '../../scripts/maps.js';
 import {categoryGet} from '../../scripts/forms.js'
 import { getCurrentLocation } from '../../scripts/geo.js';
-import modal_message_correction_mixin from '../../components/modal-message-correction-mixin';
+import modal_form_correction_mixin from '../../components/modal-form-correction-mixin';
+import form_suggestion from '../../components/form-suggestion';
 
 var mapboxgl = require('mapbox-gl/dist/mapbox-gl.js');
 
@@ -17,6 +18,7 @@ const searchPage = new Vue({
     components:{
         'map-view': mapView,
         'vue-bootstrap-typeahead': VueBootstrapTypeahead,
+        'form-suggestion': form_suggestion,
     },
     computed:{
         showManualLocation: function(){
@@ -66,7 +68,7 @@ const searchPage = new Vue({
                 });
         },
         updateCategory: function(){
-            categoryGet(this.urls.categoryList, this.form.sector, 'category');
+            categoryGet(this.urls.categoryList, this.form.sector, 'search_category');
         },
         makeQueryString: function(){
             let qs = Object.entries(this.filter).map(function([key,value]){
@@ -81,7 +83,7 @@ const searchPage = new Vue({
             this.activeBusiness = b;
         }
     },
-    mixins: [typeahead_mixin, modal_message_correction_mixin],
+    mixins: [typeahead_mixin, modal_form_correction_mixin],
     watch: {
         'form.location': function(locationSource){
             if (locationSource == "gps"){

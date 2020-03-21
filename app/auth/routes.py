@@ -171,8 +171,10 @@ def register():
         return redirect(url_for("main.index"))
     form = RegistrationForm().populate_choices()
     if request.method == "GET":
-        form = json.dumps(form_to_dict(form))
-        return render_template("auth/register.html", title='Register', form=form)
+        form_values = json.dumps(form_to_dict(form, "values"))
+        form_errors = json.dumps(form_to_dict(form, "errors"))
+        return render_template("auth/register.html", title='Register',
+                               form_values=form_values, form_errors=form_errors)
     if form.validate_on_submit():
         address = Address(line1=form.address.line1.data, 
                           line2=form.address.line2.data, 
@@ -189,8 +191,10 @@ def register():
         flash("Please check your email for an email verification message.")
         return redirect(url_for('auth.welcome'))
     else:
-        form = json.dumps(form_to_dict(form))
-        return render_template("auth/register.html", title='Register', form=form), 422
+        form_values = json.dumps(form_to_dict(form, "values"))
+        form_errors = json.dumps(form_to_dict(form, "errors"))
+        return render_template("auth/register.html", title='Register',
+            form_values=form_values, form_errors=form_errors), 422
 
     
 @bp.route('/userupdate', methods=["POST"])
@@ -231,7 +235,6 @@ def userupdate():
 
 @bp.route('/shutdown')
 def server_shutdown():
-    print("shutting down")
     if not current_app.testing:
         abort(404)
     shutdown = request.environ.get('werkzeug.server.shutdown')

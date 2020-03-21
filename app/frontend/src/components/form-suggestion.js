@@ -1,42 +1,34 @@
-import Vue from 'vue';
-import Vuelidate from 'vuelidate';
+import _ from 'lodash';
 
-import ErrorMessage from './error-message';
-import form_input_group from './form-input-group';
-import form_input_select from './form-input-select';
-import form_textbox from './form-textbox';
-import FormInput from './form-input';
-import FormInputCheckbox from './form-input-checkbox';
-import FormInputSelectMultiple from './form-input-select-multiple';
+import form_mixin from './forms/form_mixin'
+import ErrorMessage from './forms/error-message';
+import form_input_select from './forms/form-input-select';
+import FormTextbox from './forms/form-textbox';
+import FormInput from './forms/form-input';
+import FormInputCheckbox from './forms/form-input-checkbox';
+import FormInputSelectMultiple from './forms/form-input-select-multiple';
 import {states} from '../../supporting/states';
 
-import {categoryGetList, getSectorList} from './../scripts/forms';
-import {isEmpty, telephone} from './../scripts/validators';
-
-
+import {getCategoryList, getSectorList} from '../scripts/forms';
+import {isEmpty, telephone} from '../scripts/validators';
 
 import required from 'vuelidate/lib/validators/required';
 import requiredIf from 'vuelidate/lib/validators/requiredIf';
 import email from 'vuelidate/lib/validators/email';
 import or from 'vuelidate/lib/validators/or';
 
-
-Vue.use(Vuelidate);
-
-let form_message_correction = {
+let form_suggestion = {
     components: {
         'error-message': ErrorMessage,
         'form-input': FormInput,
-        'form-input-group': form_input_group,
-        'form-textbox': form_textbox,
+        'form-textbox': FormTextbox,
         'form-input-checkbox': FormInputCheckbox,
         'form-input-select': form_input_select,
         'form-input-select-multiple': FormInputSelectMultiple,
 
     },
-    computed: {
-
-    },
+    mixins: [form_mixin],
+    computed: {},
     data: function(){
         return {
             form: {
@@ -49,12 +41,12 @@ let form_message_correction = {
                 category: "",
                 address_updated: false,
                 address: {
-                    is_coordinate_error: false,
                     line1: "",
                     line2: "",
                     city: "",
                     state: "",
-                    zip: ""
+                    zip: "",
+                    coordinate_error: false,
                 },
                 contact_info_updated: false,
                 email: "",
@@ -62,26 +54,15 @@ let form_message_correction = {
                 telephone:"",
                 other: "",
             },
-            states: states,
-            sectors: [],
-            categories: [],
+            options: {
+                states: states,
+                sectors: [],
+                categories: [],
+            }
         }
     },
     delimiters: ["[[", "]]"],
-    props: {
-        form_presets: {
-            type: Object,
-            required: false,
-        },
-        url: {
-            type: String,
-            required: true,
-        },
-        reset_form: {
-            type: Boolean,
-            required: false,
-        }
-    },
+    props: {}, //set by mixin
     validations: {
         form: {
             id: {
@@ -110,7 +91,7 @@ let form_message_correction = {
                 required,
             },
             address: {
-                is_coordinate_error: {
+                coordinate_error: {
                     required: requiredIf(function(){
                         return this.form.address_updated;
                     }),
@@ -150,46 +131,32 @@ let form_message_correction = {
         },
     },
     methods: {
-        resetForm: function() {
-            this.$v.$reset();
-            Object.keys(this.form).forEach((key)=> this.form[key] = (typeof this.form[key] == 'boolean') ? false : "");
+        get_sector_list: async function() {
+            let s = await getSectorList();
+            return s;
         },
-        get_address_updated: function() {
-            return this.form.address_updated;
-        }
-        
+        get_category_list: async function(sector=null) {
+            let c = await getCategoryList(sector);
+            return c
+        },
     },
     created: async function() {
-        let s = await getSectorList();
-        this.sectors = s;
+        this.options.sectors = await this.get_sector_list();
+        this.options.categories = await this.get_category_list();
     },
     watch: {
-        'form_presets': {
-            handler: function(new_val) {
-            Object.entries(this.form_presets).forEach(([key,value])=>this.form[key]=value);
-            },
-            deep: true,
-        },
-        'reset_form': function(new_val) {
-            if (new_val==true) {
-                this.resetForm();
-                this.$emit('form_is_reset')
-            }
-        },
         'form.sector': {
             handler: async function(new_val){
-                let c = await categoryGetList(new_val);
-                this.categories = c;
+                if (new_val != 0) {
+                    this.options.categories = await this.get_category_list(new_val);
+                }
             },
+
         },
-        '$v.$invalid': function(new_val) {
-            let is_valid = !new_val;
-            this.$emit('form_is_valid', is_valid);
-        }
     },
     template: `
     <div>
-        <form id = "message-form" v-bind:action="url" method="POST">
+        <form :id="form_id" :action="url" method="POST">
             <input name="csrf_token" type="hidden" :value="form_presets.csrf_token">
             <input name='id' type="hidden" :value="form_presets.id">
             
@@ -198,7 +165,8 @@ let form_message_correction = {
                 :readonly="true"
                 :required="true"
                 :validator="$v.form.name"
-                v-model="$v.form.name.$model">
+                v-model="$v.form.name.$model"
+                :server_side_errors="server_side_errors.name">
                 Business Name
             </form-input>
             
@@ -206,7 +174,8 @@ let form_message_correction = {
                 name="is_not_active"
                 :required="true"
                 :validator="$v.form.is_not_active"
-                v-model="$v.form.is_not_active.$model">
+                v-model="$v.form.is_not_active.$model"
+                :server_side_errors="server_side_errors.is_not_active">
                 Check if business is permanently closed.
             </form-input-checkbox>
             
@@ -214,42 +183,45 @@ let form_message_correction = {
                 name="category_updated"
                 :required="true"
                 :validator="$v.form.category_updated"
-                v-model="$v.form.category_updated.$model">
+                v-model="$v.form.category_updated.$model"
+                :server_side_errors="server_side_errors.category_updated">
                 Check if business sector/categories need to be updated.
             </form-input-checkbox>
             <form-input-select
                 v-if="form.category_updated"
                 name="sector"
-                :options="sectors"
+                :options="options.sectors"
                 :validator="$v.form.sector"
                 v-model="$v.form.sector.$model"
-                :value="form.sector">
+                :server_side_errors="server_side_errors.sector">
             Sector
           </form-input-select>            
             <form-input-select-multiple
                 v-if="form.category_updated"
                 name="category"
-                :options="categories"
+                :options="options.categories"
                 :validator="$v.form.category"
                 v-model="$v.form.category.$model"
-                :value="form.category">
+                :server_side_errors="server_side_errors.category">
             Category
           </form-input-select-multiple>
 
 
             <form-input-checkbox
-                name="form.address_updated"
+                name="address_updated"
                 :required="true"
                 v-model="$v.form.address_updated.$model"
-                :validator="$v.form.address_updated">
+                :validator="$v.form.address_updated"
+                :server_side_errors="server_side_errors.address_updated">
                 Check if address/location is incorrect.
             </form-input-checkbox>
             <form-input-checkbox
                 v-if="form.address_updated"
-                name="is_coordinate_error"
+                name="coordinate_error"
                 :required="true"
-                :validator="$v.form.address.is_coordinate_error"
-                v-model="$v.form.address.is_coordinate_error.$model">
+                :validator="$v.form.address.coordinate_error"
+                v-model="$v.form.address.coordinate_error.$model"
+                :server_side_errors="server_side_errors.address.coordinate_error">
                 Check if map coordinates are incorrect.
             </form-input-checkbox>
             <form-input
@@ -257,14 +229,16 @@ let form_message_correction = {
                 name="line1"
                 :required="true"
                 :validator="$v.form.address.line1"
-                v-model="$v.form.address.line1.$model">
+                v-model="$v.form.address.line1.$model"
+                :server_side_errors="server_side_errors.address.line1">
                 Street Address
             </form-input>
             <form-input
                 v-if="form.address_updated"
                 name="line2"
                 :required="false"
-                v-model="form.address.line2">
+                v-model="form.address.line2"
+                :server_side_errors="server_side_errors.address.line2">
                 Address Line 2
             </form-input>
             <form-input
@@ -272,16 +246,18 @@ let form_message_correction = {
                 name="city"
                 :required="true"
                 :validator="$v.form.address.city"
-                v-model="$v.form.address.city.$model">
+                v-model="$v.form.address.city.$model"
+                :server_side_errors="server_side_errors.address.city">
                 City
             </form-input>
             <form-input-select
                 v-if="form.address_updated"
-                name="address-state"
-                :options="states"
+                name="state"
+                :options="options.states"
                 :validator="$v.form.address.state"
                 :value="form.address.state"
-                v-model.trim="$v.form.address.state.$model">
+                v-model.trim="$v.form.address.state.$model"
+                :server_side_errors="server_side_errors.address.state">
             State
           </form-input-select>
             <form-input
@@ -289,15 +265,17 @@ let form_message_correction = {
                 name="zip"
                 :required="true"
                 :validator="$v.form.address.zip"
-                v-model="$v.form.address.zip.$model">
+                v-model="$v.form.address.zip.$model"
+                :server_side_errors="server_side_errors.address.zip">
                 Zip Code
             </form-input>                                            
 
             <form-input-checkbox
-                name="form.contact_info_updated"
+                name="contact_info_updated"
                 :required="true"
                 v-model="$v.form.contact_info_updated.$model"
-                :validator="$v.form.contact_info_updated">
+                :validator="$v.form.contact_info_updated"
+                :server_side_errors="server_side_errors.contact_info_updated">
                 Check if email, website or telephone are incorrect.
             </form-input-checkbox>
             <form-input
@@ -305,7 +283,8 @@ let form_message_correction = {
                 name="email"
                 :required="false"
                 :validator="$v.form.email"
-                v-model="$v.form.email.$model">
+                v-model="$v.form.email.$model"
+                :server_side_errors="server_side_errors.email">
                 Email Address
                 <template v-slot:errors>
                     <error-message
@@ -321,7 +300,8 @@ let form_message_correction = {
                 name="website"
                 :required="false"
                 :validator="$v.form.website"
-                v-model="$v.form.website.$model">
+                v-model="$v.form.website.$model"
+                :server_side_errors="server_side_errors.website">
                 Website
             </form-input>  
             <form-input
@@ -329,28 +309,36 @@ let form_message_correction = {
                 name="telephone"
                 :required="false"
                 :validator="$v.form.telephone"
-                v-model="$v.form.telephone.$model">
+                v-model="$v.form.telephone.$model"
+                :server_side_errors="server_side_errors.telephone">
                 Telephone
                 <template v-slot:errors>
-                <error-message
-                :field="$v.form.telephone"
-                validator="or">
-                Telephone number must be 10 digits long.
-                </error-message>
-            </template>
+                    <error-message
+                    :field="$v.form.telephone"
+                    validator="or">
+                    Telephone number must be 10 digits long.
+                    </error-message>
+                </template>
             </form-input>                                      
 
-            <div class="form-group">
             <form-textbox
                 name='other'
                 v-model.trim="form.other"
-                :required="false">
+                :required="false"
+                :server_side_errors="server_side_errors.other">
                 Other
             </form-textbox>
-        </div>
+
+            <button
+                :id="form_id + '_submit'"
+                class="btn btn-primary btn-block submit"
+                type="submit"
+                v-on:click.prevent="submit">
+                Submit
+            </button>
         </form>
     </div>
     
     `
 }
-export default form_message_correction;
+export default form_suggestion;

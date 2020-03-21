@@ -1,5 +1,8 @@
 
-let form_input_group = {
+let form_input_typeahead = {
+    components:{
+        'typeahead': () => import('./typeahead.js'),
+    },
     props: {
         name: {
             type: String,
@@ -24,7 +27,7 @@ let form_input_group = {
             required: false,
             default: "text"
         },
-        autocompleteUrl: {
+        url: {
             type: String,
             required: false,
         }           
@@ -33,6 +36,9 @@ let form_input_group = {
         updateValue: function(value){
             this.$emit('input', value);
         },
+        emitMessage: function(msg){
+            this.$emit(msg.name, msg.value)
+        }
     },
     template: `
     <div class="form-group">
@@ -40,14 +46,14 @@ let form_input_group = {
           v-bind:for="name">
           <slot></slot>
         </label>
-        <input
-          class="form-control"
+        <typeahead
+          v-bind:url="url"
           v-bind="$props"
           v-bind:id="name"
-          v-on:change="updateValue($event.target.value)">
-        </input>
+          v-on:input="updateValue"
+          v-on:id-change="emitMessage"/>
     </div>
     `,
 }
 
-export default form_input_group;
+export default form_input_typeahead;

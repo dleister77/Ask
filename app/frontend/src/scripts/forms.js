@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { len } from 'vuelidate/lib/validators/common';
 
 let category_get_url = '/categorylist';
 let sector_get_url = '/sectorlist';
@@ -18,7 +19,7 @@ function categoryGet(url, sector, category_id){
     });
 }
 
-async function categoryGetList(sector=null){
+async function getCategoryList(sector=null){
     try {
         let response = await axios.get(category_get_url, {
                         params: {
@@ -33,9 +34,12 @@ async function categoryGetList(sector=null){
 
 async function getSectorList(){
 
-    let response = await fetch(sector_get_url)
-    let list = await response.json()
-    return list;
+    try {
+        let response = await axios.get(sector_get_url)
+        return response.data;
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 function updateSelectFieldOptions(response, id){
@@ -79,4 +83,57 @@ function postForm(path, params, method='post'){
     form.submit();
 }
 
-export {categoryGet, categoryGetList, getSectorList, makeForm, postForm};
+function reset_form(form_old) {
+    let form_new = {};
+    Object.entries(form_old).forEach(function([key, value]) {
+        switch (typeof value) {
+            case 'string':
+                form_new[key] = "";
+                break;
+            case 'boolean':
+                form_new[key] = false;
+                break;
+            case 'number':
+                form_new[key] = 0;
+                break;
+            case 'undefined':
+                form_new[key] = null;
+            case 'object':
+                if (value instanceof Array) {
+                    form_new[key] = Array(0);
+                } else if (value == null) {
+                    form_new[key] = null;
+                } else if (len(Object.keys(value)) > 0) {
+                    form_new[key] = reset_form(value);
+                } else {
+                    form_new[key] = null;
+                }
+                break;
+        }
+    });
+    return form_new;
+}
+
+function is_object_literal(value) {
+    if (typeof value != 'object' || value instanceof Array || value == null ){
+        return false;
+    }
+    else if ( len(Object.keys(value)) > 0 ) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function set_form(form_presets, form) {
+    Object.entries(form_presets).forEach(function([key, value]) {
+        if(is_object_literal(value)){
+                form[key] = set_form(value, form[key]);
+        } else {
+            form[key] = value;
+        }
+    });
+    return form;
+}
+
+export {categoryGet, getCategoryList, getSectorList, makeForm, postForm, reset_form, set_form};

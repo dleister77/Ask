@@ -55,7 +55,7 @@ describe('visible links', function(){
         });
         after(function(){
             wrapper.destroy();
-        })
+        });
         it('check set up', function(){
             assert.isTrue(wrapper.vm.$props.folderIsVisible);
             assert.isTrue(wrapper.vm.$props.messageIsVisible);

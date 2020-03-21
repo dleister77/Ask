@@ -92,6 +92,7 @@ class TestFriendAdd(FunctionalTest):
         self.form = baseFriendSearch
         response = self.postRequest(activeClient)
         page = response.data.decode()
+        print(page)
         assert response.status_code == 200
         flash = f"Friend request sent to {baseFriendSearch['name']}.  Awaiting confirmation.".encode()
         assert flash in response.data

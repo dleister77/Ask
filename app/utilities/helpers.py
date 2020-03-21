@@ -171,13 +171,25 @@ def form_to_dict2(form):
 
     return {"csrf_token": form.csrf_token.current_token, "data": form.data, "errors": form.errors}
 
-def form_to_dict(form):
+def form_to_dict(form, field_attribute):
+    """Generates dictionary from wtf forms form object.
+    Args:
+        form (WTF Form): form object
+        field_attribute: values or errors, determines whether a dictionary of
+            values or errors will be generated
+    Returns:
+        Dictionary of values or errors
+    """
     form_dict = {}
+    if field_attribute == "values":
+        attribute = 'data'
+    elif field_attribute == 'errors':
+        attribute = 'errors'
     for field in form:
         if field.type == 'FormField':
-            form_dict[field.short_name] = form_to_dict(field)
-        elif field.short_name == 'csrf_token':
-            form_dict[field.short_name] = {"value": field.current_token}
+            form_dict[field.short_name] = form_to_dict(field, field_attribute)
+        if field.short_name == 'csrf_token' and field_attribute == 'values':
+            form_dict[field.short_name] = field.current_token
         else:
-            form_dict[field.short_name] = {"data": field.data, "errors": field.errors}
+            form_dict[field.short_name] = getattr(field, attribute)
     return form_dict

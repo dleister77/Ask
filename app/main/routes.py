@@ -161,6 +161,7 @@ def providerAutocomplete():
     """Pulls list of providers matching input text."""
     form = ProviderSearchForm(request.args)
     form.populate_choices()
+    print(form.data)
     del form.sort
     if form.validate():
         try:
@@ -366,12 +367,22 @@ def searchJSON():
 @login_required
 def make_provider_suggestion():
     form = ProviderSuggestionForm().populate_choices()
+    form_category = request.form.get('category')
+    # if form_category is not None:
+    #     form.category.data = str(request.form.get('category')).split(',')
     if form.validate_on_submit():
         
-        if form.category.data != []:
+        if form.category_updated.data is True:
             categories = [Category.query.get(cat) for cat in form.category.data]
         else:
             categories = []
+
+        if form.contact_info_updated.data is True:
+            website = form.website.data
+            telephone = form.telephone.data
+            email = form.email.data
+        else:
+            website, telephone, email = None, None, None
 
         if form.address_updated.data is True:
             address = Address_Suggestion(
@@ -380,27 +391,31 @@ def make_provider_suggestion():
                 city = form.city.data,
                 state_id = form.state.data,
                 zip = form.zip.data,
-                is_coordinate_error = form.is_coordinate_error.data
+                is_coordinate_error = form.coordinate_error.data
             )
         else:
             address = None
 
         suggestion = Provider_Suggestion.create(
+            user_id = current_user.id,
             name = form.name.data,
             provider_id = form.id.data,
-            user_id = current_user.id,
-            email = form.email.data,
-            telephone = form.telephone.data,
             is_active = not form.is_not_active.data,
-            website = form.website.data,
+            email = email,
+            telephone = telephone,
+            website = website,
             categories = categories,
-            address = address
+            address = address,
+            other = form.other.data,
         )
         code = 200
         msg = {"status":"success"}
     else:
         code = 422
-        msg = {"status":"failure"}
+        msg = {
+            "status":"failure",
+            "errors": form.errors
+        }
     return jsonify(msg), code
 
 @bp.route('/user/<username>')

@@ -3,8 +3,6 @@ import message_read from '../src/components/message-read';
 require('jsdom-global')();
 const describe = require('mocha').describe;
 const it = require('mocha').it;
-const beforeEach = require('mocha').beforeEach;
-const afterEach = require('mocha').afterEach;
 const assert = require('chai').assert
 
 const Vue = require('vue/dist/vue.js');

@@ -905,15 +905,14 @@ class TestMessage(object):
         assert m.recipient.email == current_app.config['ADMINS'][0]
 
     def test_message_delete_cascade(self, test_message):
-        s = test_message.sender
-        r = test_message.recipient
+        s_id = int(test_message.sender.id)
+        r_id = int(test_message.recipient.id)
         assert test_message is not None
-        assert s is not None
-        assert r is not None
+        assert Message_User.query.get(s_id) is not None
         test_message.delete()
+        assert Message_User.query.get(s_id) is None
+        assert Message_User.query.get(r_id) is None
         assert Message.query.get(test_message.id) is None
-        assert Message_User.query.get(s.id) is None
-        assert Message_User.query.get(r.id) is None
 
 @pytest.mark.usefixtures("dbSession")
 class TestConversation(object):
@@ -922,12 +921,14 @@ class TestConversation(object):
         assert c is not None
 
     def test_delete_cascade(self, test_message):
+        m_id = test_message.id
+        c_id = test_message.conversation_id
         assert test_message is not None
-        c = test_message.conversation
+        c = Conversation.query.get(c_id)
         c.delete()
-        c = Conversation.query.get(1)
+        c = Conversation.query.get(c_id)
         assert c is None
-        m = Message.query.get(test_message.id)
+        m = Message.query.get(m_id)
         assert m is None
         # assert Message.query.get(1) is None
 

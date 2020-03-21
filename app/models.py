@@ -1619,6 +1619,11 @@ class Conversation(Model):
     """Conversation that captures multiple messages"""
     id = db.Column(db.Integer, primary_key=True)
 
+    messages = db.relationship("Message",
+                               backref=backref("conversation", uselist=False),
+                               cascade="all, delete-orphan",
+                               passive_deletes=True)
+
 class Message(Model):
     """Message data common to all users on message
     
@@ -1634,13 +1639,17 @@ class Message(Model):
 
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer,
-                                db.ForeignKey("conversation.id", ondelete="CASCADE"))
+                                db.ForeignKey("conversation.id", ondelete="CASCADE"),
+                                nullable=False)
     timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
     msg_type = db.Column(db.String(25), index=True)
     subject = db.Column(db.String(50), index=True)
     body = db.Column(db.String(5000))
 
-    conversation = db.relationship("Conversation", backref="messages", uselist=False)
+    users = db.relationship("Message_User",
+                            backref=backref("message", uselist=False),
+                            cascade="all, delete-orphan",
+                            passive_deletes=True)
 
 
     @hybrid_property
@@ -1721,8 +1730,8 @@ class Message_User(Model):
     read = db.Column(db.Boolean, index=True)
     tag = db.Column(db.String(20), index=True)
     message_id = db.Column(db.Integer,
-                           db.ForeignKey("message.id", ondelete="CASCADE"))
-    message = db.relationship("Message", backref="users", uselist=False)
+                           db.ForeignKey("message.id", ondelete="CASCADE"),
+                           nullable=False)
     user = db.relationship("User", backref="messages")
 
     def __init__(self, **kwargs):
@@ -1748,131 +1757,3 @@ class Message_User(Model):
    
 
 
-# class Message_User(Message_User):
-
-#     __tablename__= "Message_User"
-
-#     id = db.Column(db.Integer, db.ForeignKey('message_user.id'), primary_key=True)
-#     # message_id = db.Column(db.Integer, db.ForeignKey("message.id"))
-#     # message = db.relationship("Message", backref=backref("Message_User", uselist=False), uselist=False)
-
-#     def __init__(self, **kwargs):
-#         super(Message_User, self).__init__(**kwargs)
-#         self.role = 'Message_User'
-#         self.tag = 'inbox'
-#         self.read = False
-
-#     __mapper_args = {
-#         'polymorphic_identity': 'Message_User',
-#     }
-
-# class Sender(Message_User):
-
-#     __tablename__="sender"
-
-#     id = db.Column(db.Integer, db.ForeignKey('message_user.id'), primary_key=True)
-#     # message_id = db.Column(db.Integer, db.ForeignKey("message.id"))
-#     # message = db.relationship("Message", backref=backref("sender", uselist=False), uselist=False)
-
-#     def __init__(self, **kwargs):
-#         super(Sender, self).__init__(**kwargs)
-#         self.role = 'sender'
-#         self.tag = 'sent'
-#         self.read = True
-
-#     __mapper_args = {
-#         'polymorphic_identity': 'sender',
-#     } 
-
-
-
-# class Message2(Model):
-#     """User to user messages
-    
-#     Attributes:
-#       id (int): message id
-#       conversation_id (int): id of conversation that message belongs to
-      
-#       sender_id (int): id of person sending the message
-#       sender_name (str): full name of person sending the message
-#       sender_email (str): email of person sending the message
-#       sender_folder (str): folder that sender stores the message in
-#       sender_read (boolean): whether message has been read by the sender, default to true
-      
-#       receiver_id (int): id of person receiving the message
-#       receiver_name (str): name of person receiving the message
-#       receiver_folder (str): folder that receiver stores the message in
-#       receiver_read (boolean): whether message has been read by the receiver, default to false
-
-#       timestamp (Datetime): date/time when message sent
-#       msg_type (str): type of message, either user2user or admin
-#       body (str): text of message
-
-#       sender (User): User that sent the message
-#       receiver (User): User that sent the message
-#       conversation (Conversation): Conversation to which message belongs to
-#       """
-
-#     id = db.Column(db.Integer, primary_key=True)
-
-#     last_message_id = db.Column(db.Integer, db.ForeignKey("message2.id"))
-
-#     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-#     sender_name = db.Column(db.String(128))
-#     sender_email = db.Column(db.String(120))
-#     sender_folder = db.Column(db.String(20), default="sent", index=True)
-#     sender_read = db.Column(db.Boolean, default=True)
-
-#     receiver_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-#     receiver_name = db.Column(db.String(128))
-#     receiver_email = db.Column(db.String(120))
-#     receiver_folder = db.Column(db.String(20), default="inbox", index=True)
-#     receiver_read = db.Column(db.Boolean, default=True)
-
-#     msg_type = db.Column(db.String(25), index=True)
-
-#     timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
-#     subject = db.Column(db.String(50), index=True)
-#     body = db.Column(db.String(5000))
-
-#     sender = db.relationship("User", backref="sent_messages2", uselist=False, foreign_keys=[sender_id])
-#     receiver = db.relationship("User", backref="received_messages2", uselist=False, foreign_keys=[receiver_id])
-#     child_message = db.relationship("Message2", backref=backref("parent_message", uselist=False))
-
-#     def send_reply(self,subject, body):
-#         msg = Message2.create(
-#             conversation_id = self.conversation_id,
-#             sender_id = self.receiver_id,
-#             sender_name = self.receiver_name,
-#             sender_email = self.sender_email,
-#             receiver_id = self.sender_id,
-#             receiver_name = self.sender_name,
-#             receiver_email = self.sender_email,
-#             msg_type=self.msg_type,
-#             subject=subject,
-#             body=body
-#         )
-#         return msg
-    
-#     @staticmethod
-#     def send_new(form, msg_type):
-#             msg = Message2.create(
-#                     sender_id = form.sender_id.data,
-#                     sender_name = form.sender_name.data,
-#                     sender_email = form.sender_email.data,
-#                     receiver_id = form.receiver_id.data,
-#                     receiver_name = form.receiver_name.data,
-#                     receiver_email = form.receiver_email.data,
-#                     msg_type=msg_type,
-#                     subject=form.subject.data,
-#                     body=form.body.data
-#                 )
-    
-#     def is_admin_send(self):
-#         return self.message_type == "admin" and self.receiver_id is not None\
-#             and self.sender_id is None
-    
-#     def is_admin_receive(self):
-#         return self.message_type == "admin" and self.receiver_id is None\
-#             and self.sender_id is not None
-        

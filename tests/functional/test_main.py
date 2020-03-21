@@ -520,7 +520,7 @@ class TestMessageMove(FunctionalTest):
         assert archive_count == 0
         inbox_count = len(current_user.get_messages('inbox'))
         assert inbox_count == 2        
-        self.form = {"message_id": 2, "status": "archive"}
+        self.form = {"message_id": 2, "tag": "archive"}
         response = self.postRequest(activeClient)
         assert response.status_code == 200
         flash = b"Message archived"
@@ -535,7 +535,7 @@ class TestMessageMove(FunctionalTest):
         assert archive_count == 0
         inbox_count = len(current_user.get_messages('inbox'))
         assert inbox_count == 2        
-        self.form = {"message_id": "2,6", "status": "archive"}
+        self.form = {"message_id": "2,6", "tag": "archive"}
         response = self.postRequest(activeClient)
         assert response.status_code == 200
         flash = b"Messages archived"
@@ -546,7 +546,7 @@ class TestMessageMove(FunctionalTest):
         assert inbox_count == 0
 
     def test_move_invalid_status(self, activeClient):
-        self.form = {"message_id": 2, "status": "invalid folder name"}
+        self.form = {"message_id": 2, "tag": "invalid folder name"}
         response = self.postRequest(activeClient)
         assert response.status_code == 200
         flash = b"Invalid request.  Please choose a valid folder."
@@ -602,21 +602,21 @@ class TestProviderSuggestion(FunctionalTest):
         self.form = dict(
             id=1,
             name="Douthit Electrical",
-            is_not_active="true",
-            category_updated="true",
+            is_not_active=True,
+            category_updated=True,
             sector="1",
             category="2",
             contact_info_updated="true",
             email="doug@test.com",
             website="www.test.com",
             telephone="1234567890",
-            address_updated="true",
+            address_updated=True,
             line1="7708 Covey Chase Dr",
             line2="",
             city="charlotte",
             state="1",
             zip="28210",
-            is_coordinate_error="false",
+            is_coordinate_error=False,
         )
         response = self.postRequest(activeClient)
         assert response.status_code == 200

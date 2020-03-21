@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import typeahead_mixin from '../../components/typeahead_mixin';
+import typeahead_mixin from '../../components/forms/typeahead_mixin';
 
 
 

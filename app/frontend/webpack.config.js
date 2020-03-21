@@ -41,7 +41,7 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin({
-            cleanOnceBeforeBuildPatterns:['**static/js/**', '!**templates/**', '!**static/css**']
+            cleanOnceBeforeBuildPatterns:['**static/js/*', '!**templates/**', '!**static/css**']
         }),
         
         new HtmlWebpackPlugin({

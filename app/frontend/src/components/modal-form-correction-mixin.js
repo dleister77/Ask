@@ -1,9 +1,9 @@
-import modal_message_correction from './modal-message-correction';
+import modal_form_wrapper from './modals/modal-form-wrapper';
 
 
-const modal_message_correction_mixin = {
+const modal_form_correction_mixin = {
     components: {
-        "modal-message-correction": modal_message_correction,
+        "modal-form-wrapper": modal_form_wrapper,
     },
     delimiters: ['[[', ']]'],
     data: {
@@ -11,9 +11,15 @@ const modal_message_correction_mixin = {
         form_presets: {
             csrf_token: csrf,
             id: "",
-            subject: "",
-            address: "",
-            address_status: "",
+            name: "",
+            address: {
+                line1: "",
+                line2: "",
+                city: "",
+                state: "",
+                zip: "",
+                coordinate_error: false,
+            },
             sector: "",
             category: "",
             email: "",
@@ -25,7 +31,7 @@ const modal_message_correction_mixin = {
         },
     },
     methods: {
-        setMessagePresets: function(event){
+        setFormPresets: function(event){
             let source = event.target;
             this.form_presets.id = source.dataset.id;
             this.form_presets.name = source.dataset.subject;
@@ -43,16 +49,16 @@ const modal_message_correction_mixin = {
             this.form_presets.website = this.activeBusiness.website;
             this.form_presets.telephone = this.activeBusiness.telephone;
         },
-        resetFormPresets: function() {
-            Object.keys(this.form_presets).forEach(function(key) {
-                if (key != "csrf_token"){
-                    this.form_presets[key] = "";
-                }
-            }, this);
-        },
+        // resetFormPresets: function() {
+        //     Object.keys(this.form_presets).forEach(function(key) {
+        //         if (key != "csrf_token"){
+        //             this.form_presets[key] = "";
+        //         }
+        //     }, this);
+        // },
         setActiveBusiness: function(id) {
             //to be implemented by individual page
         }
     },
 }
-export default modal_message_correction_mixin;
+export default modal_form_correction_mixin;

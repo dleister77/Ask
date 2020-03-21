@@ -21,9 +21,8 @@
     <form action="{{url_for('main.search')}}" method="get" id="providersearch">
         {{ field_render(form.location, **{'v-model':'form.location'}) }}
         <div class = "form-group row"
-          hidden
-          v-show="showManualLocation"
-          id="manual_location">
+            v-show="showManualLocation"
+            id="manual_location">
             <div class = "col">
                 {{ form.manual_location.label() }}
                 {{ form.manual_location(class_="form-control",
@@ -135,13 +134,24 @@
 
 {% block modal %}
 
-<modal-message-correction
-    modal_id="message-correction-modal"
+<modal-form-wrapper
+    modal_id="suggestion-modal"
     :form_presets="form_presets"
     :url="urls.send_message"
-    title="Suggest a Correction:"
-    @reset_form_presets="resetFormPresets">
-</modal-message-correction>
+    title="Suggest a Correction:">
+    <template v-slot:default="fp">
+        <form-suggestion
+            form_id="suggestion_form"
+            :form_presets="fp.form_presets"
+            :reset_form_values="fp.reset_form_values"
+            :set_form_values="fp.set_form_values"
+            :url="fp.url"
+            @form_is_set="fp.mark_form_set"
+            @form_is_reset="fp.mark_form_reset"
+            @form_is_submitted="fp.do_hide_modal">
+        </form-suggestion>
+    </template>
+</modal-form-wrapper>
 
 {% endblock %}
 
@@ -174,7 +184,7 @@
 </script>
 
 
-    <script src="/static/js/search.1453c2e60f274c144d89.js"></script>
+    <script src="/static/js/search.40aee4fcb4dd520145a2.js"></script>
 
 
 {% endblock %}

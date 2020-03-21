@@ -956,3 +956,69 @@ class TestProviderSuggestion(FormTest):
 		self.form.populate_choices()
 		check = self.form.validate()
 		assert not check
+
+	def test_new_address_updated_error(self, testProvider):
+		test_case = dict(
+			id=testProvider.id,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=True,
+			sector=1,
+			category=2,
+			contact_info_updated=True,
+			telephone="7044103875",
+			website="www.test.com",
+			email="test@testing.com",
+			address_updated=True,
+			line1=testProvider.address.line1,
+			line2=testProvider.address.line2,
+			city=testProvider.address.city,	
+			state=testProvider.address.state_id,
+			zip=testProvider.address.zip,
+			is_coordinate_error="false",
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert not check
+
+	def test_category_updated_error(self, testProvider):
+		cat_ids = [cat.id for cat in testProvider.categories]
+		test_case = dict(
+			id=testProvider.id,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=True,
+			sector=1,
+			category=cat_ids,
+			contact_info_updated=True,
+			telephone="7044103875",
+			website="www.test.com",
+			email="test@testing.com",
+			address_updated=False,
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert not check
+
+	def test_contact_info_updated_error(self, testProvider):
+		cat_ids = [cat.id for cat in testProvider.categories]
+		test_case = dict(
+			id=testProvider.id,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=False,
+			contact_info_updated=True,
+			telephone=testProvider.telephone,
+			website=testProvider.website,
+			email=testProvider.email,
+			address_updated=False,
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert not check
