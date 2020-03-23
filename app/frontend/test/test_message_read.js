@@ -1,4 +1,4 @@
-import message_read from '../src/components/message-read';
+import message_read from '../src/components/messages/message-read';
 
 require('jsdom-global')();
 const describe = require('mocha').describe;

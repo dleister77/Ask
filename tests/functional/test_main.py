@@ -447,6 +447,7 @@ class TestMessageSend(FunctionalTest):
         assert response.status_code == 200
         check = {"status":"success"}
         output = json.loads(response.data.decode())
+        print(output)
         assert check == output
         assert len(current_user.get_messages('sent')) == u1_sent + 1
         assert testUser2.get_inbox_unread_count() == u2_inbox + 1

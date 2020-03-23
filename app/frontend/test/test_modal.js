@@ -1,5 +1,5 @@
 
-import base_modal from '../src/components/base-modal';
+import base_modal from '../src/components/modals/base-modal';
 
 const describe = require('mocha').describe;
 const it = require('mocha').it;

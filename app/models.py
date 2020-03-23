@@ -1,52 +1,49 @@
 from collections import namedtuple
 import copy
 from datetime import datetime, date
-from operator import attrgetter
 import os
 import re
-from string import capwords
 
 from flask import current_app, render_template, session
 from flask_login import UserMixin, current_user
 import jwt
-from sqlalchemy import CheckConstraint, UniqueConstraint, func as saFunc, or_, and_, select
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy import UniqueConstraint, func as saFunc, or_, and_
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, validates
 from sqlalchemy.sql import exists, func
 from sqlalchemy.sql.expression import desc
-from threading import Thread
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from app.database import Model
 from app.extensions import db
 from app.utilities.email import decode_token, get_token, send_email
-from app.utilities.geo import getDistance, geocode, AddressError, APIAuthorizationError
+from app.utilities.geo import (getDistance, geocode, AddressError,
+                               APIAuthorizationError)
 from app.utilities.helpers import url_check, url_parse, thumbnail_from_buffer,\
                                   name_check
 
 addressTuple = namedtuple('addressTuple', ['line1', 'city', 'state', 'zip'])
 
+
 class dbQuery(object):
     """Helper class to to simplify SQLalchemy orm queries.
-    
+
     Attributes:
         query_args (list): fields that are returned
         select_from (class): class that is right side of query
         join_args (list): fields at which joins take place on query
         outerjoin_args (list): left outerjoin field arguments.
-        filter_args (list): filters to be applied.  
+        filter_args (list): filters to be applied.
         group_by (list): fields used to group return values
         sort_args (list): fields used to determine sort order
         limit (integer): defaults to none, limits number of query results
-    
+
     Methods:
         getQuery: returns SQL query.  Not yet submitted to db.
         all: calls getQuery and submits to db, returning all results
         copy: creates copy of existing query
-    
+
     """
     def __init__(self, limit=None):
         self.query_args = []
@@ -57,17 +54,17 @@ class dbQuery(object):
         self.group_by = []
         self.sort_args = []
         self.limit = limit
-    
+
     def getQuery(self):
         """returns SQL query.  Not yet submitted to db."""
         return db.session.query(*self.query_args)\
-                                .select_from(self.select_from)\
-                                .join(*self.join_args)\
-                                .outerjoin(*self.outerjoin_args)\
-                                .filter(*self.filter_args)\
-                                .group_by(*self.group_by)\
-                                .order_by(*self.sort_args)\
-                                .limit(self.limit)
+                         .select_from(self.select_from)\
+                         .join(*self.join_args)\
+                         .outerjoin(*self.outerjoin_args)\
+                         .filter(*self.filter_args)\
+                         .group_by(*self.group_by)\
+                         .order_by(*self.sort_args)\
+                         .limit(self.limit)
 
     def all(self):
         """Creates sql query and submits to db, returning list of results."""
@@ -88,36 +85,51 @@ class dbQueryIterator(object):
     def __init__(self, source):
         self.source = source
         self.fields = list(source.__dict__.keys())
-    
+
     def __next__(self):
         if len(self.fields) > 0:
             return getattr(self.source, self.fields.pop(0))
         else:
             raise StopIteration
 
+
 # many to many table linking users with groups
-user_group = db.Table('user_group', db.Model.metadata,
+user_group = db.Table(
+    'user_group', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('group_id', db.Integer, db.ForeignKey('group.id')))
+    db.Column('group_id', db.Integer, db.ForeignKey('group.id'))
+)
 
 
 # many to many table linking providers to multiple categories
-category_provider = db.Table('category_provider', db.Model.metadata,
+category_provider = db.Table(
+    'category_provider', db.Model.metadata,
     db.Column('category_id', db.Integer, db.ForeignKey('category.id')),
-    db.Column('provider_id', db.Integer, db.ForeignKey('provider.id',
-                                            ondelete="CASCADE")),
-    UniqueConstraint('category_id', 'provider_id', name='unique_cat_prov'))
+    db.Column(
+        'provider_id', db.Integer,
+        db.ForeignKey(
+            'provider.id', ondelete="CASCADE"
+        )
+    ),
+    UniqueConstraint('category_id', 'provider_id', name='unique_cat_prov')
+)
 
 # many to many table linking provider suggestions to multiple categories
-cat_prov_suggestion = db.Table('cat_prov_suggest', db.Model.metadata,
+cat_prov_suggestion = db.Table(
+    'cat_prov_suggest', db.Model.metadata,
     db.Column('category_id', db.Integer, db.ForeignKey('category.id')),
-    db.Column('provider_suggestion_id', db.Integer, db.ForeignKey('provider_suggestion.id',
-                                            ondelete="CASCADE")))
+    db.Column(
+        'provider_suggestion_id', db.Integer,
+        db.ForeignKey('provider_suggestion.id', ondelete="CASCADE")
+    )
+)
 
 # many to many table linking pictures with users with friends
-user_friend = db.Table('user_friend', db.Model.metadata,
+user_friend = db.Table(
+    'user_friend', db.Model.metadata,
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('friend_id', db.Integer, db.ForeignKey('user.id')))
+    db.Column('friend_id', db.Integer, db.ForeignKey('user.id'))
+)
 
 
 class State(Model):
@@ -129,13 +141,15 @@ class State(Model):
     name = db.Column(db.String(64), index=True)
     state_short = db.Column(db.String(24), index=True)
     addresses = db.relationship("Address", backref="state")
-    address_suggestions = db.relationship("Address_Suggestion", backref="state")
+    address_suggestions = db.relationship(
+        "Address_Suggestion", backref="state"
+    )
 
     @staticmethod
     def list():
         """Query db to populate state list on forms."""
         if current_app:
-            if current_app.config['TESTING'] == True:
+            if current_app.config['TESTING'] is True:
                 list = current_app.config['TEST_STATES']
             else:
                 list = [(s.id, s.name) for s in State.query.order_by("name")]
@@ -166,13 +180,13 @@ class Address(Model):
         latitude (flt): latitude of address coordinates
         longitude (flt): longitude of address coordinates
         low_accuracy (bool): whether lat/long were based on low accuracy score
-    
+
     Methods:
         update: overrides superclass update method.  calls get_coordinates if
                 address changed
         get_coordinates: retrieves updated coordinates based on address and
                          updates latitude and longitude
-        
+
     Relationships:
         Parent of:
         Child of: State, User, Provider
@@ -186,14 +200,13 @@ class Address(Model):
     user_id = db.Column(db.Integer,
                         db.ForeignKey("user.id", ondelete="CASCADE"),
                         unique=True)
-    provider_id = db.Column(db.Integer, 
+    provider_id = db.Column(db.Integer,
                             db.ForeignKey("provider.id", ondelete="CASCADE"),
                             unique=True)
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
     latitude = db.Column(db.Float(precision='8,6'), index=True)
     longitude = db.Column(db.Float(precision='9,6'), index=True)
     low_accuracy = db.Column(db.Boolean, default=False)
-
 
     def __init__(self, **kwargs):
         super(Address, self).__init__(**kwargs)
@@ -227,7 +240,6 @@ class Address(Model):
         if isinstance(self.unknown, bool):
             assert field is not None or self.unknown is True
         return field
-       
 
     @hybrid_property
     def line2(self):
@@ -240,7 +252,6 @@ class Address(Model):
             line2 = line2.title()
         self._line2 = line2
 
-
     @hybrid_property
     def city(self):
         return self._city
@@ -252,11 +263,10 @@ class Address(Model):
             city = city.title()
         self._city = city
 
-    
     @hybrid_property
     def coordinates(self):
         """Returns tuple of latitude and longitude."""
-        if self.latitude == None or self.longitude == None:
+        if self.latitude is None or self.longitude is None:
             return None
         else:
             return (self.latitude, self.longitude)
@@ -273,10 +283,10 @@ class Address(Model):
 
     def get_coordinates(self):
         """Get latitude and longitude for given address and store in db.
-        
+
         Raises:
             AddressError: if geocode determines invalid address submitted.
-        
+
         """
         if self.state_id is not None:
             state = State.query.get(self.state_id).state_short
@@ -288,17 +298,17 @@ class Address(Model):
         except (AddressError, APIAuthorizationError):
             raise
         return None
-    
+
     @property
     def distance(self):
-        """Return geodesic distance from location stored in session to address."""
+        """Return geodesic distance from session location to address."""
         origin = session['location']['coordinates']
         distance = getDistance(origin, self.coordinates)
         return distance
 
-
     def __repr__(self):
         return f"<Address {self.line1}, {self.city}, {self.state}>"
+
 
 class Address_Suggestion(Model):
     """Address update suggestion provided by users.
@@ -313,10 +323,10 @@ class Address_Suggestion(Model):
                            address
         state_id (int): foreign key, id of address's state
         is_coordinates_error: user says map coordinates do not match location
-    
+
     Methods:
         None
-        
+
     Relationships:
         Parent of:
         Child of: State, Provider_Correction
@@ -329,14 +339,18 @@ class Address_Suggestion(Model):
     line2 = db.Column(db.String(128))
     zip = db.Column(db.String(20), index=True)
     city = db.Column(db.String(64), index=True, nullable=False)
-    provider_suggestion_id = db.Column(db.Integer, 
-                            db.ForeignKey("provider_suggestion.id", ondelete="CASCADE"),
-                            unique=True)
+    provider_suggestion_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "provider_suggestion.id", ondelete="CASCADE"
+        ),
+        unique=True
+    )
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
     is_coordinate_error = db.Column(db.Boolean, index=True)
 
     def __repr__(self):
-        return f"<Address Suggestion {self.line1}, {self.city}, {self.state}>"    
+        return f"<Address Suggestion {self.line1}, {self.city}, {self.state}>"
 
 
 class User(UserMixin, Model):
@@ -365,9 +379,10 @@ class User(UserMixin, Model):
 
     Methods:
         set_password: Store submitted password as hash.
-        check_password: Compares hashed submitted password to store password hash.
+        check_password: Compares hashed submitted password to store password
+        hash.
         send_password_reset_email: send email for user to reset password.
-        verify_password_reset_token: verify email link token is valid to allow 
+        verify_password_reset_token: verify email link token is valid to allow
         password reset.
         send_email_verification_email: send email to verify email address.
         verify_email_verification_token: verify email verification weblink.
@@ -377,7 +392,9 @@ class User(UserMixin, Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    username = db.Column(
+        db.String(64), index=True, unique=True, nullable=False
+    )
     _email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     email_verified = db.Column(db.Boolean, nullable=False, default=False)
     password_hash = db.Column(db.String(128))
@@ -386,7 +403,7 @@ class User(UserMixin, Model):
     _last_name = db.Column(db.String(64), index=True, nullable=False)
     role = db.Column(db.String(12), default="individual")
 
-    address = db.relationship("Address", backref="user", 
+    address = db.relationship("Address", backref="user",
                               cascade="all, delete-orphan", lazy=False,
                               uselist=False, passive_deletes=True)
     reviews = db.relationship("Review", backref="user",
@@ -396,21 +413,22 @@ class User(UserMixin, Model):
                               primaryjoin=(id == user_friend.c.user_id),
                               secondaryjoin=(id == user_friend.c.friend_id),
                               backref="friends_reverse")
-    sentfriendrequests = db.relationship("FriendRequest",
-                                     primaryjoin="(User.id == FriendRequest.requestor_id)",
-                                     backref="requestor",
-                                     passive_deletes=True)
-    receivedfriendrequests = db.relationship("FriendRequest",
-                                     primaryjoin="(User.id == FriendRequest.friend_id)",
-                                     backref="requested_friend",
-                                     passive_deletes=True)
+    sentfriendrequests = db.relationship(
+        "FriendRequest", primaryjoin="(User.id == FriendRequest.requestor_id)",
+        backref="requestor", passive_deletes=True
+    )
+    receivedfriendrequests = db.relationship(
+        "FriendRequest", primaryjoin="(User.id == FriendRequest.friend_id)",
+        backref="requested_friend", passive_deletes=True
+    )
 
     sentgrouprequests = db.relationship("GroupRequest", backref="requestor",
                                         passive_deletes=True)
 
-    suggestions = db.relationship("Provider_Suggestion", backref="user", 
-                            passive_deletes=True,
-                            cascade="all, delete-orphan")  
+    suggestions = db.relationship(
+        "Provider_Suggestion", backref="user", passive_deletes=True,
+        cascade="all, delete-orphan"
+    )
     _email_token_key = 'verify_email'
     _password_token_key = 'reset_password'
 
@@ -428,7 +446,6 @@ class User(UserMixin, Model):
     @hybrid_property
     def last_name(self):
         return self._last_name
-
 
     @last_name.setter
     def last_name(self, last_name):
@@ -449,7 +466,7 @@ class User(UserMixin, Model):
     @email.setter
     def email(self, email):
         """"Only sets email if change from current.
-        
+
         Saves new email only if changing from what is stored in db.  Avoids
         unique constraint in db.
         """
@@ -460,21 +477,20 @@ class User(UserMixin, Model):
 
     def get_inbox_unread_count(self):
         count = db.session.query(func.count(Message_User.id))\
-                         .filter(Message_User.user_id==self.id,\
-                                 Message_User.tag=='inbox',\
-                                 Message_User.read==False)\
+                          .filter(Message_User.user_id == self.id,
+                                  Message_User.tag == 'inbox',
+                                  Message_User.read == False)\
                          .scalar()
         return count
-    
+
     def get_messages(self, folder):
         msgs = db.session.query(Message_User)\
                             .join(Message_User.message)\
-                            .filter(Message_User.user_id==self.id,
-                                    Message_User.tag==folder)\
+                            .filter(Message_User.user_id == self.id,
+                                    Message_User.tag == folder)\
                             .order_by(Message.timestamp.desc())\
                             .all()
         return msgs
-
 
     @validates('address', include_removes=True)
     def validate_address(self, key, address, is_remove):
@@ -483,7 +499,6 @@ class User(UserMixin, Model):
         else:
             assert address is not None
         return address
-
 
     def set_password(self, password):
         """Converts plaintext password to hash and stores in db."""
@@ -504,23 +519,28 @@ class User(UserMixin, Model):
     def send_password_reset_email(self):
         """Send email to allow user to reset password."""
         token = self._get_reset_password_token()
-        send_email('Ask Your Peeps: Password Reset',
-                sender=current_app.config['ADMINS'][0],
-                recipients=[self.email],
-                cc = None,
-                text_body=render_template('auth/email/reset_password_msg.txt',
-                                            user=self, token=token),
-                html_body=render_template('auth/email/reset_password_msg.html',
-                                            user=self, token=token))
+        send_email(
+            'Ask Your Peeps: Password Reset',
+            sender=current_app.config['ADMINS'][0],
+            recipients=[self.email],
+            cc=None,
+            text_body=render_template(
+                'auth/email/reset_password_msg.txt', user=self, token=token
+            ),
+            html_body=render_template(
+                'auth/email/reset_password_msg.html', user=self, token=token
+            )
+        )
 
     @staticmethod
     def verify_password_reset_token(token):
         """Static method to verify password reset token.
 
         Args:
-            token (Str): token sent by user when clicking on password reset link
+            token (Str): token sent by user when clicking on password reset
+            link
 
-        Returns: 
+        Returns:
             User:  User corresponding to id in token
             None:  if token doesn't validate
         """
@@ -534,30 +554,35 @@ class User(UserMixin, Model):
     def _get_email_verification_token(self, expiration=10*60*24):
         """Get jwt token for email address verification."""
         payload = {self._email_token_key: self.id}
-        expiration = expiration # 10 days
+        expiration = expiration  # 10 days
         return get_token(payload, expiration)
 
     def send_email_verification(self):
         """Send email to request email verification."""
         token = self._get_email_verification_token()
-        send_email('Ask Your Peeps: Email Verification',
-                   sender=current_app.config['ADMINS'][0],
-                   recipients=[self.email],
-                   cc = None,
-                   text_body=render_template('auth/email/verify_email_msg.txt',
-                                             user=self, token=token),
-                   html_body=render_template('auth/email/verify_email_msg.html',
-                                             user=self, token=token))
+        send_email(
+            'Ask Your Peeps: Email Verification',
+            sender=current_app.config['ADMINS'][0],
+            recipients=[self.email],
+            cc=None,
+            text_body=render_template(
+                'auth/email/verify_email_msg.txt', user=self, token=token
+            ),
+            html_body=render_template(
+                'auth/email/verify_email_msg.html', user=self, token=token
+            )
+        )
 
     @staticmethod
     def verify_email_verification_token(token):
         """Static method to check email verification token.
-        
+
         Args:
            token (str): token from email user receives to verify email
         Returns:
             user (User or None): user if token verifies, else None
-            error (str): error type (expired or invalid) if token doesn't verify
+            error (str): error type (expired or invalid) if token doesn't
+            verify
         """
 
         try:
@@ -583,14 +608,14 @@ class User(UserMixin, Model):
 
     def add(self, relation, request=None):
         """Determine whether to add group or friend and call approp method.
-        
+
         Args:
             relation (object): group or user being added as group or friend.
-            request (friendrequest or grouprequest): request to be deleted after
-                relation added
+            request (friendrequest or grouprequest): request to be deleted
+            after relation added
         Returns:
             None
-        
+
         """
         if type(relation) == User:
             self._addfriend(relation)
@@ -615,7 +640,7 @@ class User(UserMixin, Model):
 
     def remove(self, relation):
         """Removes relation (group or friend) from approp relation list.
-        
+
         Args:
             relation (object): group or user being removed.
 
@@ -661,24 +686,26 @@ class FriendRequest(Model):
     Methods:
         send: send friend request email from requestor to friend
         verify_token: verifies token in request email link
-    
+
     """
 
     __tablename__ = "friendrequest"
 
     id = db.Column(db.Integer, primary_key=True)
-    friend_id = db.Column(db.Integer, db.ForeignKey("user.id",
-                                                     ondelete="CASCADE"),
-                          nullable=False)
-    requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
-                                                       ondelete="CASCADE"), 
-                             nullable=False)
+    friend_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    requestor_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False
+    )
     date_sent = db.Column(db.Date, index=True, nullable=True)
     token_key = 'request'
 
-
     def __repr__(self):
-        return f"<FriendRequest {self.requestor.full_name} {self.requested_friend.full_name}>"
+        return f"<FriendRequest {self.requestor.full_name} "
+        f"{self.requested_friend.full_name}>"
 
     def _get_request_token(self):
         """Get friend request token."""
@@ -695,30 +722,36 @@ class FriendRequest(Model):
         """
 
         token = self._get_request_token()
-        send_email('Ask Your Peeps: Friend Verification',
-                sender=current_app.config['ADMINS'][0],
-                recipients=[self.requested_friend.email],
-                cc=None,
-                text_body=render_template('relationship/email/friend_request.txt',
-                                            user=self.requested_friend,
-                                            friend=self.requestor,
-                                            token=token),
-                html_body=render_template('relationship/email/friend_request.html',
-                                            user=self.requested_friend,
-                                            friend=self.requestor,
-                                            token=token))
+        send_email(
+            'Ask Your Peeps: Friend Verification',
+            sender=current_app.config['ADMINS'][0],
+            recipients=[self.requested_friend.email],
+            cc=None,
+            text_body=render_template(
+                'relationship/email/friend_request.txt',
+                user=self.requested_friend,
+                friend=self.requestor,
+                token=token
+            ),
+            html_body=render_template(
+                'relationship/email/friend_request.html',
+                user=self.requested_friend,
+                friend=self.requestor,
+                token=token
+            )
+        )
         self.date_sent = date.today()
         return None
 
     @staticmethod
     def verify_token(token):
         """Verifies friend request token is valid.
-        
-        Check friend request jwt token, returns request object if valid and None
-           if invalid.
+
+        Check friend request jwt token, returns request object if valid and
+            None if invalid.
         Args:
             token (str): token returned by friend when approving request
-        
+
         Returns:
             request (FriendRequest) if valid or None if invalid
         """
@@ -730,9 +763,10 @@ class FriendRequest(Model):
             request = None
         return request
 
+
 class GroupRequest(Model):
     """Request for user to join a group.
-    
+
     Attributes:
         id (int): id for specific request
         group_id (int): id of group user would like to join
@@ -746,18 +780,20 @@ class GroupRequest(Model):
         send: send group request email from requestor to group_admin
         verify_token: verifies token in request email link
         get_pending: returns list of pending approval request for group admin
-    
+
     """
 
     __tablename__ = "grouprequest"
 
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey("group.id",
-                                                    ondelete="CASCADE"),
-                         nullable=False)
-    requestor_id = db.Column(db.Integer, db.ForeignKey("user.id",
-                                                        ondelete="CASCADE"),
-                             nullable=False)
+    group_id = db.Column(
+        db.Integer, db.ForeignKey("group.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    requestor_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False
+    )
     date_sent = db.Column(db.Date, index=True, nullable=True)
     token_key = 'request'
 
@@ -776,27 +812,32 @@ class GroupRequest(Model):
         """
         # create group join request
         token = self._get_request_token()
-        send_email('Ask Your Peeps: Group Join Request',
-                sender=current_app.config['ADMINS'][0],
-                recipients=[self.group.admin.email],
-                cc = None,
-                text_body=render_template('relationship/email/group_request.txt',
-                                            user=self.group.admin, group=self.group,
-                                            new_member=self.requestor, token=token),
-                html_body=render_template('relationship/email/group_request.html',
-                                            user=self.group.admin, group=self.group,
-                                            new_member=self.requestor, token=token))
+        send_email(
+            'Ask Your Peeps: Group Join Request',
+            sender=current_app.config['ADMINS'][0],
+            recipients=[self.group.admin.email],
+            cc=None,
+            text_body=render_template(
+                'relationship/email/group_request.txt', user=self.group.admin,
+                group=self.group, new_member=self.requestor, token=token
+            ),
+            html_body=render_template(
+                'relationship/email/group_request.html', user=self.group.admin,
+                group=self.group, new_member=self.requestor, token=token
+            )
+        )
         self.date_sent = date.today()
         return None
 
     @staticmethod
     def verify_token(token):
         """Verifies group request email token.
-        
+
         Check group request token and returns GroupRequest if valid and None
            if invalid.
         Args:
-           token (str): token return by group admin upon approving request email
+           token (str): token return by group admin upon approving request
+           email
         Returns:
             request (GroupRequest) if valid or None
         """
@@ -807,15 +848,13 @@ class GroupRequest(Model):
             request = None
         return request
 
-
-
     def __repr__(self):
         return f"<GroupRequest {self.requestor.full_name} {self.group.name}>"
 
     @staticmethod
     def get_pending(user):
         """Static mehtod, Return pending approval requests user is admin for.
-        
+
         Args:
             user (User): user object of group_admin
         Returns:
@@ -824,7 +863,8 @@ class GroupRequest(Model):
         pending = GroupRequest.query.join(Group)\
                                     .filter(Group.admin_id == user.id).all()
         return pending
- 
+
+
 class Sector(Model):
     """Business sector that categories are a member of.
 
@@ -832,7 +872,7 @@ class Sector(Model):
         id (int): id of sector, primary key for db table
         name (str): name of sector
         categories (list): list of categories in sector
-    
+
     Methods:
         list: Generates a list of tuples of sector id and name
 
@@ -842,19 +882,20 @@ class Sector(Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
 
-    categories = db.relationship("Category", backref=backref("sector",
-                                                             uselist=False))
+    categories = db.relationship(
+        "Category", backref=backref("sector", uselist=False)
+    )
 
     @staticmethod
     def list():
         """Generate list of tuples of sector id/name
-        
+
         Args:
             None
         Returns:
             List of tuples (id, name)
-        """        
-        
+        """
+
         if current_app:
             if current_app.config['TESTING'] is True:
                 list = current_app.config['TEST_SECTOR']
@@ -870,14 +911,14 @@ class Sector(Model):
 
 class Category(Model):
     """Business categories which businesses fall into
-    
+
     Attributes:
         id (int): id of category, primary key for db
         name (str): name of category, must be unique
         sector_id (id): foreign key, id for sector into which category falls
         providers (list): list of providers in the category
         reviews (list): list of reviews in the category
-    
+
     Methods:
         list: generate list of tuples with category id/name
 
@@ -888,33 +929,35 @@ class Category(Model):
     """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True)
-    sector_id = db.Column(db.Integer, db.ForeignKey("sector.id"), nullable=False)
+    sector_id = db.Column(
+        db.Integer, db.ForeignKey("sector.id"), nullable=False
+    )
     providers = db.relationship("Provider", secondary=category_provider,
                                 backref="categories")
-    provider_suggestions = db.relationship("Provider_Suggestion",
-                          secondary=cat_prov_suggestion,
-                                backref="categories")
+    provider_suggestions = db.relationship(
+        "Provider_Suggestion", secondary=cat_prov_suggestion,
+        backref="categories"
+    )
     reviews = db.relationship("Review", backref="category")
 
     @staticmethod
     def list(sector_id):
         """Generate list of tuples of category id and name for given sector
-        
+
         Args:
             sector_id (int): sector id to use as look up for categories
         Returns:
             List of tuples (id, name)
-        
         """
 
         if current_app:
             if sector_id is not None:
                 sector = Sector.query.get(sector_id)
                 catList = (Category.query.filter(Category.sector == sector)
-                                            .order_by(Category.name)).all()
+                                         .order_by(Category.name)).all()
             else:
                 catList = Category.query.all()
-            catList = [(category.id, category.name) for category in catList]                
+            catList = [(category.id, category.name) for category in catList]
         else:
             catList = []
         return catList
@@ -931,7 +974,8 @@ class Provider(Model):
         name (str): hybrid property, name of business
         email (str): optional, email address of business.  must be unique
         telephone (str): 10 digit telephone number, must be unique
-        is_active (Bool): True if business is active/open, False if inactive/closed
+        is_active (Bool): True if business is active/open, False if
+            inactive/closed
         address (Address): address of business
         reviews (List): list of Reviews for the business
         categories (list): list of categories that business serves
@@ -940,13 +984,12 @@ class Provider(Model):
         Parent of: review, provider_correction
         Child of: address
         Many to Many: category
-    
+
     Methods:
         list: generate list of provider id and name based on category.
         search: generate list of providers based on search and social filters
         profile: return tuple of provider summary statistics / provider object
             based on social filter
-    
     """
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(64), index=True, nullable=False)
@@ -955,14 +998,18 @@ class Provider(Model):
     website = db.Column(db.String(120))
     is_active = db.Column(db.Boolean, default=True)
 
-    address = db.relationship("Address", backref="provider", uselist=False,
-                              passive_deletes=True,
-                              cascade="all, delete-orphan")
-    reviews = db.relationship("Review", cascade="all, delete-orphan", 
-                              backref="provider", passive_deletes=True)
-    suggestions = db.relationship("Provider_Suggestion", backref="provider", 
-                              passive_deletes=True,
-                              cascade="all, delete-orphan")                              
+    address = db.relationship(
+        "Address", backref="provider", uselist=False, passive_deletes=True,
+        cascade="all, delete-orphan"
+    )
+    reviews = db.relationship(
+        "Review", cascade="all, delete-orphan", backref="provider",
+        passive_deletes=True
+    )
+    suggestions = db.relationship(
+        "Provider_Suggestion", backref="provider", passive_deletes=True,
+        cascade="all, delete-orphan"
+    )
 
     @hybrid_property
     def name(self):
@@ -991,7 +1038,7 @@ class Provider(Model):
         else:
             assert address is not None
         return address
-    
+
     @validates('website')
     def validate_website(self, key, website):
         if website is None:
@@ -1000,15 +1047,14 @@ class Provider(Model):
             raise ValueError("Invalid website url")
         return url_parse(website)[1]
 
-
     @hybrid_property
     def categoryList(self):
-        return self._categoryList    
-    
+        return self._categoryList
+
     @hybrid_property
     def review_count(self):
         return len(self.reviews)
-    
+
     @hybrid_property
     def average_rating(self):
         try:
@@ -1016,19 +1062,19 @@ class Provider(Model):
             return total/self.review_count
         except ZeroDivisionError:
             return 0
-    
+
     @hybrid_property
     def average_cost(self):
         try:
             total = sum([review.cost for review in self.reviews])
             return total/self.review_count
         except ZeroDivisionError:
-            return 0  
+            return 0
 
     @staticmethod
     def list(category_id, format='tuple'):
         """Returns list of provider id and name based on category filter
-        
+
         Args:
             category_id (int): category id to filter providers by
             format (str): output format (dict or tuple) for id/name output in
@@ -1036,7 +1082,7 @@ class Provider(Model):
 
         Returns:
             list: list of providers (id and name)
-        
+
         Raises:
             ValueError: if format other than dict or tuple is passed as
                         parameter
@@ -1046,15 +1092,19 @@ class Provider(Model):
         query = (Provider.query.filter(Provider.categories.contains(category))
                                .order_by(Provider.name)).all()
         if format == 'dict':
-            provider_list = [{"id": provider.id, "name": provider.name} for provider
-                            in query]
+            provider_list = [
+                {
+                    "id": provider.id, "name": provider.name
+                }
+                for provider in query
+            ]
         elif format == 'tuple':
-            provider_list = [(provider.id, provider.name) for provider
-                            in query]
+            provider_list = [
+                (provider.id, provider.name) for provider in query
+            ]
         else:
-            raise ValueError("incorrect format")   
+            raise ValueError("incorrect format")
         return provider_list
-
 
     @classmethod
     def search(cls, filters, sort=None, limit=None):
@@ -1062,12 +1112,12 @@ class Provider(Model):
 
         Search for providers based on category and distance from search origin.
         Sorting by name or average rating are done by database.  Distance sort
-        done outside of this method.  
-        
+        done outside of this method.
+
         Args:
             filters (dict): search filters (category, name, location, id, etc)
             sort (str): sort criteria to use.  name, distance, rating
-            limit (int): optional, defaults to none, limits number of results 
+            limit (int): optional, defaults to none, limits number of results
                          returned
         Returns:
             list: list of providers plus summary statistics for each provider,
@@ -1077,32 +1127,36 @@ class Provider(Model):
         q = dbQuery()
         q.select_from = Provider
         q.limit = limit
-        q.group_by = [Provider.id, Provider.name, Provider.email,
-                      Provider.telephone, Address.line1, Address.line2,
-                      Address.city, State.state_short, State.name, State.id, Address.zip,
-                      Address.latitude, Address.longitude]
+        q.group_by = [
+            Provider.id, Provider.name, Provider.email, Provider.telephone,
+            Address.line1, Address.line2, Address.city, State.state_short,
+            State.name, State.id, Address.zip, Address.latitude,
+            Address.longitude
+        ]
         q.join_args = [Provider.address, Address.state, Provider.categories]
         q.outerjoin_args = [Provider.reviews, Review.user]
-        q.query_args = [Provider.id.label('id'), Provider.name.label('name'),
-                        Provider.email.label('email'),
-                        Provider.website.label('website'),
-                        Provider.telephone.label('telephone'),
-                        Address.line1.label('line1'),
-                        Address.line2.label('line2'),
-                        Address.city.label('city'),
-                        State.state_short.label('state_short'),
-                        State.name.label('state'),
-                        State.id.label('state_id'),
-                        Address.zip.label('zip'),
-                        Address.latitude.label('latitude'),
-                        Address.longitude.label('longitude'),
-                        saFunc.group_concat(Category.name.distinct()).label("categories"),
-                        saFunc.group_concat(Category.id.distinct()).label("category_ids"),
-                        saFunc.group_concat(Category.sector_id.distinct()).label("sector_ids"),
-                        func.avg(Review.rating).label('reviewAverage'),
-                        func.avg(Review.cost).label('reviewCost'),
-                        func.count(Review.id.distinct()).label('reviewCount'),
-                        saFunc.group_concat(Review.id).label('reviewIDs')
+        q.query_args = [
+            Provider.id.label('id'), Provider.name.label('name'),
+            Provider.email.label('email'),
+            Provider.website.label('website'),
+            Provider.telephone.label('telephone'),
+            Address.line1.label('line1'),
+            Address.line2.label('line2'),
+            Address.city.label('city'),
+            State.state_short.label('state_short'),
+            State.name.label('state'),
+            State.id.label('state_id'),
+            Address.zip.label('zip'),
+            Address.latitude.label('latitude'),
+            Address.longitude.label('longitude'),
+            saFunc.group_concat(Category.name.distinct()).label("categories"),
+            saFunc.group_concat(Category.id.distinct()).label("category_ids"),
+            saFunc.group_concat(Category.sector_id.distinct())
+                  .label("sector_ids"),
+            func.avg(Review.rating).label('reviewAverage'),
+            func.avg(Review.cost).label('reviewCost'),
+            func.count(Review.id.distinct()).label('reviewCount'),
+            saFunc.group_concat(Review.id).label('reviewIDs')
                       ]
 
         if sort and sort == "rating":
@@ -1111,14 +1165,20 @@ class Provider(Model):
             q.sort_args = [Provider.name]
 
         if "category" in filters.keys():
-            q.filter_args.append(Provider.categories.contains(filters['category']))
+            q.filter_args.append(
+                Provider.categories.contains(filters['category'])
+            )
             # q.filter_args.append(Category.id == filters['category'].id)
 
         if "location" in filters.keys():
-            q.filter_args.extend([Address.longitude > filters['location'].minLong,
-                               Address.longitude < filters['location'].maxLong,
-                               Address.latitude > filters['location'].minLat,
-                               Address.latitude < filters['location'].maxLat])
+            q.filter_args.extend(
+                [
+                    Address.longitude > filters['location'].minLong,
+                    Address.longitude < filters['location'].maxLong,
+                    Address.latitude > filters['location'].minLat,
+                    Address.latitude < filters['location'].maxLat
+                ]
+            )
 
         if "id" in filters.keys():
             q.filter_args.append(Provider.id == filters['id'])
@@ -1134,24 +1194,32 @@ class Provider(Model):
             q.join_args.extend([Provider.reviews, Review.user])
             friendsFilter = User.friends.contains(current_user)
             groups = [g.id for g in current_user.groups]
-            groupsFilter = (and_(Group.id.in_(groups), User.id != current_user.id))
-            if filters.get('friends') is True and filters.get('groups') is False:
+            groupsFilter = (and_(
+                Group.id.in_(groups), User.id != current_user.id)
+            )
+            if (filters.get('friends') is True and
+               filters.get('groups') is False):
                 q.filter_args.append(friendsFilter)
                 providers = q.getQuery()
-            elif filters.get('groups') is True and filters.get('friends') is False:
+            elif (filters.get('groups') is True and
+                  filters.get('friends') is False):
                 q.filter_args.append(groupsFilter)
                 q.join_args.append(User.groups)
                 providers = q.getQuery()
 
-            elif filters.get('groups') is True and filters.get('friends') is True:
-                sort_args = q.sort_args[:]
+            elif (filters.get('groups') is True and
+                  filters.get('friends') is True):
                 q.sort_args.clear()
                 q.group_by.insert(0, 'reviewID')
                 q.group_by.extend(['rating', 'cost'])
                 q.query_args[-4:] = []
-                q.query_args.extend([Review.id.label('reviewID'),
-                                      Review.rating.label('rating'),
-                                      Review.cost.label('cost')])
+                q.query_args.extend(
+                    [
+                        Review.id.label('reviewID'),
+                        Review.rating.label('rating'),
+                        Review.cost.label('cost')
+                    ]
+                )
                 qF = q.copy()
                 qG = q.copy()
                 qF.filter_args.append(friendsFilter)
@@ -1162,16 +1230,17 @@ class Provider(Model):
                 sub = qF.getQuery().union(qG.getQuery()).subquery(name='sub')
                 qP = dbQuery()
                 qP.select_from = sub
-                qP.query_args = [sub.c.id, sub.c.name, sub.c.email, 
-                        sub.c.telephone, sub.c.line1, sub.c.line2, sub.c.city,
-                        sub.c.state_short, sub.c.zip, sub.c.latitude,
-                        sub.c.longitude, sub.c.categories,
-                        func.avg(sub.c.rating).label('reviewAverage'),
-                        func.avg(sub.c.cost).label('reviewCost'),
-                        func.count(sub.c.reviewID).label('reviewCount'),
-                        saFunc.group_concat(sub.c.reviewID).label('reviewIDs')
+                qP.query_args = [
+                    sub.c.id, sub.c.name, sub.c.email, sub.c.telephone,
+                    sub.c.line1, sub.c.line2, sub.c.city, sub.c.state_short,
+                    sub.c.zip, sub.c.latitude, sub.c.longitude,
+                    sub.c.categories,
+                    func.avg(sub.c.rating).label('reviewAverage'),
+                    func.avg(sub.c.cost).label('reviewCost'),
+                    func.count(sub.c.reviewID).label('reviewCount'),
+                    saFunc.group_concat(sub.c.reviewID).label('reviewIDs')
                 ]
-                qP.group_by = qP.query_args.copy()[:-4]    
+                qP.group_by = qP.query_args.copy()[:-4]
 
                 if sort and sort == "rating":
                     qP.sort_args = [desc("reviewAverage"), sub.c.name]
@@ -1181,9 +1250,8 @@ class Provider(Model):
                 q = qP
 
         providers = q.getQuery()
-        providers=providers.all()
+        providers = providers.all()
         return providers
-
 
     def profile(self, filter):
         """Return tuple of provider object with review summary information(avg/count)
@@ -1199,17 +1267,23 @@ class Provider(Model):
                         func.count(Review.id).label("count")]
         friendsFilter = User.friends.contains(current_user)
         groups = [g.id for g in current_user.groups]
-        groupsFilter = (and_(Group.id.in_(groups), User.id != current_user.id))                        
+        groupsFilter = (
+            and_(Group.id.in_(groups), User.id != current_user.id)
+        )
         # update filter and joins for relationship filters
-        if filter['friends_filter'] is True and filter['groups_filter'] is False:
+        if (filter['friends_filter'] is True and
+           filter['groups_filter'] is False):
             q.filter_args.append(friendsFilter)
-        if filter['groups_filter'] is True and filter['friends_filter'] is False:
+        if (filter['groups_filter'] is True and
+           filter['friends_filter'] is False):
             q.join_args.append(User.groups)
             q.filter_args.append(groupsFilter)
-        if filter['groups_filter'] is True and filter['friends_filter'] is True:
-            q.query_args = [Review.id.label('reviewID'),
-                                    Review.rating.label('rating'),
-                                    Review.cost.label('cost')]           
+        if (filter['groups_filter'] is True and
+           filter['friends_filter'] is True):
+            q.query_args = [
+                Review.id.label('reviewID'), Review.rating.label('rating'),
+                Review.cost.label('cost')
+            ]
             qF = q.copy()
             qG = q.copy()
             qF.filter_args.append(friendsFilter)
@@ -1221,28 +1295,34 @@ class Provider(Model):
 
             q = dbQuery()
             q.select_from = sub
-            q.query_args = [func.avg(sub.c.rating).label("average"),
-                            func.avg(sub.c.cost).label("cost"),
-                            func.count(sub.c.reviewID).label("count")]            
+            q.query_args = [
+                func.avg(sub.c.rating).label("average"),
+                func.avg(sub.c.cost).label("cost"),
+                func.count(sub.c.reviewID).label("count")
+            ]
 
         summary = q.getQuery().first()
         return (self, summary.average, summary.cost, summary.count)
-    
+
     @staticmethod
     def import_file(filename):
-        biz = namedtuple('biz', ['name', 'category', 'line1', 'city', 'state', 'zip','website'])
+        biz = namedtuple(
+            'biz',
+            ['name', 'category', 'line1', 'city', 'state', 'zip', 'website']
+        )
         base_dir = os.path.dirname(current_app.instance_path)
         file = os.path.join(base_dir, 'supporting', filename)
         with open(file, 'r') as f:
             business = f.readline().strip()
             biz = business.split(', ')
             name, category, line1, city, state, zip, telephone, website = biz
-            return (name, category, line1, city, state, zip, telephone, website)
-            
-
+            return (
+                name, category, line1, city, state, zip, telephone, website
+            )
 
     def __repr__(self):
         return f"<Provider {self.name}>"
+
 
 class Provider_Suggestion(Model):
     """Suggestions from users to correct provider information.
@@ -1262,16 +1342,22 @@ class Provider_Suggestion(Model):
     Relationship:
         Child of: address
         Many to Many: category
-    
+
     Methods:
         None
-    
+
     """
     __tablename__ = "provider_suggestion"
 
     id = db.Column(db.Integer, primary_key=True)
-    provider_id = db.Column(db.Integer, db.ForeignKey("provider.id", ondelete="CASCADE"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    provider_id = db.Column(
+        db.Integer, db.ForeignKey("provider.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False
+    )
     name = db.Column(db.String(64), index=True)
     email = db.Column(db.String(120))
     telephone = db.Column(db.String(24))
@@ -1279,12 +1365,14 @@ class Provider_Suggestion(Model):
     is_active = db.Column(db.Boolean, default=True, index=True)
     other = db.Column(db.String(1000))
 
-    address = db.relationship("Address_Suggestion", backref="provider_suggestion", uselist=False,
-                              passive_deletes=True,
-                              cascade="all, delete-orphan")
-  
+    address = db.relationship(
+        "Address_Suggestion", backref="provider_suggestion", uselist=False,
+        passive_deletes=True, cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
-        return f"<Provider Suggestion {self.provider.name}>" 
+        return f"<Provider Suggestion {self.provider.name}>"
+
 
 class Review(Model):
 
@@ -1297,11 +1385,13 @@ class Review(Model):
         user_id (int): id of User that created the review
         provider_id (int): id of provider/business that is being reviewed
         category_id (int): id of category given to review
-        rating (int): numeric rating between 1 (low) and 5 (high) to rate quality/satisfaction
+        rating (int): numeric rating between 1 (low) and 5 (high) to rate
+            quality/satisfaction
         cost (int): numeric rating between 1 (low) and 5 (high) to rate how
                     expensive business is relative to others
         price_paid (int): dollar cost paid for service/product
-        description (str): short description of service being reviewed (ie. AC tuneup)
+        description (str): short description of service being reviewed
+            (ie. AC tuneup)
         service_date (Date): date that reviewers interaction with business took
                              place
         comments (str): full review of business
@@ -1311,7 +1401,7 @@ class Review(Model):
         category (Category): Category (object) associated with category_id
 
     Methods:
-        search: returns list of reviews associated with given provider based on 
+        search: returns list of reviews associated with given provider based on
                 provider id and social filter
     Relationships:
         Parent of: Picture
@@ -1320,7 +1410,9 @@ class Review(Model):
 
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE")
+    )
     provider_id = db.Column(db.Integer, db.ForeignKey("provider.id",
                                                       ondelete="cascade"),
                             nullable=False)
@@ -1369,9 +1461,9 @@ class Review(Model):
         return price_paid
 
     @classmethod
-    def search(cls, providerId=None, groupId = None,  filter=None):
+    def search(cls, providerId=None, groupId=None,  filter=None):
         """Searches for reviews based on provider id and social filters.
-        
+
         Args:
             providerId (int): provider id from database
             groupId (int): group id from database
@@ -1380,7 +1472,7 @@ class Review(Model):
                                  users groups
         Returns:
             list of review objects
-        
+
         """
         # base filter and join args
         q = dbQuery()
@@ -1391,13 +1483,18 @@ class Review(Model):
             q.join_args = [Review.provider, Review.user]
             friendsFilter = User.friends.contains(current_user)
             groups = [g.id for g in current_user.groups]
-            groupsFilter = and_(Group.id.in_(groups), User.id != current_user.id)
-            if filter['friends_filter'] is True and filter['groups_filter'] is False:
+            groupsFilter = and_(
+                Group.id.in_(groups), User.id != current_user.id
+            )
+            if (filter['friends_filter'] is True and
+               filter['groups_filter'] is False):
                 q.filter_args.append(friendsFilter)
-            elif filter['groups_filter'] is True and filter['friends_filter'] is False:
+            elif (filter['groups_filter'] is True and
+                  filter['friends_filter'] is False):
                 q.join_args.extend([User.groups])
                 q.filter_args.extend(groupsFilter)
-            elif filter['groups_filter'] is True and filter['friends_filter'] is True:
+            elif (filter['groups_filter'] is True and
+                  filter['friends_filter'] is True):
                 q.filter_args.append(or_(groupsFilter, friendsFilter))
             return q.all()
         elif groupId is not None:
@@ -1405,18 +1502,18 @@ class Review(Model):
             q.join_args = [Review.user, User.groups]
             q.sort_args = [Review.timestamp]
             return q.all()
-    
-    #TODO add median to summary stat
+
+    # TODO add median to summary stat
     @classmethod
     def summaryStatSearch(cls, filters=None):
         """Calculate summary statistics for review meeting filter criteria.
-        
+
         Args:
-            filters (dict): search criteria (location, category, friends, groups)
-                for reviews to include in summary stat calc
+            filters (dict): search criteria (location, category, friends,
+               groups) for reviews to include in summary stat calc
         Returns:
             aggregated summary statistics: count, avg rating, avg cost
-        
+
         """
         q = dbQuery()
         q.select_from = Review
@@ -1425,20 +1522,24 @@ class Review(Model):
             func.avg(Review.rating).label("average"),
             func.avg(Review.cost).label("cost")
         ]
-        q.join_args = [Review.category,
-                       Review.provider,
-                       Provider.address,
-                       Review.user
+        q.join_args = [
+            Review.category, Review.provider, Provider.address, Review.user
         ]
 
         if "category" in filters.keys():
-            q.filter_args.append(Provider.categories.contains(filters['category']))
+            q.filter_args.append(
+                Provider.categories.contains(filters['category'])
+            )
 
         if "location" in filters.keys():
-            q.filter_args.extend([Address.longitude > filters['location'].minLong,
-                               Address.longitude < filters['location'].maxLong,
-                               Address.latitude > filters['location'].minLat,
-                               Address.latitude < filters['location'].maxLat])
+            q.filter_args.extend(
+                [
+                    Address.longitude > filters['location'].minLong,
+                    Address.longitude < filters['location'].maxLong,
+                    Address.latitude > filters['location'].minLat,
+                    Address.latitude < filters['location'].maxLat
+                ]
+            )
 
         friendsFilter = User.friends.contains(current_user)
         groups = [g.id for g in current_user.groups]
@@ -1451,9 +1552,10 @@ class Review(Model):
             q.join_args.append(User.groups)
             q.filter_args.append(groupsFilter)
         if filters['groups'] is True and filters['friends'] is True:
-            q.query_args = [Review.id.label('reviewID'),
-                                    Review.rating.label('rating'),
-                                    Review.cost.label('cost')]           
+            q.query_args = [
+                Review.id.label('reviewID'), Review.rating.label('rating'),
+                Review.cost.label('cost')
+            ]
             qF = q.copy()
             qG = q.copy()
             qF.filter_args.append(friendsFilter)
@@ -1465,14 +1567,14 @@ class Review(Model):
 
             q = dbQuery()
             q.select_from = sub
-            q.query_args = [func.count(sub.c.reviewID).label("count"),
-                            func.avg(sub.c.rating).label("average"),
-                            func.avg(sub.c.cost).label("cost"),
-            ]            
+            q.query_args = [
+                func.count(sub.c.reviewID).label("count"),
+                func.avg(sub.c.rating).label("average"),
+                func.avg(sub.c.cost).label("cost"),
+            ]
 
         summary = q.getQuery().first()
         return summary
-
 
 
 class Picture(Model):
@@ -1487,9 +1589,11 @@ class Picture(Model):
     id = db.Column(db.Integer, primary_key=True)
     path = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(120), nullable=False)
-    review_id = db.Column(db.Integer, db.ForeignKey("review.id",
-                                                    ondelete="CASCADE"),
-                          nullable=False)
+    review_id = db.Column(
+        db.Integer, db.ForeignKey("review.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
     def __repr__(self):
         return f"<Picture {self.name}>"
 
@@ -1500,10 +1604,10 @@ class Picture(Model):
         Args:
             form (wtf form): form that includes submitted pictures
             pictures (list): list of existing Picture objects
-        
+
         Returns:
             Updated list of pictures.  Not yet committed to db.
-            
+
         """
 
         if pictures is None:
@@ -1529,7 +1633,7 @@ class Picture(Model):
 
         Args:
             form (wtf form): form containing pictures to delete
-        
+
         Return:
             None
         """
@@ -1545,9 +1649,10 @@ class Picture(Model):
                 os.remove(os.path.join(path, picture.name))
             picture.delete()
 
+
 class Group(Model):
     """Groups (social, religious, sports, etc.) that user can belong to.
-    
+
     Attributes:
         id (int): primary key of group in db
         name (str): name of group, unique
@@ -1594,11 +1699,14 @@ class Group(Model):
 
     def __repr__(self):
         return f"<Group {self._name}>"
-    
+
     @classmethod
     def search(cls, filters):
         """Search groups for groups match search query."""
-        memberCheck = exists().where(cls.members.contains(current_user)).label("membership")
+        memberCheck = (
+            exists().where(cls.members.contains(current_user))
+                    .label("membership")
+        )
         query_args = [cls.id, cls.name, cls.description, memberCheck]
         join_args = []
         outerjoin_args = []
@@ -1606,14 +1714,15 @@ class Group(Model):
         sort_arg = [cls.name]
         limit = None
         groups = (db.session.query(*query_args)
-                                     .join(*join_args)
-                                     .outerjoin(*outerjoin_args)
-                                     .filter(*filter_args)
-                                     .group_by(cls.id)
-                                     .order_by(*sort_arg)
-                                     .limit(limit)
-                                     .all())      
+                            .join(*join_args)
+                            .outerjoin(*outerjoin_args)
+                            .filter(*filter_args)
+                            .group_by(cls.id)
+                            .order_by(*sort_arg)
+                            .limit(limit)
+                            .all())
         return groups
+
 
 class Conversation(Model):
     """Conversation that captures multiple messages"""
@@ -1624,9 +1733,10 @@ class Conversation(Model):
                                cascade="all, delete-orphan",
                                passive_deletes=True)
 
+
 class Message(Model):
     """Message data common to all users on message
-    
+
     Attributes:
       id (int): message id
       conversation_id (int): id of conversation that message belongs to
@@ -1638,34 +1748,39 @@ class Message(Model):
       """
 
     id = db.Column(db.Integer, primary_key=True)
-    conversation_id = db.Column(db.Integer,
-                                db.ForeignKey("conversation.id", ondelete="CASCADE"),
-                                nullable=False)
-    timestamp = db.Column(db.DateTime, default = datetime.utcnow, index=True)
+    conversation_id = db.Column(
+        db.Integer, db.ForeignKey("conversation.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     msg_type = db.Column(db.String(25), index=True)
     subject = db.Column(db.String(50), index=True)
     body = db.Column(db.String(5000))
 
-    users = db.relationship("Message_User",
-                            backref=backref("message", uselist=False),
-                            cascade="all, delete-orphan",
-                            passive_deletes=True)
-
+    users = db.relationship(
+        "Message_User", backref=backref("message", uselist=False),
+        cascade="all, delete-orphan", passive_deletes=True
+    )
 
     @hybrid_property
     def sender(self):
-        s = list(filter(lambda x: x.role=='sender', self.users))[0]
+        s = list(
+            filter(lambda x: x.role == 'sender', self.users)
+        )[0]
         if s is not None:
             return s
 
     @hybrid_property
     def recipient(self):
-        r = list(filter(lambda x: x.role=='recipient', self.users))[0]
+        r = list(
+            filter(lambda x: x.role == 'recipient', self.users)
+        )[0]
         if r is not None:
             return r
 
     @staticmethod
-    def send_new(sender_dict, recipient_dict, subject, body, msg_type="user2user"):
+    def send_new(sender_dict, recipient_dict, subject, body,
+                 msg_type="user2user"):
         """Send new message."""
         c = Conversation.create()
         message = Message.create(
@@ -1686,22 +1801,29 @@ class Message(Model):
         admin = dict(full_name="AYP Admin")
         if "email" in user.keys():
             admin["email"] = current_app.config['ADMINS'][0]
-        new_message = Message.send_new(user, admin, subject, body, msg_type="admin")
+        new_message = Message.send_new(
+            user, admin, subject, body, msg_type="admin"
+        )
         return new_message
-    
+
     def send_reply(self, subject, body):
         """send reply to existing message."""
 
         new_message = Message.create(
-            conversation_id = self.conversation_id,
-            msg_type = self.msg_type,
-            subject = subject,
-            body = body,
-            users = [
-                Message_User(role='sender', user_id=self.recipient.user_id,
-                email=self.recipient.email, full_name=self.recipient.full_name),
-                Message_User(role='recipient', user_id=self.sender.user_id,
-                email=self.sender.email, full_name=self.sender.full_name)
+            conversation_id=self.conversation_id,
+            msg_type=self.msg_type,
+            subject=subject,
+            body=body,
+            users=[
+                Message_User(
+                    role='sender', user_id=self.recipient.user_id,
+                    email=self.recipient.email,
+                    full_name=self.recipient.full_name
+                ),
+                Message_User(
+                    role='recipient', user_id=self.sender.user_id,
+                    email=self.sender.email, full_name=self.sender.full_name
+                )
             ]
         )
         return new_message
@@ -1718,7 +1840,7 @@ class Message_User(Model):
        status (str): folder message stored in
        message (Message): Message object that Message_User data pertains to
        user (User): User that receives the message
-    
+
     """
     __tablename__ = "message_user"
 
@@ -1729,9 +1851,10 @@ class Message_User(Model):
     _role = db.Column(db.String(15))
     read = db.Column(db.Boolean, index=True)
     tag = db.Column(db.String(20), index=True)
-    message_id = db.Column(db.Integer,
-                           db.ForeignKey("message.id", ondelete="CASCADE"),
-                           nullable=False)
+    message_id = db.Column(
+        db.Integer, db.ForeignKey("message.id", ondelete="CASCADE"),
+        nullable=False
+    )
     user = db.relationship("User", backref="messages")
 
     def __init__(self, **kwargs):
@@ -1754,6 +1877,3 @@ class Message_User(Model):
             elif self.role == 'recipient':
                 self.tag = 'inbox'
                 self.read = False
-   
-
-

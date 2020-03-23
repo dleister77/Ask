@@ -1,6 +1,6 @@
 
-import modal_form_wrapper from '../src/components/modal-form-wrapper';
-import base_modal from '../src/components/base-modal'
+import modal_form_wrapper from '../src/components/modals/modal-form-wrapper';
+import base_modal from '../src/components/modals/base-modal'
 
 const describe = require('mocha').describe;
 const it = require('mocha').it;

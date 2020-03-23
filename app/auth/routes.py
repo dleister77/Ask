@@ -1,7 +1,7 @@
 import json
 
-from flask import flash, jsonify, redirect, render_template, request, url_for, \
-                  current_app, session
+from flask import flash, redirect, render_template, request, url_for,\
+                  current_app, session, abort
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.urls import url_parse
 
@@ -9,10 +9,10 @@ from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, PasswordChangeForm, \
                            PasswordResetRequestForm, PasswordResetForm,\
                            UserUpdateForm
-from app.extensions import db
 from app.models import User, Address
 from app.utilities.helpers import email_verified, form_to_dict
 from app.utilities.pagination import Pagination
+
 
 @bp.route('/')
 @bp.route('/welcome')
@@ -22,22 +22,25 @@ def welcome():
     form = LoginForm()
     return render_template("auth/welcome.html", form=form, title="Welcome")
 
+
 @bp.route('/emailverify/<token>')
 def email_verify(token):
     user, error = User.verify_email_verification_token(token)
     if not user:
         if error == "Expired":
-            msg = "Email verification failed due to expiration of verification "\
-                  "code.  Please login and request a new verification code."
+            msg = ("Email verification failed due to expiration of"
+                   " verification code.  Please login and request a new"
+                   " verification code.")
         else:
-            msg = "Email verification failed.  Please login and request a new "\
-                  "verification code to try again." 
+            msg = ("Email verification failed.  Please login and request a new"
+                   " verification code to try again.")
     else:
         user.email_verified = True
         user.save()
         msg = "Email successfully verified."
     flash(msg)
     return redirect(url_for('auth.welcome'))
+
 
 @bp.route('/emailverifyrequest')
 def email_verify_request():
@@ -91,7 +94,7 @@ def password_reset_request():
         flash("Check email for instructions to reset your password.")
         return redirect(url_for('auth.welcome'))
     return render_template('auth/password_reset_request.html',
-                          title="Password Reset", form=form)
+                           title="Password Reset", form=form)
 
 
 @bp.route('/passwordreset/<token>', methods=['GET', 'POST'])
@@ -131,15 +134,16 @@ def passwordupdate():
     user = current_user
     reviews = user.reviews
     summary = user.summary()
-    pag_args = {"username": user.username}    
-    pagination = Pagination(reviews,page, current_app.config.get('PER_PAGE'))
+    pag_args = {"username": user.username}
+    pagination = Pagination(reviews, page, current_app.config.get('PER_PAGE'))
     pag_urls = pagination.get_urls('main.user', pag_args)
     reviews = pagination.paginatedData
     return render_template("user.html", title="User Profile", user=user,
                            reviews=reviews, form=form,
-                           modal_title=modal_title, pform=pform, 
+                           modal_title=modal_title, pform=pform,
                            modal_title_2=modal_title_2, pword_open=pword_open,
                            pag_urls=pag_urls, summary=summary)
+
 
 @bp.route('/register2', methods=["GET", "POST"])
 def register2():
@@ -148,21 +152,25 @@ def register2():
         return redirect(url_for("main.index"))
     form = RegistrationForm().populate_choices()
     if form.validate_on_submit():
-        address = Address(line1=form.address.line1.data, 
-                          line2=form.address.line2.data, 
-                          city=form.address.city.data, 
+        address = Address(line1=form.address.line1.data,
+                          line2=form.address.line2.data,
+                          city=form.address.city.data,
                           state_id=form.address.state.data,
                           zip=form.address.zip.data)
-        user = User.create(first_name=form.first_name.data, 
-                           last_name=form.last_name.data, email=form.email.data, 
-                           username=form.username.data, address=address)
+        user = User.create(first_name=form.first_name.data,
+                           last_name=form.last_name.data,
+                           email=form.email.data,
+                           username=form.username.data,
+                           address=address)
         user.set_password(form.password.data)
         user.send_email_verification()
         session['email_verification_sent'] = True
         flash("Congratulations! You've successfully registered.")
         flash("Please check your email for an email verification message.")
         return redirect(url_for('auth.welcome'))
-    return render_template("auth/register.html", title='Register', form=form), 422
+    return render_template("auth/register.html",
+                           title='Register', form=form), 422
+
 
 @bp.route('/register', methods=["GET", "POST"])
 def register():
@@ -174,16 +182,19 @@ def register():
         form_values = json.dumps(form_to_dict(form, "values"))
         form_errors = json.dumps(form_to_dict(form, "errors"))
         return render_template("auth/register.html", title='Register',
-                               form_values=form_values, form_errors=form_errors)
+                               form_values=form_values,
+                               form_errors=form_errors)
     if form.validate_on_submit():
-        address = Address(line1=form.address.line1.data, 
-                          line2=form.address.line2.data, 
-                          city=form.address.city.data, 
+        address = Address(line1=form.address.line1.data,
+                          line2=form.address.line2.data,
+                          city=form.address.city.data,
                           state_id=form.address.state.data,
                           zip=form.address.zip.data)
-        user = User.create(first_name=form.first_name.data, 
-                           last_name=form.last_name.data, email=form.email.data, 
-                           username=form.username.data, address=address)
+        user = User.create(first_name=form.first_name.data,
+                           last_name=form.last_name.data,
+                           email=form.email.data,
+                           username=form.username.data,
+                           address=address)
         user.set_password(form.password.data)
         user.send_email_verification()
         session['email_verification_sent'] = True
@@ -194,9 +205,10 @@ def register():
         form_values = json.dumps(form_to_dict(form, "values"))
         form_errors = json.dumps(form_to_dict(form, "errors"))
         return render_template("auth/register.html", title='Register',
-            form_values=form_values, form_errors=form_errors), 422
+                               form_values=form_values,
+                               form_errors=form_errors), 422
 
-    
+
 @bp.route('/userupdate', methods=["POST"])
 @login_required
 @email_verified
@@ -225,13 +237,15 @@ def userupdate():
     reviews = current_user.reviews
     summary = current_user.summary()
     pag_args = {"username": current_user.username}
-    pagination = Pagination(reviews,page, current_app.config.get('PER_PAGE'))
+    pagination = Pagination(reviews, page, current_app.config.get('PER_PAGE'))
     pag_urls = pagination.get_urls('main.user', pag_args)
     reviews = pagination.paginatedData
     return render_template("user.html", form=form, reviews=reviews,
-                           title="User Profile", modal_title=modal_title, 
-                           user=current_user, modal_open=modal_open, pag_urls=pag_urls,
-                           summary=summary),422
+                           title="User Profile", modal_title=modal_title,
+                           user=current_user, modal_open=modal_open,
+                           pag_urls=pag_urls,
+                           summary=summary), 422
+
 
 @bp.route('/shutdown')
 def server_shutdown():
