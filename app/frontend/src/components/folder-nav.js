@@ -1,18 +1,18 @@
-import nav_list_button from './nav-list-button';
+import navListButton from './nav-list-button';
 
-const folder_nav = ('folder-nav', {
-    components:{
-        "nav-list-button": nav_list_button,
-    },
-    props: {
-        eventSignal: Object,
-        folderIsVisible: Boolean,
-        messageIsVisible: Boolean,
-        moveLinksVisible: Boolean,
-        newMessageIsVisible: Boolean,
-        urls: Object,
-    },
-    template:`
+const folderNav = ('folder-nav', {
+  components: {
+    'nav-list-button': navListButton,
+  },
+  props: {
+    eventSignal: Object,
+    folderIsVisible: Boolean,
+    messageIsVisible: Boolean,
+    moveLinksVisible: Boolean,
+    newMessageIsVisible: Boolean,
+    urls: Object,
+  },
+  template: `
     <nav class="navbar">
         
         <ul class="nav">
@@ -102,4 +102,4 @@ const folder_nav = ('folder-nav', {
     </nav>`,
 });
 
-export default folder_nav;
+export default folderNav;

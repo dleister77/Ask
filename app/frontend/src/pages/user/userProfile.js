@@ -1,10 +1,10 @@
 import Vue from 'vue';
-import modal_form_usermessage_mixin from '../../components/modal-message-user-mixin';
+import ModalFormUsermessageMixin from '../../components/modal-message-user-mixin';
 
 
 const user = new Vue({
-    el: '#appContent',
-    mixins: [modal_form_usermessage_mixin],
+  el: '#appContent',
+  mixins: [ModalFormUsermessageMixin],
 });
 
 export default user;

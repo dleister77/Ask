@@ -1,12 +1,12 @@
-const nav_list_button = {
-    props: {
-        eventSignal: {
-            type: String,
-            required: true
-        },
+const navListButton = {
+  props: {
+    eventSignal: {
+      type: String,
+      required: true,
     },
-    inheritAttrs: false,
-    template: `
+  },
+  inheritAttrs: false,
+  template: `
         <li class="nav-item">
             <button
                 ref="b"
@@ -17,7 +17,7 @@ const nav_list_button = {
             <slot></slot>
             </button>
         </li>
-    `
+    `,
 };
 
-export default nav_list_button;
+export default navListButton;

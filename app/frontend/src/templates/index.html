@@ -157,10 +157,6 @@
 
 {% block jsScripts %}
 
-<script>
-</script>
-
-
 
 <script>
     let form_dict = '{{ form_dict|safe }}';
@@ -182,6 +178,10 @@
     {% endif %}
     
 </script>
+
+<!-- mapbox -->
+<script src='https://api.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.css' rel='stylesheet' />
 
 <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
     <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>

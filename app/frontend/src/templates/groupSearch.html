@@ -40,20 +40,28 @@
     <br>
 </div>
 
-{% endblock content_narrow_form %}
+
+{% endblock %}
+
+
 
 
 {% block jsScripts %}
 
-    <!-- url for js file -->
-    <script> let links = {'autocomplete': "{{ url_for('relationship.groupSearchAutocomplete') }}"} </script>
+<script>
 
-
+    let links = {
+        autocomplete: "{{ url_for('relationship.groupSearchAutocomplete') }}"
+    }
+    </script>
+    
+    
     <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
         <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
     <% } %>
-        
 
 
 {% endblock %}
+
+
 

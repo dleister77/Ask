@@ -2,98 +2,97 @@ import Vue from 'vue';
 import Vuelidate from 'vuelidate';
 import axios from 'axios';
 
-import {reset_form, set_form} from '../../scripts/forms';
+import { resetForm, setForm } from '../../scripts/forms';
 
 Vue.use(Vuelidate);
 
-let form_mixin = {
-    computed: {},
-    data: function(){
-        return {
-            form: {},
-            options: {},
-            server_side_errors: {},
-        }
+const FormMixin = {
+  computed: {},
+  data() {
+    return {
+      form: {},
+      options: {},
+      server_side_errors: {},
+    };
+  },
+  delimiters: ['[[', ']]'],
+  props: {
+    form_id: {
+      type: String,
+      required: false,
+      default: 'vue-form',
     },
-    delimiters: ["[[", "]]"],
-    props: {
-        form_id: {
-            type: String,
-            required: false,
-            default: "vue-form",
-        },
-        form_presets: {
-            type: Object,
-            required: false,
-        },
-        url: {
-            type: String,
-            required: false,
-        },
-        reset_form_values: {
-            type: Boolean,
-            required: false,
-        },
-        set_form_values: {
-            type: Boolean,
-            required: false,
-        },
+    form_presets: {
+      type: Object,
+      required: false,
     },
-    validations: {
-        form: {},
+    url: {
+      type: String,
+      required: false,
     },
-    methods: {
-        populate_form: function() {
-            return new FormData(document.getElementById(this.form_id))
-        },
-        reset_form: function() {
-            this.$v.$reset();
-            this.form = reset_form(this.form);
-            this.$emit('form_is_reset');
-        },
-        set_form: function() {
-            this.form = set_form(this.form_presets, this.form);
-            this.$emit('form_is_set');
-        },
-        submit: async function() {
-            this.$emit('form_is_submitted')
-            if (this.$v.$invalid){
-                alert("Please correct errors and resubmit")
-            } else {
-                this.server_side_errors = {};
-                let self = this;
-                const form = this.populate_form();
-                axios.post(this.url, form)
-                .then(function(response){
-                    alert("Message sent");
-                    self.$emit('form_is_submitted');
-                    self.reset_form();
-                })
-                .catch(function(error){
-                    console.log(error);
-                    let message = "Unable to send message. Please correct errors:\n"
-                    let form_errors = error.response.data.errors
-                    self.server_side_errors = form_errors
-                    let displayed_errors = Object.values(form_errors)
-                    message += displayed_errors.join('\n');
-                    alert(message);
-                })
-            }
-        },
+    reset_form_values: {
+      type: Boolean,
+      required: false,
     },
-    watch: {
-        'set_form_values': function(new_val) {
-            if (new_val == true){
-                this.set_form();
-                this.$emit('form_is_set');
-            }
-        },
-        'reset_form_values': function(new_val) {
-            if (new_val==true) {
-                this.reset_form();
-                this.$emit('form_is_reset')
-            }
-        },
+    set_form_values: {
+      type: Boolean,
+      required: false,
     },
-}
-export default form_mixin;
+  },
+  validations: {
+    form: {},
+  },
+  methods: {
+    populate_form() {
+      return new FormData(document.getElementById(this.form_id));
+    },
+    reset_form() {
+      this.$v.$reset();
+      this.form = resetForm(this.form);
+      this.$emit('form_is_reset');
+    },
+    set_form() {
+      this.form = setForm(this.form_presets, this.form);
+      this.$emit('form_is_set');
+    },
+    submit() {
+      this.$emit('form_is_submitted');
+      if (this.$v.$invalid) {
+        alert('Please correct errors and resubmit');
+      } else {
+        this.server_side_errors = {};
+        const form = this.populate_form();
+        axios.post(this.url, form)
+          .then(() => {
+            alert('Message sent');
+            this.$emit('form_is_submitted');
+            this.reset_form();
+          })
+          .catch((error) => {
+            console.log(error);
+            let message = 'Unable to send message. Please correct errors:\n';
+            const formErrors = error.response.data.errors;
+            this.server_side_errors = formErrors;
+            const displayedErrors = Object.values(formErrors);
+            message += displayedErrors.join('\n');
+            alert(message);
+          });
+      }
+    },
+  },
+  watch: {
+    set_form_values(newVal) {
+      if (newVal === true) {
+        this.set_form();
+        this.$emit('form_is_set');
+      }
+    },
+    reset_form_values(newVal) {
+      if (newVal === true) {
+        this.reset_form();
+        this.$emit('form_is_reset');
+      }
+    },
+  },
+};
+export default FormMixin;

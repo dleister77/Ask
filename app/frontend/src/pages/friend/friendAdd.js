@@ -1,22 +1,22 @@
 import Vue from 'vue';
-import typeahead_mixin from '../../components/forms/typeahead_mixin';
+import TypeaheadMixin from '../../components/forms/typeahead_mixin';
 
 
 const friendAdd = new Vue({
-    el: '#app',
-    delimiters: ['[[', ']]'],
-    mixins: [typeahead_mixin],
-    data: {
-        urls: links,
-        typeahead: {
-            include_id: true,
-        }
+  el: '#app',
+  delimiters: ['[[', ']]'],
+  mixins: [TypeaheadMixin],
+  data: {
+    urls: links,
+    typeahead: {
+      include_id: true,
     },
-    methods: {
-        suggestionSerializer: function(person){
-            return `${person.first_name} ${person.last_name}, ${person.city} ${person.state}`
-        }
+  },
+  methods: {
+    suggestionSerializer(person) {
+      return `${person.first_name} ${person.last_name}, ${person.city} ${person.state}`;
     },
+  },
 });
 
 export default friendAdd;
