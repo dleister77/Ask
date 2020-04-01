@@ -103,12 +103,12 @@ const MessageForm = {
       
       <input v-model="form.recipient_id" v-bind="{name: 'recipient_id', type:'hidden'}">
       
-      <input v-model="form.recipient" name='recipient' type='hidden'>
       
       <div class="form-group">
           <label
           for="recipient_typeahead"
           v-if="!is_active">To</label>
+          <input v-model="form.recipient" name='recipient' type='hidden'> 
           <vue-bootstrap-typeahead
               id="recipient_typeahead"
               name="recipient_typeahead"
@@ -123,7 +123,7 @@ const MessageForm = {
       <form-input
           v-if="is_active"
           v-model="form.recipient"
-          :name='recipient'
+          name='recipient'
           :readonly=true
           :required=false>
           To
@@ -144,6 +144,7 @@ const MessageForm = {
       </form-textbox>
 
       <button
+          id="message-form-submit"
           class="btn btn-primary btn-block submit"
           type="submit"
           v-on:click.prevent="sendMessage"

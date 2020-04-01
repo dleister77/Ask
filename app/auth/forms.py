@@ -53,21 +53,26 @@ class AddressField(FlaskForm):
         code
     """
     line1 = StringField("Street Address",
+                        default='',
                         validators=[InputRequired(
                                         message="Street address is required.")
                                     ])
-    line2 = StringField("Address Line 2", validators=[Optional()])
+    line2 = StringField("Address Line 2", default='', validators=[Optional()])
     city = StringField("City",
+                       default='',
                        validators=[
                            InputRequired(message="City is required.")
                         ])
     state = SelectField("State", choices=State.list(), coerce=int,
+                        default=0,
                         validators=[
                             InputRequired(message="State is required.")
                         ])
-    zip = StringField("Zip", validators=[
-                                InputRequired(message="Zip code is required.")
-                             ])
+    zip = StringField("Zip",
+                      default='',
+                      validators=[
+                          InputRequired(message="Zip code is required.")
+                      ])
 
     def validate_zip(form, field):
         if len(field.data) != 5:
@@ -115,17 +120,20 @@ class RegistrationForm(FlaskForm):
     """
 
     first_name = StringField("First Name",
+                             default='',
                              validators=[
                                  InputRequired(
                                      message="First name is required.")
                              ])
     last_name = StringField("Last Name",
+                            default='',
                             validators=[
                                 InputRequired(
                                     message="Last name is required.")
                             ])
     address = FormField(AddressField)
     email = StringField("Email Address",
+                        default='',
                         validators=[
                             InputRequired(
                                 message="Email address is required."),
@@ -133,16 +141,19 @@ class RegistrationForm(FlaskForm):
                             unique_check(User, User.email)
                         ])
     username = StringField("Username",
+                           default='',
                            validators=[InputRequired(
                                         message="Username is required."),
                                        unique_check(User, User.username)])
     password = PasswordField("Password",
+                             default='',
                              validators=[
                                  InputRequired(
                                      message="Password is required."),
                                  Length(min=7, max=15)
                              ])
     confirmation = PasswordField("Confirm Password",
+                                 default='',
                                  validators=[
                                      InputRequired(
                                          message="Password confirmation is "

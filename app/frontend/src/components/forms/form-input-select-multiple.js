@@ -51,7 +51,7 @@ const FormInputSelectMultiple = {
           v-if="required"
           :field="validator"
           validator="required">
-          <slot></slot>is required.
+          <slot></slot> is required.
       </error-message>
       <slot name="errors"></slot>
   </div>

@@ -1,8 +1,8 @@
-import navListButton from './nav-list-button';
+import NavListButton from './nav-list-button';
 
 const folderNav = ('folder-nav', {
   components: {
-    'nav-list-button': navListButton,
+    'nav-list-button': NavListButton,
   },
   props: {
     eventSignal: Object,
@@ -55,6 +55,7 @@ const folderNav = ('folder-nav', {
 
         <ul class="nav ml-auto justify-content-end">
             <nav-list-button
+                id="new-message"
                 ref="new-message"
                 v-if="folderIsVisible"
                 v-bind:event-signal="eventSignal.newMessage"
@@ -66,6 +67,7 @@ const folderNav = ('folder-nav', {
             </nav-list-button>
 
             <nav-list-button
+             id="previous-message"
              ref="previous-message"
              v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.updateActive"
@@ -78,6 +80,7 @@ const folderNav = ('folder-nav', {
 
             <nav-list-button
              ref="next-message"
+             id="next-message"
              v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.updateActive"
              v-on:update-active-message="$emit(eventSignal.updateActive, +1)"

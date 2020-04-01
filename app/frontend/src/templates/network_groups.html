@@ -17,6 +17,7 @@
                     v-bind:serializer="suggestionSerializer"
                     placeholder="Enter name of group..."
                     @hit="typeahead.selected = $event"/>
+                    {{ render_errors(GroupSearch.name) }}
             </div>
         </div>  
         {{ field_render(GroupSearch.submit)}}

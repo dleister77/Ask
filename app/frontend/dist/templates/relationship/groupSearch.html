@@ -1,6 +1,6 @@
 {% extends "/layout/sub/single_column.html" %}
 
-{% from "/macros/form.html" import field_render %}
+{% from "/macros/form.html" import field_render, render_errors %}
 {% from "/macros/group.html" import renderGroupShort %}
 {% from "/macros/nav.html" import pagination %}
 
@@ -20,6 +20,7 @@
                     v-bind:serializer="suggestionSerializer"
                     placeholder="Enter name of group..."
                     @hit="typeahead.selected = $event"/>
+                {{ render_errors(form.name) }}
             </div>
         </div>  
         {{ field_render(form.submit)}}
@@ -40,20 +41,28 @@
     <br>
 </div>
 
-{% endblock content_narrow_form %}
+
+{% endblock %}
+
+
 
 
 {% block jsScripts %}
 
-    <!-- url for js file -->
-    <script> let links = {'autocomplete': "{{ url_for('relationship.groupSearchAutocomplete') }}"} </script>
+<script>
 
-
+    let links = {
+        autocomplete: "{{ url_for('relationship.groupSearchAutocomplete') }}"
+    }
+    </script>
     
-        <script src="/static/js/groupSearch.1a895285816513a9bdf2.js"></script>
     
-        
+    
+        <script src="/static/js/groupSearch.a96e7cd7cf63257e96dc.js"></script>
+    
 
 
 {% endblock %}
+
+
 

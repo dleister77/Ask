@@ -50,7 +50,7 @@ const FormElementMixin = {
       return vuelidateInvalid || sseInvalid;
     },
     filtered_server_side_errors() {
-      if (this.has_sse) {
+      if (this.has_sse && this.validator.$dirty && !this.validator.required) {
         const errors = this.server_side_errors.filter((error) => {
           return !error.includes('require');
         });
@@ -64,8 +64,14 @@ const FormElementMixin = {
       return '';
     },
   },
+  data() {
+    return {
+      enteredValue: '',
+    };
+  },
   methods: {
     updateValue(value) {
+      this.enteredValue = value;
       this.$emit('input', value);
     },
   },

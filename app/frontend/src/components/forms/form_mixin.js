@@ -44,10 +44,11 @@ const FormMixin = {
   },
   methods: {
     populate_form() {
-      return new FormData(document.getElementById(this.form_id));
+      return new FormData(this.$refs.form_ref);
     },
     reset_form() {
       this.$v.$reset();
+      this.server_side_errors = {};
       this.form = resetForm(this.form);
       this.$emit('form_is_reset');
     },
@@ -56,7 +57,6 @@ const FormMixin = {
       this.$emit('form_is_set');
     },
     submit() {
-      this.$emit('form_is_submitted');
       if (this.$v.$invalid) {
         alert('Please correct errors and resubmit');
       } else {
@@ -73,8 +73,10 @@ const FormMixin = {
             let message = 'Unable to send message. Please correct errors:\n';
             const formErrors = error.response.data.errors;
             this.server_side_errors = formErrors;
-            const displayedErrors = Object.values(formErrors);
-            message += displayedErrors.join('\n');
+            if (formErrors !== undefined) {
+              const displayedErrors = Object.values(formErrors);
+              message += displayedErrors.join('\n');
+            }
             alert(message);
           });
       }

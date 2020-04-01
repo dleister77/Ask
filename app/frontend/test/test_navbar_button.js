@@ -1,7 +1,6 @@
-import nav_list_button from '../src/components/nav-list-button.js';
+import NavListButton from '../src/components/nav-list-button';
 
 require('jsdom-global')();
-
 
 const describe = require('mocha').describe;
 const it = require('mocha').it;
@@ -9,18 +8,20 @@ const assert = require('chai').assert
 const Vue = require('vue/dist/vue.js');
 const VueTestUtils = require('@vue/test-utils');
 
-const App = Vue.component('app', nav_list_button);
+const App = Vue.component('app', NavListButton);
 
-const wrapper = VueTestUtils.mount(App,{
-    propsData:{
-        eventSignal: 'testsignal'
-    }
-});
+const mountOptions = {
+  propsData: {
+    eventSignal: 'testsignal',
+  },
+};
+
+const wrapper = VueTestUtils.mount(App, mountOptions);
 
 wrapper.find('button').trigger('click');
 
-describe('nav list button', function(){
-  it('should emit test-signal when button is clicked', function(){
-      assert.equal(wrapper.emitted().testsignal.length,1);
-    });
+describe('nav list button', () => {
+  it('should emit test-signal when button is clicked', () => {
+    assert.equal(wrapper.emitted().testsignal.length, 1);
   });
+});

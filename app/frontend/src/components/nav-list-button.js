@@ -1,4 +1,4 @@
-const navListButton = {
+const NavListButton = {
   props: {
     eventSignal: {
       type: String,
@@ -20,4 +20,4 @@ const navListButton = {
     `,
 };
 
-export default navListButton;
+export default NavListButton;

@@ -12,7 +12,7 @@ import ErrorMessage from './forms/error-message';
 import FormInput from './forms/form-input';
 import FormInputSelect from './forms/form-input-select';
 import { states } from '../../supporting/states';
-import { or, minValue } from 'vuelidate/lib/validators';
+
 
 
 const FormRegister = {
@@ -68,11 +68,7 @@ const FormRegister = {
           required,
         },
         state: {
-          required: and(required, minValue(1)),
-        },
-        zip: {
           required,
-          length: and(minLength(5), maxLength(5)),
         },
       },
       email: {
@@ -98,8 +94,6 @@ const FormRegister = {
     submit(event) {
       if (this.$v.$invalid) {
         alert('Please correct errors and resubmit');
-        event.preventDefault();
-        this.$v.$touch();
       } else {
         event.target.submit();
       }
@@ -116,19 +110,13 @@ const FormRegister = {
   },
   template: `
   <div>
-      <form
-        ref="form_ref"
-        :id="form_id"
-        :action="url"
-        method="POST"
-        novalidate="true">
+      <form ref="form_ref" :id="form_id" :action="url" method="POST">
 
           <input type="hidden"
           :value="form.csrf_token"
           name="csrf_token">
 
           <form-input
-            ref="first_name"
             name="first_name"
             v-model.trim="$v.form.first_name.$model"
             :validator="$v.form.first_name"
@@ -137,7 +125,6 @@ const FormRegister = {
           </form-input>
 
           <form-input
-            ref="last_name"
             name="last_name"
             v-model.trim="$v.form.last_name.$model"
             :validator="$v.form.last_name"
@@ -146,49 +133,45 @@ const FormRegister = {
           </form-input>
 
           <form-input
-            ref="address-line1"
             name="address-line1"
-            v-model.trim="$v.form.address.line1.$model"
+            :required="true"
+            v-model.trim="$v.form.address.line1"
             :validator="$v.form.address.line1"
-            :server_side_errors="server_side_errors.address ? server_side_errors.address.line1 : undefined">
+            :server_side_errors="server_side_errors.address.line1">
             <template #default>Street Address</template>
           </form-input>
 
           <form-input
-            ref="address-line2"
             name="address-line2"
             :required="false"
             v-model.trim="form.address.line2"
-            :server_side_errors="server_side_errors.address ? server_side_errors.address.line2 : undefined">
+            :server_side_errors="server_side_errors.address.line2">
             <template #default>Address Line 2</template>
           </form-input>
 
           <form-input
-            ref="address-city"
             name="address-city"
             v-model.trim="$v.form.address.city.$model"
             :validator="$v.form.address.city"
-            :server_side_errors="server_side_errors.address ? server_side_errors.address.city : undefined">
+            :server_side_errors="server_side_errors.address.city">
             <template #default>City</template>
           </form-input>
 
           <form-input-select
-            ref="address-state"
             name="address-state"
             :options="options.states"
             :validator="$v.form.address.state"
             :value="form.address.state"
             v-model="$v.form.address.state.$model"
-            :server_side_errors="server_side_errors.address ? server_side_errors.address.state : undefined">
+            :server_side_errors="server_side_errors.state">
             <template #default>State</template>
           </form-input-select> 
 
           <form-input
-            ref="address-zip"
             name="address-zip"
             v-model.trim="$v.form.address.zip.$model"
             :validator="$v.form.address.zip"
-            :server_side_errors="server_side_errors.address ? server_side_errors.address.zip : undefined">
+            :server_side_errors="server_side_errors.zip">
             <template #default>Zip Code</template>
             <template v-slot:errors>
               <error-message
@@ -200,7 +183,6 @@ const FormRegister = {
           </form-input>
 
           <form-input
-            ref="email"
             name="email"
             v-model.trim="$v.form.email.$model"
             :validator="$v.form.email"
@@ -210,13 +192,12 @@ const FormRegister = {
               <error-message 
                 :field="$v.form.email"
                 validator="email">
-                <template #default>Invalid email address.</template></default>
+                <template #default>Invalid email address.</default>
               </error-message>
             </template>  
           </form-input>
 
           <form-input
-            ref="username"
             name="username"
             v-model.trim="$v.form.username.$model"
             :validator="$v.form.username"
@@ -225,7 +206,6 @@ const FormRegister = {
           </form-input>
 
           <form-input
-            ref="password"
             name="password"
             type="password"
             v-model.trim="$v.form.password.$model"
@@ -242,7 +222,6 @@ const FormRegister = {
           </form-input>
 
           <form-input
-            ref="confirmation"
             name="confirmation"
             type="password"
             v-model.trim="$v.form.confirmation.$model"
@@ -259,10 +238,9 @@ const FormRegister = {
           </form-input>
 
           <button
-              id="submit"
               type="submit"
               class="btn btn-primary btn-block"
-              @click="submit">
+              @click="$v.$touch">
               Submit
           </button>             
       </form>

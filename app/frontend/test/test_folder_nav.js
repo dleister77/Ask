@@ -1,5 +1,4 @@
-import folder_nav from '../src/components/folder-nav.js';
-import nav_list_button from '../src/components/nav-list-button.js'
+import FolderNav from '../src/components/folder-nav';
 
 require('jsdom-global')();
 const describe = require('mocha').describe;
@@ -11,82 +10,90 @@ const assert = require('chai').assert
 const Vue = require('vue/dist/vue.js');
 const VueTestUtils = require('@vue/test-utils');
 
-const App = Vue.component('app', folder_nav);
+const App = Vue.component('app', FolderNav);
 
 
-let mountOptions = {
-    propsData: {
-        eventSignal: {
-            updateActive: "update-active-message",
-            newMessage: "new-message",
-            backToLast: "back-to-last",
-            replyToMessage: "reply-to-message",
-            moveMessage: 'move-message',
-        },
-        folderIsVisible: true,
-        messageIsVisible: false,
-        moveLinksVisible: false,
-        newMessageIsVisible: false,
-        urls:{
-            view_inbox: '/message/folder/inbox',
-            view_sent: '/message/folder/sent',
-            view_archive: '/message/folder/archive',
-            view_trash: '/message/folder/trash'
-        }
-    }
+const mountOptions = {
+  propsData: {
+    eventSignal: {
+      updateActive: 'update-active-message',
+      newMessage: 'new-message',
+      backToLast: 'back-to-last',
+      replyToMessage: 'reply-to-message',
+      moveMessage: 'move-message',
+    },
+    folderIsVisible: true,
+    messageIsVisible: false,
+    moveLinksVisible: false,
+    newMessageIsVisible: false,
+    urls: {
+      view_inbox: '/message/folder/inbox',
+      view_sent: '/message/folder/sent',
+      view_archive: '/message/folder/archive',
+      view_trash: '/message/folder/trash',
+    },
+  },
 };
 
-describe('check instance', function(){
-    let wrapper=VueTestUtils.mount(App, mountOptions);
-    it('check that its a vue instance', function(){
+describe('check instance', () => {
+  let wrapper=VueTestUtils.mount(App, mountOptions);
+  it('check that its a vue instance', () => {
     assert.isTrue(wrapper.isVueInstance());
-    });
-    wrapper.destroy();
+  });
+  wrapper.destroy();
 });
 
-describe('visible links', function(){
-    let wrapper;
-    let refsToTest = ['folder-list', 'new-message', 'back-button', 'previous-message','next-message','reply-to', 'move-links-delete','move-links-archive'];
-    describe('show set to true', async function(){
-        before( async function(){
-            wrapper = VueTestUtils.mount(App, mountOptions);
-            wrapper.setProps({folderIsVisible: true, messageIsVisible: true, moveLinksVisible: true});
-            await Vue.nextTick();
-        });
-        after(function(){
-            wrapper.destroy();
-        });
-        it('check set up', function(){
-            assert.isTrue(wrapper.vm.$props.folderIsVisible);
-            assert.isTrue(wrapper.vm.$props.messageIsVisible);
-            assert.isTrue(wrapper.vm.$props.moveLinksVisible);
-        });
-
-        refsToTest.forEach(function(item){
-            it(item, function(){
-                assert.isTrue(wrapper.find({ref: item}).exists());
-            });
-        });
+describe('visible links', () => {
+  let wrapper;
+  const refsToTest = [
+    'folder-list', 'new-message', 'back-button', 'previous-message',
+    'next-message', 'reply-to', 'move-links-delete', 'move-links-archive'
+  ];
+  describe('show set to true', async () => {
+    before(async () => {
+      wrapper = VueTestUtils.mount(App, mountOptions);
+      wrapper.setProps({ folderIsVisible: true, messageIsVisible: true, moveLinksVisible: true });
+      await Vue.nextTick();
+    });
+    after(() => {
+      wrapper.destroy();
+    });
+    it('check set up', () => {
+      assert.isTrue(wrapper.vm.$props.folderIsVisible);
+      assert.isTrue(wrapper.vm.$props.messageIsVisible);
+      assert.isTrue(wrapper.vm.$props.moveLinksVisible);
     });
 
-    describe('show set to false', async function(){
-        before( async function(){
-            wrapper = VueTestUtils.mount(App, mountOptions);
-            wrapper.setProps({folderIsVisible: false, messageIsVisible: false, moveLinksVisible: false});
-            await Vue.nextTick();
-        });
-        after(function(){
-            wrapper.destroy();
-        })
-        it('check set up', function(){
-            assert.isNotTrue(wrapper.vm.$props.folderIsVisible);
-            assert.isNotTrue(wrapper.vm.$props.messageIsVisible);
-            assert.isNotTrue(wrapper.vm.$props.moveLinksVisible);
-        });
-        refsToTest.forEach(function(item){
-            it(item, function(){
-                assert.isNotTrue(wrapper.find({ref: item}).exists());
-            });
-        });
+    refsToTest.forEach((item) => {
+      it(item, () => {
+        assert.isTrue(wrapper.find({ ref: item }).exists());
+      });
     });
+  });
+
+  describe('show set to false', async () => {
+    before(async () => {
+      wrapper = VueTestUtils.mount(App, mountOptions);
+      const props = {
+        folderIsVisible: false,
+        messageIsVisible: false,
+        moveLinksVisible: false,
+      };
+      wrapper.setProps(props);
+      await Vue.nextTick();
+    });
+    after(() => {
+      wrapper.destroy();
+    });
+    it('check set up', () => {
+      assert.isNotTrue(wrapper.vm.$props.folderIsVisible);
+      assert.isNotTrue(wrapper.vm.$props.messageIsVisible);
+      assert.isNotTrue(wrapper.vm.$props.moveLinksVisible);
+    });
+    refsToTest.forEach((item) => {
+      it(item, () => {
+        assert.isNotTrue(wrapper.find({ ref: item }).exists());
+      });
+    });
+  });
 });

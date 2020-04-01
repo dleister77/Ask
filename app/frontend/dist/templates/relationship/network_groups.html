@@ -5,10 +5,24 @@
 
 {% block content_narrow_form %}
 
-        <form action="{{url_for('relationship.groupSearch')}}" id="groupSearch" method="get">
-            {{form_render(GroupSearch)}}
-            <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
-        </form>
+    <form action="{{url_for('relationship.groupSearch')}}" id="groupSearchForm" method="get">
+        <div class = "form-group row">
+            <div class = "col">
+                {{ GroupSearch.name.label() }}
+                {{ GroupSearch.name(type="hidden", **{'v-bind:value':'form.name'} ) }}
+                <vue-bootstrap-typeahead
+                    id="name_typeahead"
+                    v-bind:data="typeahead.suggestions"
+                    v-model="form.name"
+                    v-bind:serializer="suggestionSerializer"
+                    placeholder="Enter name of group..."
+                    @hit="typeahead.selected = $event"/>
+                    {{ render_errors(GroupSearch.name) }}
+            </div>
+        </div>  
+        {{ field_render(GroupSearch.submit)}}
+        <a href="{{url_for('relationship.group_create')}}">Create New Group</a>
+    </form>
         <br>
         <div id="network_groups"></div>
         <!-- list of groups user belongs to -->
@@ -31,7 +45,6 @@
         <br>
     <!-- url for js file -->
         </div>
-    <script> let url = "{{ url_for('relationship.groupSearchAutocomplete') }}" </script>
 
 {% endblock content_narrow_form %}
 
@@ -42,7 +55,6 @@
         
         <script>
             var modal = {{modal_open|tojson}}.modal
-            console.log(modal)
             $(window).on('load', function(){
             $(modal).modal('show');
         });
@@ -100,6 +112,23 @@
                 </div>
             </div>
         </div>
+
+{% endblock %}
+
+{% block jsScripts %}
+
+<script>
+
+    let links = {
+        autocomplete: "{{ url_for('relationship.groupSearchAutocomplete') }}"
+    }
+    </script>
+    
+    
+    
+        <script src="/static/js/network_groups.32581a4fdc5c7b834d1f.js"></script>
+    
+
 
 {% endblock %}
 

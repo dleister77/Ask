@@ -23,6 +23,7 @@ const FormInput = {
       <input
         class="form-control"
         :class="error_class"
+        :value="value"
         v-bind="$props"
         v-bind:id="name"
         v-on:change="updateValue($event.target.value)">
@@ -31,12 +32,12 @@ const FormInput = {
           v-if="required"
           :field="validator"
           validator="required">
-          <slot></slot> is required.
+          <slot>[[name]]</slot> is required.
       </error-message>
       <slot name="errors"></slot>
       <template v-for="error in filtered_server_side_errors">
         <small class="form-error-message">
-        [[ error ]]
+        [[error]]
         </small>
       </template>
   </div>

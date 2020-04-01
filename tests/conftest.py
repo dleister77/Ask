@@ -204,8 +204,9 @@ def test_db(app):
     u3.set_password("password5678")
 
 
-    #set starting messages
+    # set starting messages
     m1 = Message.send_new(dict(user_id=1), dict(user_id=2), "test subject", "test body")
+    time.sleep(1)
     m2 = Message.send_new(dict(user_id=2), dict(full_name="admin"),"test admin subject", "test adminbody", msg_type="admin")
     m3 = Message.send_new(dict(user_id=1), dict(user_id=2), "yet another test subject", " yet another test body")
 
@@ -222,7 +223,6 @@ def dbSession(test_db):
     session = db.create_scoped_session(options)
     db.session = session
     yield session
-    print("closing db")
     db.session.close()
     transaction.rollback()
     connection.close()

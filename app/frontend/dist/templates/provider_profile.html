@@ -32,10 +32,12 @@
 
 {% block content_wide %}
     {% if reviews %}
-        {%for review in reviews %}
-            {{render_review(review, current_user, false)}}
-            <br>
-        {% endfor %}
+        <div id="reviews">
+            {%for review in reviews %}
+                {{render_review(review, current_user, false)}}
+                <br>
+            {% endfor %}
+        </div>
 
         {{pagination(pag_urls)}}
         <modal-form-wrapper
@@ -70,7 +72,7 @@
 </script>
 
 
-    <script src="/static/js/providerProfile.d0733cacd07dec29039b.js"></script>
+    <script src="/static/js/providerProfile.2ecad05e839473929a6b.js"></script>
 
 
 {% endblock %}

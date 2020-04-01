@@ -4,7 +4,8 @@ const FormInputSelect = {
   mixins: [FormElementMixin],
   computed: {
     options_start_at_0() {
-      return this.options[0].id === 0;
+      const firstId = this.options[0].id;
+      return firstId === 0;
     },
   },
   data() {
@@ -22,14 +23,14 @@ const FormInputSelect = {
       required: true,
     },
   },
-  mounted() {
-    this.selected = this.value;
-  },
-  watch: {
-    selected(value) {
-      this.$emit('input', value);
-    },
-  },
+  // created() {
+  //   // this.selected = this.value;
+  // },
+  // watch: {
+  //   selected(value) {
+  //     this.$emit('input', value);
+  //   },
+  // },
   template: `
   <div class="form-group">
       <label
@@ -42,12 +43,12 @@ const FormInputSelect = {
         :class="{'form-error':validator.$error}"
         v-bind="$props"
         v-bind:id="name"
-        v-model="selected">
+        :value="value"
+        @change=updateValue($event.target.value)>
         <option
           v-if="options[0].id != 0"
-          value=0>
-          <-- Select from list -->
-        </option>
+          disabled
+          value=0><-- Select from list --></option>
         <template v-for="option in options">
           <option 
               :value="option.id">
@@ -59,7 +60,7 @@ const FormInputSelect = {
           v-if="required"
           :field="validator"
           validator="required">
-          <slot></slot>is required.
+          <slot></slot> is required.
       </error-message>
       <slot name="errors"></slot>
       <template v-for="error in filtered_server_side_errors">

@@ -453,6 +453,7 @@ class TestGroupSearch(FunctionalTest):
     def test_invalid(self, activeClient, testGroup):
         testCase = {"name": ""}
         response = self.getRequest(activeClient, **testCase)
+        print(response.data.decode())
         assert response.status_code == 422
         errorMsg = 'Group name is required.'
         assert errorMsg.encode() in response.data

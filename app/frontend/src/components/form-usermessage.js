@@ -44,39 +44,46 @@ const FormUsermessage = {
   watch: {},
   template: `
   <div>
-      <form :id="form_id" :action="url" method="POST">
+      <form ref="form_ref" :id="form_id" :action="url" method="POST">
           <input name="csrf_token" type="hidden" :value="form_presets.csrf_token">
-          <input name='recipient_id' type="hidden" :value="form_presets.recipient_id">
-              <form-input
-                  name="recipient"
-                  v-model="$v.form.recipient_name.$model"
-                  :readonly=true
-                  :validator=$v.form.recipient_name
-                  :server_side_errors="server_side_errors.recipient_name">
-                  To
-              </form-input>
-              <form-input
-                  name='subject'
-                  v-model.trim="$v.form.subject.$model"
-                  :validator="$v.form.subject"
-                  :server_side_errors="server_side_errors.subject">
-                  Subject
-              </form-input>
-              <form-textbox
-                  name='body'
-                  v-model.trim="$v.form.body.$model"
-                  :validator="$v.form.body"
-                  :server_side_errors="server_side_errors.body">
-                  Message Body
-              </form-textbox>
+          <input
+            ref='recipient_id'
+            name='recipient_id'
+            type="hidden"
+            :value="form_presets.recipient_id">
 
-              <button
-                  :id="form_id + '_submit'"
-                  class="btn btn-primary btn-block submit"
-                  type="submit"
-                  v-on:click.prevent="submit">
-                  Submit
-              </button>
+            <form-input
+              ref='recipient'
+              name="recipient"
+              v-model="$v.form.recipient_name.$model"
+              :readonly=true
+              :validator=$v.form.recipient_name
+              :server_side_errors="server_side_errors.recipient_name"
+              >To</form-input>
+
+            <form-input
+              ref='subject'
+              name='subject'
+              v-model.trim="$v.form.subject.$model"
+              :validator="$v.form.subject"
+              :server_side_errors="server_side_errors.subject"
+              >Subject</form-input>
+
+            <form-textbox
+              ref='body'
+              name='body'
+              v-model.trim="$v.form.body.$model"
+              :validator="$v.form.body"
+              :server_side_errors="server_side_errors.body"
+              >Message body</form-textbox>
+
+            <button
+              :id="form_id + '_submit'"
+              class="btn btn-primary btn-block submit"
+              type="submit"
+              v-on:click.prevent="submit"
+              >Submit</button>
+
       </form>
   </div>
   

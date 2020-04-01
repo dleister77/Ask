@@ -126,6 +126,9 @@ const FormSuggestion = {
       website: {
       },
       telephone: {
+        required: requiredIf(function () {
+          return this.form.contact_info_updated;
+        }),
         or: or(isEmpty, telephone),
       },
     },
@@ -142,7 +145,6 @@ const FormSuggestion = {
   },
   async created() {
     this.options.sectors = await this.get_sector_list();
-    this.options.categories = await this.get_category_list();
   },
   watch: {
     'form.sector': {
@@ -156,54 +158,54 @@ const FormSuggestion = {
   },
   template: `
     <div>
-        <form :id="form_id" :action="url" method="POST">
+        <form ref="form_ref" :id="form_id" :action="url" method="POST">
             <input name="csrf_token" type="hidden" :value="form_presets.csrf_token">
             <input name='id' type="hidden" :value="form_presets.id">
             
             <form-input
-                name="name"
-                :readonly="true"
-                :required="true"
-                :validator="$v.form.name"
-                v-model="$v.form.name.$model"
-                :server_side_errors="server_side_errors.name">
-                Business Name
+              name="name"
+              :readonly="true"
+              :required="true"
+              :validator="$v.form.name"
+              v-model="$v.form.name.$model"
+              :server_side_errors="server_side_errors.name">
+              <template #default>Business Name</template>
             </form-input>
             
             <form-input-checkbox
-                name="is_not_active"
-                :required="true"
-                v-model="$v.form.is_not_active.$model"
-                :validator="$v.form.is_not_active"
-                :server_side_errors="server_side_errors.is_not_active">
-                Check if business is permanently closed.
+              name="is_not_active"
+              :required="true"
+              v-model="$v.form.is_not_active.$model"
+              :validator="$v.form.is_not_active"
+              :server_side_errors="server_side_errors.is_not_active">
+              <template #default>Check if business is permanently closed.</template>
             </form-input-checkbox>
             
             <form-input-checkbox
-                name="category_updated"
-                :required="true"
-                :validator="$v.form.category_updated"
-                v-model="$v.form.category_updated.$model"
-                :server_side_errors="server_side_errors.category_updated">
-                Check if business sector/categories need to be updated.
+              name="category_updated"
+              :required="true"
+              :validator="$v.form.category_updated"
+              v-model="$v.form.category_updated.$model"
+              :server_side_errors="server_side_errors.category_updated">
+              <template #default>Check if business sector/categories need to be updated.</template>
             </form-input-checkbox>
             <form-input-select
-                v-if="form.category_updated"
-                name="sector"
-                :options="options.sectors"
-                :validator="$v.form.sector"
-                v-model="$v.form.sector.$model"
-                :server_side_errors="server_side_errors.sector">
-            Sector
-          </form-input-select>            
+              v-if="form.category_updated"
+              name="sector"
+              :options="options.sectors"
+              :validator="$v.form.sector"
+              v-model="$v.form.sector.$model"
+              :server_side_errors="server_side_errors.sector">
+              <template #default>Sector</template>
+            </form-input-select>            
             <form-input-select-multiple
-                v-if="form.category_updated"
-                name="category"
-                :options="options.categories"
-                :validator="$v.form.category"
-                v-model="$v.form.category.$model"
-                :server_side_errors="server_side_errors.category">
-            Category
+              v-if="form.category_updated"
+              name="category"
+              :options="options.categories"
+              :validator="$v.form.category"
+              v-model="$v.form.category.$model"
+              :server_side_errors="server_side_errors.category">
+            <template #default>Category</template>
           </form-input-select-multiple>
 
           <form-input-checkbox
@@ -212,18 +214,18 @@ const FormSuggestion = {
             :validator="$v.form.address_updated"
             v-model="$v.form.address_updated.$model"
             :server_side_errors="server_side_errors.address_updated">
-            Check if address/location is incorrect.
-        </form-input-checkbox>
+            <template #default>Check if address/location is incorrect.</template>
+          </form-input-checkbox>
 
-            <form-input-checkbox
-                v-if="form.address_updated"
-                name="coordinate_error"
-                :required="true"
-                :validator="$v.form.address.coordinate_error"
-                v-model="$v.form.address.coordinate_error.$model"
-                :server_side_errors="server_side_errors.address ? server_side_errors.address.coordinate_error : undefined">
-                Check if map coordinates are incorrect.
-            </form-input-checkbox>
+          <form-input-checkbox
+            v-if="form.address_updated"
+            name="coordinate_error"
+            :required="true"
+            :validator="$v.form.address.coordinate_error"
+            v-model="$v.form.address.coordinate_error.$model"
+            :server_side_errors="server_side_errors.address ? server_side_errors.address.coordinate_error : undefined">
+            <template #default>Check if map coordinates are incorrect.</template>
+          </form-input-checkbox>
             <form-input
                 v-if="form.address_updated"
                 name="line1"
@@ -231,16 +233,16 @@ const FormSuggestion = {
                 :validator="$v.form.address.line1"
                 v-model="$v.form.address.line1.$model"
                 :server_side_errors="server_side_errors.address ? server_side_errors.address.line1 : undefined">
-                Street Address
-            </form-input>
+                <template #default>Street Address</template>
+              </form-input>
             <form-input
                 v-if="form.address_updated"
                 name="line2"
                 :required="false"
                 v-model="form.address.line2"
                 :server_side_errors="server_side_errors.address ? server_side_errors.address.line2 : undefined">
-                Address Line 2
-            </form-input>
+                <template #default>Address Line 2</template>
+              </form-input>
             <form-input
                 v-if="form.address_updated"
                 name="city"
@@ -248,8 +250,7 @@ const FormSuggestion = {
                 :validator="$v.form.address.city"
                 v-model="$v.form.address.city.$model"
                 :server_side_errors="server_side_errors.address ? server_side_errors.address.city : undefined">
-                City
-            </form-input>
+                <template #default>City</template></form-input>
             <form-input-select
                 v-if="form.address_updated"
                 name="state"
@@ -258,8 +259,8 @@ const FormSuggestion = {
                 :value="form.address.state"
                 v-model.trim="$v.form.address.state.$model"
                 :server_side_errors="server_side_errors.address ? server_side_errors.address.state : undefined">
-            State
-          </form-input-select>
+                <template #default>State</template>
+              </form-input-select>
             <form-input
                 v-if="form.address_updated"
                 name="zip"
@@ -267,8 +268,8 @@ const FormSuggestion = {
                 :validator="$v.form.address.zip"
                 v-model="$v.form.address.zip.$model"
                 :server_side_errors="server_side_errors.address ? server_side_errors.address.zip : undefined">
-                Zip Code
-            </form-input>                                            
+                <template #default>Zip Code</template>
+              </form-input>                                            
 
             <form-input-checkbox
                 name="contact_info_updated"
@@ -276,8 +277,8 @@ const FormSuggestion = {
                 v-model="$v.form.contact_info_updated.$model"
                 :validator="$v.form.contact_info_updated"
                 :server_side_errors="server_side_errors.contact_info_updated">
-                Check if email, website or telephone are incorrect.
-            </form-input-checkbox>
+                <template #default>Check if email, website or telephone are incorrect.</template>
+              </form-input-checkbox>
             <form-input
                 v-if="form.contact_info_updated"
                 name="email"
@@ -285,7 +286,7 @@ const FormSuggestion = {
                 :validator="$v.form.email"
                 v-model="$v.form.email.$model"
                 :server_side_errors="server_side_errors.email">
-                Email Address
+                <template #default>Email Address</template>
                 <template v-slot:errors>
                     <error-message
                     :field="$v.form.email"
@@ -302,16 +303,16 @@ const FormSuggestion = {
                 :validator="$v.form.website"
                 v-model="$v.form.website.$model"
                 :server_side_errors="server_side_errors.website">
-                Website
-            </form-input>  
+                <template #default>Website</template>
+              </form-input>  
             <form-input
                 v-if="form.contact_info_updated"
                 name="telephone"
-                :required="false"
+                :required="true"
                 :validator="$v.form.telephone"
                 v-model="$v.form.telephone.$model"
                 :server_side_errors="server_side_errors.telephone">
-                Telephone
+                <template #default>Telephone</template>
                 <template v-slot:errors>
                     <error-message
                     :field="$v.form.telephone"
@@ -321,18 +322,18 @@ const FormSuggestion = {
                 </template>
             </form-input>                                      
 
-            <form-textbox
-                name='other'
+            <!--<form-textbox
+                name="other"
                 v-model.trim="form.other"
                 :required="false"
                 :server_side_errors="server_side_errors.other">
-                Other
-            </form-textbox>
+                <template #default>Other</template>
+            </form-textbox> -->
 
             <button
                 :id="form_id + '_submit'"
                 class="btn btn-primary btn-block submit"
-                type="submit"
+                type="button"
                 v-on:click.prevent="submit">
                 Submit
             </button>
