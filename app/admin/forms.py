@@ -1,7 +1,9 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField,SubmitField, TextAreaField
-from wtforms.validators import (InputRequired, Email)
-                                
+from wtforms import StringField, SelectField, SubmitField, TextAreaField,\
+                    HiddenField
+from wtforms.validators import (InputRequired, Email, AnyOf)
+
+
 class MessageForm(FlaskForm):
     """Collects information to register new user for site.
 
@@ -13,15 +15,39 @@ class MessageForm(FlaskForm):
         subject (str): subject of message
         body (text): text body of message
     """
-
-    first_name = StringField("First Name", validators=[InputRequired(message="First name is required.")])
-    last_name = StringField("Last Name", validators=[InputRequired(message = "Last name is required.")])
-    email = StringField("Email Address", validators=[InputRequired(message="Email address is required."), Email()])
-    category = SelectField("Category", choices=[('question', 'Ask us a question'),
-                                                ('suggestion', 'Give us a suggestion'),
-                                                ('problem', 'Report a problem')],
-                        validators=[InputRequired(message="Category is required.")])
-    subject = StringField("Subject", validators=[InputRequired(message="Subject is required.")])
-    message = TextAreaField("Message", render_kw = {"rows": 6}, validators=[InputRequired()])
+    url = HiddenField("Url", validators=[AnyOf(["", None], message='')])
+    first_name = StringField(
+        "First Name",
+        validators=[InputRequired(message="First name is required.")]
+    )
+    last_name = StringField(
+        "Last Name",
+        validators=[InputRequired(message="Last name is required.")]
+    )
+    email = StringField(
+        "Email Address",
+        validators=[
+            InputRequired(message="Email address is required."),
+            Email()
+        ]
+    )
+    category = SelectField(
+        "Category",
+        choices=[
+            ('question', 'Ask us a question'),
+            ('suggestion', 'Give us a suggestion'),
+            ('problem', 'Report a problem')
+        ],
+        validators=[InputRequired(message="Category is required.")]
+    )
+    subject = StringField(
+        "Subject",
+        validators=[InputRequired(message="Subject is required.")]
+    )
+    body = TextAreaField(
+        "Message Body",
+        render_kw={"rows": 6},
+        validators=[InputRequired(message="Message body is required.")]
+    )
     submit = SubmitField("Submit")
     

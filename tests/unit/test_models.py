@@ -8,16 +8,15 @@ from shutil import rmtree
 from flask import current_app
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
-from werkzeug.datastructures import FileStorage, MultiDict
+from werkzeug.datastructures import FileStorage
 
-from app import db, mail
-from app.main.forms import ReviewForm
+from app import mail
 from app.models import User, Address, Group, Category, Review, Provider,\
                        FriendRequest, GroupRequest, Sector, Picture, Message,\
-                           Message_User, Conversation, Provider_Suggestion,\
-                               Address_Suggestion
+                       Message_User, Conversation, Provider_Suggestion,\
+                       Address_Suggestion
 from app.utilities.email import get_token
-from app.utilities.geo import geocode, AddressError, Location
+from app.utilities.geo import AddressError, Location
 from tests.conftest import assertEqualsTolerance
 
 
@@ -426,6 +425,7 @@ class TestProvider(object):
         assert testProvider.website == 'www.douthitelectrical.com/'
         assert testProvider.telephone == "7047263329"
         assert testProvider.address.line1 == "6000 Fairview Rd"
+        assert testProvider.is_active is True
 
     def test_newValid(self, newProviderDict, newAddressDict, mockGeoResponse):
         new = Provider.create(**newProviderDict)

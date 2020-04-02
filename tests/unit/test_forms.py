@@ -1,30 +1,28 @@
 
-from flask import request
 from flask_login import current_user
 import os
 import pytest
-from werkzeug.datastructures import ImmutableMultiDict, FileStorage, Headers
-from wtforms import ValidationError
+from werkzeug.datastructures import ImmutableMultiDict, FileStorage
 
 from app import create_app
-from app.models import Sector, Category, Provider, FriendRequest, GroupRequest,\
-	                   Group, State, Review
-from app.relationship.forms import (GroupCreateForm, FriendSearchForm,\
+from app.models import Category, Provider, State, Review
+from app.relationship.forms import (GroupCreateForm, FriendSearchForm,
 									GroupSearchForm, GroupEditForm,
 									FriendDeleteForm, FriendApproveForm,
 									GroupDeleteForm, GroupMemberApproveForm)
-from app.utilities.geo import Location						
-from tests.conftest import login, scenarioUpdate
+from app.admin.forms import MessageForm as FooterContactForm
+from app.utilities.geo import Location		
 from config import TestConfig
 
 app = create_app(TestConfig)
 with app.app_context():
 	from app.main.forms import ProviderAddForm, ProviderSearchForm, ReviewForm,\
-		                       ProviderFilterForm, ProviderAddress, ReviewEditForm,\
-							   ProviderSuggestionForm
+								ProviderAddress, ReviewEditForm,\
+								ProviderSuggestionForm
 	from app.auth.forms import UserUpdateForm, PasswordChangeForm,\
-							   RegistrationForm, LoginForm, AddressField,\
-							   PasswordResetForm, PasswordResetRequestForm
+                               RegistrationForm, LoginForm, AddressField,\
+                               PasswordResetForm, PasswordResetRequestForm
+
 
 @pytest.mark.usefixtures("dbSession")
 class FormTest(object):
@@ -52,6 +50,7 @@ class FormTest(object):
 		formDict.pop(key)
 		self.make_form(formDict)
 		self.assertNot(key, errorMsg)
+
 
 def make_form(formClass, providerDict):
 	form = ImmutableMultiDict(providerDict)
@@ -88,46 +87,45 @@ def form_test(app, test_form, test_case):
 @pytest.mark.usefixtures("activeClient")
 class TestGroupMemberApprove(FormTest):
 
-	formType = GroupMemberApproveForm
+    formType = GroupMemberApproveForm
 
-	def make_form(self, formDict):
-		"""Override FormTest make form to populate choices"""
-		super().make_form(formDict)
-		self.form.populate_choices(current_user)
-	
-	def test_new(self, testGroupRequest):
-		testCase = {"request": testGroupRequest.id}
-		self.new(testCase)
-		
-	def test_missingRequired(self, testGroupRequest):
-		testCase = {}
-		key = 'request'
-		errorMsg = "Please select at least one name to approve."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
+    def make_form(self, formDict):
+        """Override FormTest make form to populate choices"""
+        super().make_form(formDict)
+        self.form.populate_choices(current_user)
 
-	def test_invalidRequest(self, testGroupRequest):
-		testCase = {"request": testGroupRequest.id + 1}
-		key = 'request'
-		errorMsg = "Invalid request. Please select request from the list."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
-	
-	def test_notGroupAdmin(self, testGroupRequest2):
-		testCase = {"request": testGroupRequest2.id}
-		key = 'request'
-		errorMsg = "User not authorized to approve this request."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
-	
-	def test_populate_choices(self, testGroupRequest):
-		self.form = self.formType()
-		self.form.populate_choices(current_user)
-		r = testGroupRequest
-		assert self.form.request.choices == [(1, f"{r.group.name} - {r.requestor.full_name}")]		
-	
-	
+    def test_new(self, testGroupRequest):
+        testCase = {"request": testGroupRequest.id}
+        self.new(testCase)
 
+    def test_missingRequired(self, testGroupRequest):
+        testCase = {}
+        key = 'request'
+        errorMsg = "Please select at least one name to approve."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_invalidRequest(self, testGroupRequest):
+        testCase = {"request": testGroupRequest.id + 1}
+        key = 'request'
+        errorMsg = "Invalid request. Please select request from the list."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_notGroupAdmin(self, testGroupRequest2):
+        testCase = {"request": testGroupRequest2.id}
+        key = 'request'
+        errorMsg = "User not authorized to approve this request."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_populate_choices(self, testGroupRequest):
+        self.form = self.formType()
+        self.form.populate_choices(current_user)
+        r = testGroupRequest
+        assert self.form.request.choices == [
+            (1, f"{r.group.name} - {r.requestor.full_name}")
+        ]		
 
 
 @pytest.mark.usefixtures("activeClient")
@@ -1022,3 +1020,36 @@ class TestProviderSuggestion(FormTest):
 		self.form.populate_choices()
 		check = self.form.validate()
 		assert not check
+
+@pytest.mark.usefixtures("client")
+class TestFooterContact(FormTest):
+    """Test footer contact form."""
+
+    formType = FooterContactForm
+    base_case = {
+        "first_name": "Roberto",
+        "last_name": "Firmino",
+        "email": "lfirmino@lfc.com",
+        "category": "question",
+        "subject": "website",
+        "body": "what is your name?"
+    }
+
+    def test_valid(self):
+        self.new(self.base_case)
+    
+    def test_invalid_url(self):
+        test_case = self.base_case.copy()
+        test_case['url'] = 'www.badwebsite.com'
+        self.make_form(test_case)
+        self.assertNot('url','')
+
+    @pytest.mark.parametrize('key, errorMsg',
+        [('first_name', 'First name is required.'),
+	     ('last_name', 'Last name is required.'),
+         ('email', 'Email address is required.'),
+         ('category', 'Category is required.'),
+         ('subject', 'Subject is required.')
+        ])
+    def test_missingRequired(self, key, errorMsg):
+        self.missingRequired(self.base_case, key, errorMsg)

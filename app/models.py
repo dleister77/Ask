@@ -996,7 +996,7 @@ class Provider(Model):
     email = db.Column(db.String(120), unique=True)
     _telephone = db.Column(db.String(24), unique=True, nullable=False)
     website = db.Column(db.String(120))
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     address = db.relationship(
         "Address", backref="provider", uselist=False, passive_deletes=True,
@@ -1128,18 +1128,31 @@ class Provider(Model):
         q.select_from = Provider
         q.limit = limit
         q.group_by = [
-            Provider.id, Provider.name, Provider.email, Provider.telephone,
-            Address.line1, Address.line2, Address.city, State.state_short,
-            State.name, State.id, Address.zip, Address.latitude,
+            Provider.id,
+            Provider.name,
+            Provider.email,
+            Provider.website,
+            Provider.telephone,
+            Provider.is_active,
+            Address.line1,
+            Address.line2,
+            Address.city,
+            State.state_short,
+            State.name,
+            State.id,
+            Address.zip,
+            Address.latitude,
             Address.longitude
         ]
         q.join_args = [Provider.address, Address.state, Provider.categories]
         q.outerjoin_args = [Provider.reviews, Review.user]
         q.query_args = [
-            Provider.id.label('id'), Provider.name.label('name'),
+            Provider.id.label('id'),
+            Provider.name.label('name'),
             Provider.email.label('email'),
             Provider.website.label('website'),
             Provider.telephone.label('telephone'),
+            Provider.is_active.label('is_active'),
             Address.line1.label('line1'),
             Address.line2.label('line2'),
             Address.city.label('city'),
@@ -1164,11 +1177,12 @@ class Provider(Model):
         else:
             q.sort_args = [Provider.name]
 
+        q.filter_args.append(Provider.is_active == True)  # noqa
+
         if "category" in filters.keys():
             q.filter_args.append(
                 Provider.categories.contains(filters['category'])
             )
-            # q.filter_args.append(Category.id == filters['category'].id)
 
         if "location" in filters.keys():
             q.filter_args.extend(
