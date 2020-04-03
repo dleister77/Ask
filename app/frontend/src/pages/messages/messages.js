@@ -182,7 +182,6 @@ const messageApp = new Vue({
                       </tr>
                   </tbody>
               </table>    
-              <button v-on:click="reverseMessages">Reverse Messages</button>
           </div>
           <br>
           <pagination-nav

@@ -1,7 +1,7 @@
 """add provider suggestions
 
 Revision ID: 7a07e2d280bf
-Revises: 10edb68acf2c
+Revises: 14e5e6764742
 Create Date: 2020-03-10 19:15:30.018444
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '7a07e2d280bf'
-down_revision = '10edb68acf2c'
+down_revision = '14e5e6764742'
 branch_labels = None
 depends_on = None
 
