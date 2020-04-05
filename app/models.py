@@ -11,7 +11,7 @@ from sqlalchemy import UniqueConstraint, func as saFunc, or_, and_
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import backref, validates
 from sqlalchemy.sql import exists, func
-from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import desc, text
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
@@ -996,7 +996,7 @@ class Provider(Model):
     email = db.Column(db.String(120), unique=True)
     _telephone = db.Column(db.String(24), unique=True, nullable=False)
     website = db.Column(db.String(120))
-    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, server_default=text('1'))
 
     address = db.relationship(
         "Address", backref="provider", uselist=False, passive_deletes=True,
