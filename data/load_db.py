@@ -1,6 +1,7 @@
 import sys
 import mysql.connector as mysql
 
+import settings
 from db import get_db, load_provider_file
 
 
@@ -16,10 +17,7 @@ def run_load(file_name):
     print("Finished loading")
 
 
-
 if __name__ == '__main__':
     import_file = sys.argv[1]
-    import_file = f'/home/leisterbrau/projects/scraping/output/{import_file}'
+    import_file = f'{settings.db_import_path}/{import_file}'
     run_load(import_file)
-
-        
