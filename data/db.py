@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import mysql.connector as mysql
 import settings
 
+
 @contextmanager
 def get_db():
     try:
@@ -13,8 +14,10 @@ def get_db():
             allow_local_infile=True
         )
         yield db
-    finally:
         db.close()
+    finally:
+        pass
+
 
 def load_provider_file(filename, cursor, db):
     create_temp = """CREATE TEMPORARY TABLE tmp (
