@@ -104,12 +104,16 @@ user_group = db.Table(
 # many to many table linking providers to multiple categories
 category_provider = db.Table(
     'category_provider', db.Model.metadata,
-    db.Column('category_id', db.Integer, db.ForeignKey('category.id')),
+    db.Column(
+        'category_id', db.Integer, db.ForeignKey('category.id'),
+        nullable=False
+    ),
     db.Column(
         'provider_id', db.Integer,
         db.ForeignKey(
             'provider.id', ondelete="CASCADE"
-        )
+        ),
+        nullable=False
     ),
     UniqueConstraint('category_id', 'provider_id', name='unique_cat_prov')
 )

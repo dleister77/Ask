@@ -1,3 +1,4 @@
+import pathlib
 import sys
 import mysql.connector as mysql
 
@@ -14,10 +15,20 @@ def run_load(file_name):
         except mysql.Error as e:
             print(f"Failed to load due to error: {e}")
             db.rollback()
-    print("Finished loading")
+    print(f'Finished loading: {file_name}')
 
+def process_imports(import_arg):
+    import_path_str = f'{settings.import_path}/{import_arg}'
+    import_path = pathlib.Path(import_path_str)
+    if import_path.is_file():
+        run_load(str(import_path))
+    elif import_path.is_dir():
+        for file in import_path.iterdir():
+            run_load(str(file))
 
 if __name__ == '__main__':
-    import_file = sys.argv[1]
-    import_file = f'{settings.db_import_path}/{import_file}'
-    run_load(import_file)
+    import_arg = sys.argv[1]
+    process_imports(import_arg)
+
+
+        
