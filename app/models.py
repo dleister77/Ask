@@ -1467,7 +1467,7 @@ class Review(Model):
         if comments == "" or comments is None:
             self._comments = None
         else:
-            self._comments = comments.capitalize()
+            self._comments = comments
 
     def _repr__(self):
         return f"<Rating {self.provider}, {self.rating}>"

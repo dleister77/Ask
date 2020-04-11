@@ -660,7 +660,7 @@ class TestReview(object):
         assert testReview.rating == 3
         assert testReview.cost == 3
         assert testReview.description == 'Fixed a light bulb'
-        assert testReview.comments == 'Satisfactory work.'
+        assert testReview.comments == 'satisfactory work.'
 
     @pytest.mark.parametrize('key', ['provider', 'category','rating', 'cost'])
     def test_newMissingRequired(self, newReviewDict, key):
@@ -680,7 +680,7 @@ class TestReview(object):
         assert len(reviews) == 4
         assert reviews[0].rating == 3
         assert reviews[0].cost == 3
-        assert reviews[0].description == 'Fixed a light bulb'
+        assert reviews[0].description == 'fixed a light bulb'
 
     def test_searchFriendFilter(self, testProvider, activeClient):
         reviewFilter = {"friends_filter": True, "groups_filter": False}

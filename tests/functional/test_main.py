@@ -154,7 +154,7 @@ class TestReview(FunctionalTest):
             review = review[0]
             assert review.service_date == date(2019, 4, 15)
             assert review.description == baseReview['description'].capitalize()
-            assert review.comments == baseReview['comments'].capitalize()
+            assert review.comments == baseReview['comments']
         finally:
             path = os.path.join(app.config['MEDIA_FOLDER'], str(testUser.id))
             rmtree(path)

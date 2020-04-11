@@ -185,7 +185,7 @@ def test_db(app):
 
     # add test reviews
     r1 = Review.create(id=1, user=u2, provider=p1, category=c1, rating=3, cost=3,
-     description="fIxed A light BULB", comments="satisfactory work.",
+     description="fixed a light bulb", comments="satisfactory work.",
      pictures=[Picture(path=os.path.join(app.config['MEDIA_FOLDER'], '2', 'test1.jpg'), name='test1.jpg')])
     r2 = Review.create(id=2, user=u3, provider=p1, category=c1, rating=5, cost=5, price_paid="", description="installed breaker Box", comments="very clean")
     r3 = Review.create(id=3, user=u1, provider=p1, category=c1, rating=1, cost=5, price_paid="", description="test", comments="Test")

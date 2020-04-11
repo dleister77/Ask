@@ -18,7 +18,7 @@ def run_load(file_name):
     print(f'Finished loading: {file_name}')
 
 def process_imports(import_arg):
-    import_path_str = f'{settings.import_path}/{import_arg}'
+    import_path_str = f'{settings.db_import_path}/{import_arg}'
     import_path = pathlib.Path(import_path_str)
     if import_path.is_file():
         run_load(str(import_path))
