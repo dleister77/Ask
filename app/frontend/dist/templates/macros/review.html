@@ -4,6 +4,10 @@
 {% macro render_review(review, current_user, bizname=true) %}
 <!-- render review card.  -->
 <!-- Inputs: review and user object. bizname determines if bizname in header-->
+
+{% set common_groups = review.user.groups|select('in', current_user.groups)|list %}  
+{% set related = review.user in current_user.friends or review.user_id == current_user.id or common_groups|length > 0 %}
+{% set reviewer_name = review.user.full_name  if related else review.user.username %}
 <div class="card">
         <div class="card-header">
             <div class="row">
@@ -33,7 +37,7 @@
                         data-toggle="modal"
                         data-target="#message-modal"
                         data-id="{{ review.user_id }}"
-                        data-name="{{ review.user.full_name }}"
+                        data-name="{{ reviewer_name }}"
                         data-subject="{{ review.provider.name }}"
                         @click="setFormPresets"
                         >Message Reviewer</button>
@@ -46,8 +50,6 @@
             <div class="row">
                 <div class="col-12 col-md-5 px-3">
                     <ul class="list-unstyled">
-                        {% set common_groups = review.user.groups|select('in', current_user.groups)|list %}  
-                        {% set related = review.user in current_user.friends or review.user_id == current_user.id or common_groups|length > 0 %}
                         {% if related %}
                             <li>Reviewer: <a href="{{url_for('main.user', username=review.user.username)}}">
                             {{"%s %s"|format(review.user.first_name, review.user.last_name)}}</a></li>

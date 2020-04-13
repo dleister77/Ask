@@ -1456,7 +1456,7 @@ class Review(Model):
         if description == "" or description is None:
             self._description = None
         else:
-            self._description = description.capitalize()
+            self._description = description
 
     @hybrid_property
     def comments(self):

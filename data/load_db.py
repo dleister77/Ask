@@ -17,6 +17,7 @@ def run_load(file_name):
             db.rollback()
     print(f'Finished loading: {file_name}')
 
+
 def process_imports(import_arg):
     import_path_str = f'{settings.db_import_path}/{import_arg}'
     import_path = pathlib.Path(import_path_str)
@@ -26,9 +27,7 @@ def process_imports(import_arg):
         for file in import_path.iterdir():
             run_load(str(file))
 
+
 if __name__ == '__main__':
     import_arg = sys.argv[1]
     process_imports(import_arg)
-
-
-        

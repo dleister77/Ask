@@ -27,29 +27,29 @@ with app.app_context():
 @pytest.mark.usefixtures("dbSession")
 class FormTest(object):
 
-	formType = ProviderAddForm
-	form = None
-	formDict = None
-		
-	def make_form(self, formDict):
-		"""Helper method to generate Provider form for tests."""
-		self.formDict = formDict
-		formDictImmut = ImmutableMultiDict(self.formDict)
-		self.form = self.formType(formdata=formDictImmut)
+    formType = ProviderAddForm
+    form = None
+    formDict = None
 
-	def assertNot(self, key, errorMsg):
-		"""Helper assertion to check not validating and confirm error message."""
-		assert not self.form.validate()
-		assert errorMsg in self.form.errors[key]
+    def make_form(self, formDict):
+        """Helper method to generate Provider form for tests."""
+        self.formDict = formDict
+        formDictImmut = ImmutableMultiDict(self.formDict)
+        self.form = self.formType(formdata=formDictImmut)
 
-	def new(self, formDict):
-		self.make_form(formDict)
-		assert self.form.validate()
+    def assertNot(self, key, errorMsg):
+        """Helper assertion to check not validating and confirm error message."""
+        assert not self.form.validate()
+        assert errorMsg in self.form.errors[key]
 
-	def missingRequired(self, formDict, key, errorMsg):
-		formDict.pop(key)
-		self.make_form(formDict)
-		self.assertNot(key, errorMsg)
+    def new(self, formDict):
+        self.make_form(formDict)
+        assert self.form.validate()
+
+    def missingRequired(self, formDict, key, errorMsg):
+        formDict.pop(key)
+        self.make_form(formDict)
+        self.assertNot(key, errorMsg)
 
 
 def make_form(formClass, providerDict):
@@ -1021,7 +1021,6 @@ class TestProviderSuggestion(FormTest):
 		check = self.form.validate()
 		assert not check
 
-@pytest.mark.usefixtures("client")
 class TestFooterContact(FormTest):
     """Test footer contact form."""
 
@@ -1053,3 +1052,21 @@ class TestFooterContact(FormTest):
         ])
     def test_missingRequired(self, key, errorMsg):
         self.missingRequired(self.base_case, key, errorMsg)
+    
+    def test_authenticated_user_invalid(self, activeClient):
+        self.make_form(self.base_case)
+        delattr(self.form, 'email')
+        self.assertNot('sender_id', 'Sender id is required.')
+
+    def test_authenticated_user_valid(self, testUser, activeClient):
+        test_case = dict(
+            sender_id=testUser.id,
+            last_name=testUser.last_name,
+            first_name=testUser.first_name,
+            category="question",
+            subject="your website",
+            body="what were you thinking?"
+        )
+        self.make_form(test_case)
+        delattr(self.form, 'email')
+        assert self.form.validate()

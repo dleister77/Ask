@@ -16,7 +16,7 @@ from wtforms.ext.dateutil.fields import DateField
 from app.auth.forms import AddressField
 from app.models import (Address, Category, Provider, Sector, State, Review,
                         Picture, User, Message_User)
-from app.utilities.forms import MultiCheckboxField
+from app.utilities.forms import MultiCheckboxField, requiredIf
 from app.utilities.helpers import url_check
 
 
@@ -76,18 +76,6 @@ def NotEqualTo(comparisonField):
             raise ValidationError(message)
     return _notEqualTo
 
-
-def requiredIf(checkField, checkValue=True):
-    """Validator to require field if check Field equals set value"""
-
-    def _requiredIf(form, field):
-        field_to_check = getattr(form, checkField)
-        message = f"{field.label.text} is required."
-        if field_to_check.data == checkValue and field.data is None:
-            raise ValidationError(message)
-        elif field_to_check.data != checkValue:
-            field.errors = []
-    return _requiredIf
 
 
 def validate_zip(form, field):

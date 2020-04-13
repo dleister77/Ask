@@ -326,6 +326,7 @@ class TestUserProfile(object):
         WebDriverWait(driver, 10).until(EC.alert_is_present())
         alert_message = Alert(driver).text
         Alert(driver).accept()
+        time.sleep(1)
         success_msg = "Message sent"
         assert alert_message == success_msg,\
             "message not sent when it should have been"

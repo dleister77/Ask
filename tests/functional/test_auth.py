@@ -6,7 +6,7 @@ from app.models import State, User
 from tests.conftest import login, logout, FunctionalTest
 
 
-class TestLogin(FunctionalTest):
+class TestContactMessage(FunctionalTest):
 
     routeFunction = 'auth.login'
 

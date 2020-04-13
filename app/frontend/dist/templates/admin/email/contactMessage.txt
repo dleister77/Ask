@@ -1,3 +1,5 @@
+{% if current_user.is_authenticated %} Sender Id: {{ form.sender_id.data }} {% endif %}
+
 Sender Name: {{form.first_name.data}} {{form.last_name.data}}
 
 Sender Email: {{form.email.data}}

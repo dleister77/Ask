@@ -1,5 +1,6 @@
 
 from wtforms import SelectMultipleField, widgets
+from wtforms.validators import ValidationError
 from wtforms.widgets.core import html_params, RadioInput
 
 
@@ -43,3 +44,16 @@ class MultiCheckboxField(SelectMultipleField):
     def pre_validate(self, form):
         """skip pre-validation"""
         pass
+
+
+def requiredIf(checkField, checkValue=True):
+    """Validator to require field if check Field equals set value"""
+
+    def _requiredIf(form, field):
+        field_to_check = getattr(form, checkField)
+        message = f"{field.label.text} is required."
+        if field_to_check.data == checkValue and field.data is None:
+            raise ValidationError(message)
+        elif field_to_check.data != checkValue:
+            field.errors = []
+    return _requiredIf

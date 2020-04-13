@@ -153,7 +153,7 @@ class TestReview(FunctionalTest):
             review = Review.query.filter_by(provider_id=baseReview['id']).all()
             review = review[0]
             assert review.service_date == date(2019, 4, 15)
-            assert review.description == baseReview['description'].capitalize()
+            assert review.description == baseReview['description']
             assert review.comments == baseReview['comments']
         finally:
             path = os.path.join(app.config['MEDIA_FOLDER'], str(testUser.id))

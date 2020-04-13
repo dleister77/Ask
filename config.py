@@ -1,5 +1,6 @@
 
 import os
+import datetime
 import dotenv
 import redis
 
@@ -18,6 +19,9 @@ class Config(object):
     "ck": "ck_%(table_name)s_%(column_0_name)s",
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s"}
+
+    # flask login
+    REMEMBER_COOKIE_DURATION = datetime.timedelta(days=30)
 
     #file upload info
     UPLOAD_FOLDER = 'photos'

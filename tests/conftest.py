@@ -20,6 +20,7 @@ from app import db
 from app.models import User, Address, State, Category, Group, Provider, Review,\
                        FriendRequest, GroupRequest, addressTuple, Sector, Picture,\
                        Message, Message_User
+import app.utilities.email as email
 import app.utilities.geo as geo
 from app.utilities.geo import AddressError, APIAuthorizationError, _geocodeGEOCODIO
 from app.utilities.helpers import thumbnail_from_buffer
@@ -556,4 +557,3 @@ def mockGeocodioApiBad(monkeypatch):
         raise GeocodioAuthError
     
     monkeypatch.setattr('app.utilities.geo._get_client', mockGeoCode)
-
