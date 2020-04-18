@@ -10,8 +10,8 @@ const MessageRead = {
   },
   template: `
   <div id="message-read">
-      <br>
-      <div class="row justify-content-between" id="message-read-header">
+      <div class="row justify-content-between border-bottom border-top py-3"
+       id="message-read-header">
           <div class="col-8">
               <p class="message-read">From: {{ message.sender_full_name }} </p>
               <p class="message-read">Subject: {{ message.subject }}</p>

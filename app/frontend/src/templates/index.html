@@ -136,8 +136,8 @@
 
 <modal-form-wrapper
     modal_id="suggestion-modal"
-    :form_presets="form_presets"
-    :url="urls.send_message"
+    :form_presets="form_presets.provider_suggestion"
+    :url="urls.send_provider_suggestion"
     title="Suggest a Correction:">
     <template v-slot:default="fp">
         <form-suggestion

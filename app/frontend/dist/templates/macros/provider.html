@@ -6,28 +6,42 @@
 
     <div class="card">
         <div class="card-header">
-            <div class="row">
-                <div class="col-7 col-md-8">
+            <div class="row justify-content-between">
+                <div class="col-9 col-md-7 align-self-center">
                     {% if provider.name not in request.view_args.values() %}
                     <h4><a class="card-header-item" id="{{provider.name}}-{{provider.id}}-link" href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
                     {% else %}
                     <h4>{{provider.name}}</h4>
                     {% endif %}
                 </div>
-                <div class="col-5 col-md-4">
-                    <ul class="nav justify-content-end">
-                        <a class="card-header-item nav-link" href="{{ url_for('main.review', name=provider.name, id=provider.id) }}">
-                        Add Review</a>
-                        <button
-                        type="button"
-                        class="btn btn-link nav-link"
-                        data-toggle="modal"
-                        data-target="#suggestion-modal"
-                        data-id="{{ provider.id }}"
-                        data-subject="{{ provider.name }}"
-                        @click="setFormPresets"
-                        >Suggest Correction</button>
-                    </ul>
+                <div class="col-3 col-md-2 align-self-center">
+                    <div class="row justify-content-center">
+                        <a class="card-header-item mx-auto"
+                          href="{{ url_for('main.review', name=provider.name, id=provider.id) }}"
+                          data-toggle="tooltip"
+                          title="Add review">
+                          <i class="material-icons">
+                            post_add
+                          </i>
+                        </a>
+                        <span
+                          class="mx-auto"
+                          tabindex="0"
+                          data-toggle="tooltip"
+                          title="Make suggestion">
+                          <a
+                            href=""
+                            data-toggle="modal"
+                            data-target="#suggestion-modal">
+                            <i
+                              class="material-icons card-header-item"
+                              data-id="{{ provider.id }}"
+                              data-subject="{{ provider.name }}"
+                              @click="setSuggestionFormPresets"
+                              >feedback</i>
+                          </a>
+                        </span>
+                      </div>
                 </div>
             </div>    
         </div>

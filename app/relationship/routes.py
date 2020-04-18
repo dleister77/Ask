@@ -215,7 +215,7 @@ def group(name, id):
         else:
             modal_form = False
             modal_title = None
-        reviews = Review.search(groupId=group.id)
+        reviews = Review.search(group_id=group.id)
         page = request.args.get('page', 1, int)
         pagination = Pagination(
             reviews, page, current_app.config.get('PER_PAGE')

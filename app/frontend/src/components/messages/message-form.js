@@ -64,16 +64,23 @@ const MessageForm = {
         .then((response) => {
           if (response.data.status === 'success') {
             this.$emit('message_sent');
-            alert('Message sent');
+            this.$swal({
+              title: 'Message Sent',
+              icon: 'success',
+            });
           } else {
             let message = 'Unabled to send message. Please correct errors:\n';
             message += response.data.errorMsg.join('\n');
-            alert(message);
+            this.$swal(message);
           }
         })
         .catch((error) => {
           console.log(error);
-          alert('Error: Unable to send message.  Please reload and try again.');
+          this.$swal({
+            title: 'Error',
+            text: 'Unable to send message.  Please reload and try again.',
+            icon: 'error',
+          });
         });
     },
     suggestionSerializer(person) {

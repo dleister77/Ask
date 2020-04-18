@@ -7,20 +7,43 @@
 
 {% block content_narrow_form %}
 
+
 <div class="card" id="user_profile">
     <div class="card-header p-2">
-        <h4 class="text-center">Profile Information
-        <small><a href="" 
-            data-toggle="modal"
-            data-target="#message-modal"
-            data-id="{{ user.id }}"
-            data-name="{{ user.full_name }}"
-            @click="setFormPresets">(message)</a></small>
-        {% if user == current_user %}    
-        <small><a href="" data-toggle="modal" data-target="#modal_id">(edit)</a></small>
-        {% endif %}
-
-        </h4>
+        <div class="row justify-content-end">
+            <div class="col-8">
+                <h4 class="text-center">Profile Information</h4>
+            </div>
+            <div class="col-2 align-self-center">
+                <div class="row justify-content-center">
+                  {% if user == current_user %}
+                      <span 
+                        class="mx-auto"
+                        data-toggle="tooltip" data-placement="top" title="edit">
+                          <a href="" data-toggle="modal" data-target="#modal_id">
+                              <i class="material-icons card-header-item">edit</i>
+                          </a>
+                      </span>
+                  {% else %}
+                    <span
+                      class="mx-auto"
+                      data-toggle="tooltip" data-placement="top"
+                      title="Send {{ user.first_name }} message">
+                        <a href="" 
+                          data-toggle="modal"
+                          data-target="#message-modal">
+                          <i class="material-icons card-header-item"
+                            data-id="{{ user.id }}"
+                            data-name="{{ user.full_name }}"
+                            @click="setFormPresets">
+                            mail
+                          </i>
+                        </a>
+                    </span>            
+                  {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
     <div class="card-body">
         {# Only show user info if user is current user or friend/groups #}
@@ -102,8 +125,8 @@
 
 <modal-form-wrapper
 modal_id="message-modal"
-:form_presets="form_presets"
-:url="urls.send_message"
+:form_presets="form_presets.user_message"
+:url="urls.send_user_message"
 title="Send Message:">
     <template v-slot:default="fp">
         <form-usermessage
@@ -153,7 +176,7 @@ title="Send Message:">
 </script>
 
 
-    <script src="/static/js/userProfile.61f407fa6567ab4ef502.js"></script>
+    <script src="/static/js/userProfile.65cfc0a25bd03b355d12.js"></script>
 
 
 

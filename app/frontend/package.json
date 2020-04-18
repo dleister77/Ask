@@ -23,6 +23,7 @@
     "@vue/test-utils": "^1.0.0-beta.31",
     "bootstrap": "^4.4.1",
     "chai": "^4.2.0",
+    "css-loader": "^3.5.2",
     "eslint": "^6.8.0",
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-plugin-import": "^2.20.1",
@@ -33,18 +34,21 @@
     "jsdom-global": "^3.0.2",
     "mocha": "^7.0.1",
     "popper.js": "^1.16.1",
-    "sinon": "^9.0.1"
+    "sinon": "^9.0.1",
+    "style-loader": "^1.1.4"
   },
   "dependencies": {
     "axios": "^0.19.2",
+    "clean-webpack-plugin": "^3.0.0",
+    "html-webpack-plugin": "^3.2.0",
     "lodash-es": "^4.17.15",
+    "sweetalert2": "^9.10.12",
     "vue": "^2.6.11",
+    "vue-sweetalert2": "^3.0.3",
     "vue-template-compiler": "^2.6.11",
     "vuelidate": "^0.7.5",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
-    "webpack-merge": "^4.2.2",
-    "clean-webpack-plugin": "^3.0.0",
-    "html-webpack-plugin": "^3.2.0"
+    "webpack-merge": "^4.2.2"
   }
 }

@@ -1,10 +1,13 @@
 import Vue from 'vue';
 import Vuelidate from 'vuelidate';
 import axios from 'axios';
+import VueSweetalert2 from 'vue-sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 import { resetForm, setForm } from '../../scripts/forms';
 
 Vue.use(Vuelidate);
+Vue.use(VueSweetalert2);
 
 const FormMixin = {
   computed: {},
@@ -58,26 +61,37 @@ const FormMixin = {
     },
     submit() {
       if (this.$v.$invalid) {
-        alert('Please correct errors and resubmit');
+        this.$swal({
+          title: 'Unable to Send Message',
+          text: 'Please correct errors and resubmit',
+          icon: 'error',
+        });
       } else {
         this.server_side_errors = {};
         const form = this.populate_form();
         axios.post(this.url, form)
           .then(() => {
-            alert('Message sent');
+            this.$swal({
+              title: 'Message sent',
+              icon: 'success',
+            });
             this.$emit('form_is_submitted');
             this.reset_form();
           })
           .catch((error) => {
             console.log(error);
-            let message = 'Unable to send message. Please correct errors:\n';
+            let message = 'Please correct errors:\n';
             const formErrors = error.response.data.errors;
             this.server_side_errors = formErrors;
             if (formErrors !== undefined) {
               const displayedErrors = Object.values(formErrors);
               message += displayedErrors.join('\n');
             }
-            alert(message);
+            this.$swal({
+              title: 'Unable to Send Message',
+              text: message,
+              icon: 'error',
+            });
           });
       }
     },

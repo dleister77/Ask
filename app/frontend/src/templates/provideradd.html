@@ -25,8 +25,10 @@
                 class="form-toggle-alert pl-1" id="toggle_message">
                 Please enter city and state.</p>
             <keep-alive v-if="!show.full_address">
-                {{field_render(form.address.line1, **{'v-model':'form.line1'})}}
-                {{field_render(form.address.line2, **{'v-model':'form.line2'})}}
+                {{ field_render(form.address.line1, **{'v-model':'form.line1'}) }}
+            </keep-alive>
+            <keep-alive v-if="!show.full_address">
+                {{ field_render(form.address.line2, **{'v-model':'form.line2'}) }}
             </keep-alive>
             {{field_render(form.address.city, **{'v-model':'form.city'})}}
             {{field_render(form.address.state, **{'v-model':'form.state'})}}

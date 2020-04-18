@@ -13,6 +13,7 @@ module.exports = (env = {}) => {
       messages: './src/pages/messages/messages.js',
       providerAdd: './src/pages/provider/providerAdd.js',
       network_groups: './src/pages/group/network_groups.js',
+      groupProfile: './src/pages/group/groupProfile.js',
       groupSearch: './src/pages/group/groupSearch.js',
       friendAdd: './src/pages/friend/friendAdd.js',
       review: './src/pages/review/review.js',
@@ -25,6 +26,17 @@ module.exports = (env = {}) => {
       if (isProduction) return 'source-map';
       return 'inline-source-map';
     })(),
+    module: {
+      rules: [
+        {
+          test: /\.css$/,
+          use: [
+            'style-loader',
+            'css-loader',
+          ],
+        },
+      ],
+    },
     output: {
       filename: 'static/js/[name].[contenthash].js',
       path: path.resolve(__dirname, './dist'),
@@ -122,7 +134,12 @@ module.exports = (env = {}) => {
         chunks: ['userProfile'],
         inject: false,
       }),
-
+      new HtmlWebpackPlugin({
+        filename: 'templates/relationship/group.html',
+        template: 'src/templates/group.html',
+        chunks: ['groupProfile'],
+        inject: false,
+      }),
     ],
     resolve: {
       alias: {

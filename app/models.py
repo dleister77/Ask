@@ -663,12 +663,15 @@ class User(UserMixin, Model):
     def summary(self):
         """Return user object with review summary information(avg/count)"""
         # need to accomodate zero reviews...joins makes it unable to calc
-        summary = (db.session.query(func.avg(Review.rating).label("average"),
-                                    func.avg(Review.cost).label("cost"),
-                                    func.count(Review.id).label("count"))
-                             .filter(User.id == self.id)
-                             .join(User)
-                             .first())
+        summary = (db.session.query(
+            func.avg(Review.rating).label("average"),
+            func.avg(Review.cost).label("cost"),
+            func.count(Review.id).label("count"))
+            .filter(
+                User.id == self.id,
+                Provider.is_active == True)
+            .join(Review.user, Review.provider)
+            .first())
         return summary
 
     def __repr__(self):
@@ -1077,7 +1080,7 @@ class Provider(Model):
 
     @staticmethod
     def list(category_id, format='tuple'):
-        """Returns list of provider id and name based on category filter
+        """Returns list of active provider id and name based on category filter
 
         Args:
             category_id (int): category id to filter providers by
@@ -1093,8 +1096,12 @@ class Provider(Model):
         """
 
         category = Category.query.get(category_id)
-        query = (Provider.query.filter(Provider.categories.contains(category))
-                               .order_by(Provider.name)).all()
+        query = Provider.query\
+            .filter(
+                Provider.categories.contains(category),
+                Provider.is_active == True
+            ).order_by(Provider.name)\
+            .all()
         if format == 'dict':
             provider_list = [
                 {
@@ -1479,12 +1486,14 @@ class Review(Model):
         return price_paid
 
     @classmethod
-    def search(cls, providerId=None, groupId=None,  filter=None):
+    def search(cls, provider_id=None, group_id=None,  user_id=None,\
+               filter=None, is_active=True):
         """Searches for reviews based on provider id and social filters.
 
         Args:
             providerId (int): provider id from database
             groupId (int): group id from database
+            userId (int): user id from database
             filter (dict): determines whether to only include reviews
                                  that have been reviewed by friends or members
                                  users groups
@@ -1492,13 +1501,13 @@ class Review(Model):
             list of review objects
 
         """
-        # base filter and join args
         q = dbQuery()
         q.select_from = Review
         q.query_args = [Review]
-        if providerId is not None:
-            q.filter_args = [Provider.id == providerId]
-            q.join_args = [Review.provider, Review.user]
+        q.join_args = [Review.provider, Review.user]
+        q.filter_args = [Provider.is_active == is_active]
+        if provider_id is not None:
+            q.filter_args.extend([Provider.id == provider_id])
             friendsFilter = User.friends.contains(current_user)
             groups = [g.id for g in current_user.groups]
             groupsFilter = and_(
@@ -1514,12 +1523,16 @@ class Review(Model):
             elif (filter['groups_filter'] is True and
                   filter['friends_filter'] is True):
                 q.filter_args.append(or_(groupsFilter, friendsFilter))
-            return q.all()
-        elif groupId is not None:
-            q.filter_args = [Group.id == groupId]
-            q.join_args = [Review.user, User.groups]
-            q.sort_args = [Review.timestamp]
-            return q.all()
+
+        elif group_id is not None:
+            q.filter_args.extend([Group.id == group_id])
+            q.join_args.extend([User.groups])
+
+        elif user_id is not None:
+            q.filter_args.extend([User.id == user_id])
+
+        q.sort_args = [Review.timestamp]
+        return q.all()
 
     # TODO add median to summary stat
     @classmethod
@@ -1543,6 +1556,7 @@ class Review(Model):
         q.join_args = [
             Review.category, Review.provider, Provider.address, Review.user
         ]
+        q.filter_args = [Provider.is_active == True]
 
         if "category" in filters.keys():
             q.filter_args.append(

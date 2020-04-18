@@ -1,5 +1,7 @@
 import axios from 'axios';
 import Vue from 'vue';
+import VueSweetalert2 from 'vue-sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 import { postForm, makeForm } from '../../scripts/forms';
 
@@ -8,6 +10,9 @@ import MessageRow from '../../components/messages/message-row';
 import MessageRead from '../../components/messages/message-read';
 import paginationNav from '../../components/pagination-nav';
 import folderNav from '../../components/folder-nav';
+
+
+Vue.use(VueSweetalert2);
 
 
 const messageApp = new Vue({
@@ -63,7 +68,7 @@ const messageApp = new Vue({
       return this.is_active && !this.newMessageIsVisible;
     },
     moveLinksVisible() {
-      return this.selectedMessages.length > 0;
+      return this.selectedMessages.length > 0 && !this.newMessageIsVisible;
     },
     newMessageIsVisible() {
       return this.show.newMessage;
@@ -161,7 +166,7 @@ const messageApp = new Vue({
 
       <div v-if="folderIsVisible" class="container-fluid p-1" id="folder">
           <div class="row">
-              <table class="table table-hover d-flex flex-column">
+              <table class="table table-hover d-flex flex-column border-bottom">
                   <thead>
                       <tr class="d-flex folder-header">
                           <th class="d-none d-md-block col-1" scope="col"><input id="select_all" type="checkbox"></th>
@@ -169,7 +174,7 @@ const messageApp = new Vue({
                           <th class="col-2" scope="col">From</th>
                           <th class="col-2" scope="col">Subject</th>
                           <th class="col-6" scope="col">Body</th>
-                          <th class="col-1" scope="col">Time Sent</th>
+                          <th class="col-2 col-md-1" scope="col">Time Sent</th>
                       </tr>
                   </thead>
                   <tbody>

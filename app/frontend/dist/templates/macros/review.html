@@ -10,8 +10,8 @@
 {% set reviewer_name = review.user.full_name  if related else review.user.username %}
 <div class="card">
         <div class="card-header">
-            <div class="row">
-                <div class="col-7 col-md-8">
+            <div class="row justify-content-between">
+                <div class="col-8 col-md-6 align-self-center">
                     <h4>
                         <a class="card-header-item"
                         href='{{url_for("main.provider", name=review.provider.name,
@@ -20,30 +20,35 @@
                         </a>
                     </h4>
                 </div>
-                {% if review.user_id == current_user.id %}
-                <div class="col-5 col-md-4">
-                    <ul class="nav justify-content-end">
-                        <a class="card-header-item nav-link" href="{{ url_for('main.reviewEdit', id=review.id) }}">                          
-                        Edit
+                <div class="col-3 col-md-2 align-self-center">
+                  <div class="row justify-content-center">
+                    {% if review.user_id == current_user.id %}
+                      <a href="{{ url_for('main.reviewEdit', id=review.id) }}"
+                        data-toggle="tooltip" title="Edit review">
+                          <i class="material-icons card-header-item nav-link">edit</i>
+                      </a>
+                      {% else %}
+                      <span
+                        class="mx-auto"
+                        tabindex="0"
+                        data-toggle="tooltip"
+                        title="Send reviewer message">
+                        <a
+                          href=""
+                          data-toggle="modal"
+                          data-target="#message-modal">
+                          <i class="material-icons card-header-item"
+                            data-id="{{ review.user_id }}"
+                            data-name="{{ reviewer_name }}"
+                            data-subject="{{ review.provider.name }}"
+                            @click="setFormPresets">
+                            mail
+                          </i>
                         </a>
-                    </ul>
+                      </span>
+                      {% endif %}
+                  </div>
                 </div>
-                {% else %}
-                <div class="col-5 col-md-4">
-                    <ul class="nav justify-content-end">
-                        <button
-                        type="button"
-                        class="btn btn-link"
-                        data-toggle="modal"
-                        data-target="#message-modal"
-                        data-id="{{ review.user_id }}"
-                        data-name="{{ reviewer_name }}"
-                        data-subject="{{ review.provider.name }}"
-                        @click="setFormPresets"
-                        >Message Reviewer</button>
-                    </ul>
-                </div>
-                {% endif %}
             </div>
         </div>
         <div class="card-body">

@@ -94,7 +94,7 @@ def provider(name, id):
         page = last.get('page', 1)
         return_code = 422
     if provider.reviewCount > 0:
-        reviews = Review.search(providerId=provider.id, filter=reviewFilter)
+        reviews = Review.search(provider_id=provider.id, filter=reviewFilter)
         pagination = Pagination(
                         reviews, page, current_app.config.get('PER_PAGE')
                      )
@@ -105,10 +105,12 @@ def provider(name, id):
         reviews = None
         pag_urls = None
 
+    provider_json = simplejson.dumps(provider._asdict(), sort_keys=True)
+
     return render_template(
         "provider_profile.html", title="Provider Profile", provider=provider,
         pag_urls=pag_urls, reviews=reviews, form=form,
-        reviewFilter=reviewFilter
+        reviewFilter=reviewFilter, provider_json=provider_json
     ), return_code
 
 
@@ -458,7 +460,7 @@ def user(username):
     """Generate profile page."""
     page = request.args.get('page', 1, int)
     user = User.query.filter_by(username=username).first()
-    reviews = user.reviews
+    reviews = Review.search(user_id=user.id)
     summary = user.summary()
     pag_args = {"username": username}
     pagination = Pagination(

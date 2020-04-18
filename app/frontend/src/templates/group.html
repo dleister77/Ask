@@ -115,9 +115,9 @@
 {% block jsScripts %}
     
     
-    
-        <script src="/static/js/groupProfile.4bb1c0c8fbeb736ba616.js"></script>
-    
+    <% for (var chunk in htmlWebpackPlugin.files.chunks) { %>
+        <script src="<%= htmlWebpackPlugin.files.chunks[chunk].entry %>"></script>
+    <% } %>
 
 
 {% endblock %}

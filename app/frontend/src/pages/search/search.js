@@ -4,7 +4,6 @@ import makeMap from '../../scripts/maps';
 import { categoryGet } from '../../scripts/forms';
 import { getCurrentLocation } from '../../scripts/geo';
 import ModalFormSuggestionMixin from '../../components/modal-form-suggestion-mixin';
-import FormSuggestion from '../../components/form-suggestion';
 
 const mapView = {
   template: '<div></div>',
@@ -15,7 +14,6 @@ const searchPage = new Vue({
   delimiters: ['[[', ']]'],
   components: {
     'map-view': mapView,
-    'form-suggestion': FormSuggestion,
   },
   computed: {
     showManualLocation() {
@@ -95,6 +93,9 @@ const searchPage = new Vue({
         this.form.gpsLong = '';
       }
     },
+  },
+  mounted() {
+    $('[data-toggle="tooltip"]').tooltip();
   },
 });
 

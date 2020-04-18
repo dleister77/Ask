@@ -20,7 +20,7 @@ const mountOptions = {
   },
 };
 
-
+// TODO FIX JS TESTING EVENT NOT SHOWING ISSUE
 describe('modal', () => {
   let wrapper;
   beforeEach(() => {

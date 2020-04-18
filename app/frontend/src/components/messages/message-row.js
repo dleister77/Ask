@@ -13,7 +13,7 @@ const MessageRow = {
               <td v-on:click="$emit('show-message')" class="col-2">{{message.sender_full_name}}</td>
               <td v-on:click="$emit('show-message')" class="col-2">{{message.subject}}</td>
               <td v-on:click="$emit('show-message')" class="col-6 folder-message-body">{{message.body}}</td>
-              <td v-on:click="$emit('show-message')" class="col-1">{{localize_time}}</td>
+              <td v-on:click="$emit('show-message')" class="col-2 col-md-1">{{localize_time}}</td>
           </tr>`,
   computed: {
     localize_time() {
