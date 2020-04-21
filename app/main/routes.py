@@ -316,22 +316,33 @@ def search():
                    "reviewed": form.reviewed_filter.data}
         sortCriteria = form.sort.data
         providers = Provider.search(filters, sortCriteria)
+
         if providers == []:
             flash("No results found. Please try a different search.")
-            form.initialize()
-            return render_template(
-                "index.html", form=form, title="Search"
-            )
-        summary = Review.summaryStatSearch(filters)
-        if sortCriteria == "distance":
-            providers = sortByDistance(searchLocation.coordinates, providers)
-        pagination = Pagination(
-                        providers,
-                        page,
-                        current_app.config.get('PER_PAGE')
-                     )
-        pag_urls = pagination.get_urls('main.search', request.args)
-        providers = pagination.paginatedData
+            providersDict = simplejson.dumps([], sort_keys=True)
+            summary = None
+            pag_urls = None
+            locationDict = None
+
+        else:
+            summary = Review.summaryStatSearch(filters)
+            if sortCriteria == "distance":
+                providers = sortByDistance(searchLocation.coordinates, providers)
+            pagination = Pagination(
+                            providers,
+                            page,
+                            current_app.config.get('PER_PAGE')
+                        )
+            pag_urls = pagination.get_urls('main.search', request.args)
+            providers = pagination.paginatedData
+            providersDict = [provider._asdict() for provider in providers]
+            providersDict = simplejson.dumps(providersDict, sort_keys=True)
+            if session.get('location'):
+                locationDict = session['location']
+                locationDict = simplejson.dumps(locationDict, sort_keys=True)
+            else:
+                locationDict = None
+
         filter_fields = [
             form.reviewed_filter, form.friends_filter, form.groups_filter
         ]
@@ -340,13 +351,7 @@ def search():
             if field.data is True:
                 reviewFilter[field.name] = 'y'
         form.initialize()
-        providersDict = [provider._asdict() for provider in providers]
-        providersDict = simplejson.dumps(providersDict, sort_keys=True)
-        if session.get('location'):
-            locationDict = session['location']
-            locationDict = simplejson.dumps(locationDict, sort_keys=True)
-        else:
-            locationDict = None
+        
         return render_template("index.html", form=form, title="Search",
                                providers=providers, pag_urls=pag_urls,
                                form_dict=form_dict,
