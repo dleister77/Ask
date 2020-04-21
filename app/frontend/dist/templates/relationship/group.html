@@ -127,6 +127,9 @@
 
 {% block jsScripts %}
     
+    <script>
+        let csrf = "{{ csrf_token() }}"
+    </script>
     
     
         <script src="/static/js/groupProfile.d7f08af65d19e5c9a274.js"></script>
