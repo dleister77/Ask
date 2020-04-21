@@ -20,22 +20,16 @@
             <div class="col-3 col-md-2 align-self-center">
               <div class="row justify-content-center">            
                 {% if current_user.id == group.admin_id %}
-                    <span
-                      class="mx-auto"
-                      tabindex="0"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      title="Edit profile">
                       <a
                         href=""
                         data-toggle="modal"
-                        data-target="#groupUpdateForm">
+                        data-target="#groupUpdateForm"
+                        v-b-tooltip="{ title:'Edit profile', disabled:isMobile }">
                         <i
                           class="material-icons card-header-item">
                           edit
                         </i>
                       </a>
-                    </span>
                 {% elif not member %}
                     <a href="{{url_for('relationship.groupadd', id=group.id)}}" class='btn btn-md btn-light float-right' role='button'>Join</a>
                 {% endif %}
@@ -108,6 +102,25 @@
         {{modal_render(modal_form, modal_title, action=url, modalID="groupUpdateForm")}}
     {% endif %}
 
+    <modal-form-wrapper
+    modal_id="message-modal"
+    :form_presets="form_presets.user_message"
+    :url="urls.send_user_message"
+    title="Send Message:">
+        <template v-slot:default="fp">
+            <form-usermessage
+                form_id="usermessage_form"
+                :form_presets="fp.form_presets"
+                :reset_form_values="fp.reset_form_values"
+                :set_form_values="fp.set_form_values"
+                :url="fp.url"
+                @form_is_set="fp.mark_form_set"
+                @form_is_reset="fp.mark_form_reset"
+                @form_is_submitted="fp.do_hide_modal">
+            </form-usermessage>
+        </template>
+    </modal-form-wrapper>    
+
 {% endblock%}
 
 
@@ -116,7 +129,7 @@
     
     
     
-        <script src="/static/js/groupProfile.6c933a551353527cbd8b.js"></script>
+        <script src="/static/js/groupProfile.d7f08af65d19e5c9a274.js"></script>
     
 
 
