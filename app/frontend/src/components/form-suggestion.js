@@ -322,13 +322,13 @@ const FormSuggestion = {
                 </template>
             </form-input>                                      
 
-            <!--<form-textbox
+            <form-textbox
                 name="other"
                 v-model.trim="form.other"
                 :required="false"
                 :server_side_errors="server_side_errors.other">
                 <template #default>Other</template>
-            </form-textbox> -->
+            </form-textbox>
 
             <button
                 :id="form_id + '_submit'"
