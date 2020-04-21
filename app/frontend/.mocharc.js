@@ -5,7 +5,7 @@
 // Otherwise, JSON or YAML is recommended.
 
 module.exports = {
-  require: ['esm'],
+  require: ['esm', 'ignore-styles'],
   diff: true,
   extension: ['js'],
   file: 'app/frontend/test/setup.js',

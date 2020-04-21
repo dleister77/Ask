@@ -254,8 +254,6 @@ class TestGroupProfile(FunctionalTest):
         assert response.status_code == 200
         updateForm = "id=groupUpdateForm"
         assert updateForm.encode() in response.data
-        updateLink = '<a href="" class="btn btn-md btn-light ml-auto" data-toggle="modal" data-target="#groupUpdateForm">Edit</a>'
-        assert updateLink.encode() in response.data
         assert testGroup.description.encode() in response.data
         for user in testGroup.members:
             link = url_for('main.user', username=user.username)

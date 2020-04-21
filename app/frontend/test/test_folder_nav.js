@@ -1,3 +1,5 @@
+import { BootstrapVue } from 'bootstrap-vue';
+
 import FolderNav from '../src/components/folder-nav';
 
 require('jsdom-global')();
@@ -12,6 +14,7 @@ const VueTestUtils = require('@vue/test-utils');
 
 const App = Vue.component('app', FolderNav);
 
+Vue.use(BootstrapVue);
 
 const mountOptions = {
   propsData: {
@@ -26,6 +29,10 @@ const mountOptions = {
     messageIsVisible: false,
     moveLinksVisible: false,
     newMessageIsVisible: false,
+    messagePosition: {
+      current: null,
+      last: 3,
+    },
     urls: {
       view_inbox: '/message/folder/inbox',
       view_sent: '/message/folder/sent',
@@ -47,7 +54,7 @@ describe('visible links', () => {
   let wrapper;
   const refsToTest = [
     'folder-list', 'new-message', 'back-button', 'previous-message',
-    'next-message', 'reply-to', 'move-links-delete', 'move-links-archive'
+    'next-message', 'reply-to', 'move-links-delete', 'move-links-archive',
   ];
   describe('show set to true', async () => {
     before(async () => {

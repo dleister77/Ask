@@ -8,6 +8,21 @@
 
 }
 
+html { font-size: 0.90rem; }
+
+@media (min-width: 576px) {
+    html { font-size: 0.95rem; }
+}
+@media (min-width: 768px) {
+    html { font-size: 1rem; }
+}
+@media (min-width: 992px) {
+    html { font-size: 1.05rem; }
+}
+@media (min-width: 1200px) {
+    html { font-size: 1.1rem; }
+}
+
 /* Utility */
 .italic{
   font-style: italic;
@@ -15,6 +30,14 @@
 .inline{
   display:inline;
 }
+
+/* Rules for sizing the icons. */
+.material-icons.md-18 { font-size: 18px; }
+.material-icons.md-24 { font-size: 24px; }
+.material-icons.md-36 { font-size: 36px; }
+.material-icons.md-48 { font-size: 48px; }
+
+
 
 /* Components */
   /* Card - reviews and business profiles */
@@ -66,6 +89,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .folder-message-element{
+    overflow-wrap: break-word;
+  }
+  /* .folder-row{
+    border-bottom: 0rem;
+  } */
+
   .folder-header{
     background-color: #003366;
     color:white;

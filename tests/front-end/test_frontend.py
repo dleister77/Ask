@@ -187,7 +187,7 @@ class TestIndex(object):
         modal_links = WebDriverWait(driver, 10)\
                         .until(EC.presence_of_all_elements_located(
                             (By.CSS_SELECTOR,
-                            'button[data-target="#suggestion-modal"]')))
+                            'a[data-target="#suggestion-modal"]')))
         assert len(modal_links) > 0
         toClick = modal_links[0]
         driver.execute_script("arguments[0].scrollIntoView();", toClick)
@@ -202,10 +202,8 @@ class TestIndex(object):
         submit = modal.find_element_by_id('suggestion_form_submit')
         driver.execute_script("arguments[0].scrollIntoView();", submit)
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert = driver.switch_to.alert
+        alert = driver.find_element_by_id("swal2-title")
         assert alert.text == 'Message sent'
-        alert.accept()
 
     def test_send_correction_address(self, driver):
         sector_el = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'search_sector')))
@@ -220,7 +218,7 @@ class TestIndex(object):
         modal_links = WebDriverWait(driver, 10)\
                         .until(EC.presence_of_all_elements_located(
                             (By.CSS_SELECTOR,
-                            'button[data-target="#suggestion-modal"]')))
+                            'a[data-target="#suggestion-modal"]')))
         assert len(modal_links) > 0, "no modal links"
         toClick = modal_links[0]
         driver.execute_script("arguments[0].scrollIntoView();", toClick)
@@ -239,10 +237,8 @@ class TestIndex(object):
         submit = modal.find_element_by_id('suggestion_form_submit')
         driver.execute_script("arguments[0].scrollIntoView();", submit)
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        assert alert_message == 'Message sent', "msg not sent"
+        alert = driver.find_element_by_id("swal2-title")
+        assert alert.text == 'Message sent'
 
 
 class TestRegister(object):
@@ -286,11 +282,9 @@ class TestRegister(object):
         submit = driver.find_element_by_id('submit')
         driver.execute_script("arguments[0].scrollIntoView();", submit)
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        msg = 'Please correct errors and resubmit'
-        assert alert_message == msg, "invalid form not caught in browser"
+        error_message = driver.find_element_by_id("swal2-title")
+        msg = 'Unable to Send Message'
+        assert error_message.text == msg, "invalid form not caught in browser"
         error = "First Name is required."
         assert error in driver.page_source
 
@@ -323,15 +317,12 @@ class TestUserProfile(object):
         body.send_keys('this is a test message')
         submit = modal.find_element_by_id('usermessage_form_submit')
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        time.sleep(1)
+        alert_message = driver.find_element_by_id("swal2-title").text
         success_msg = "Message sent"
         assert alert_message == success_msg,\
             "message not sent when it should have been"
-        modal = driver.find_element_by_id('message-modal')
-        assert not modal.is_displayed()
+        alert_button = driver.find_element_by_css_selector('button.swal2-confirm')
+        alert_button.click()
 
     def test_modal_send_invalid(self, driver):
         profile = driver.find_element_by_id('user_profile')
@@ -342,17 +333,15 @@ class TestUserProfile(object):
         body.send_keys('this is a test message')
         submit = modal.find_element_by_id('usermessage_form_submit')
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        failure_msg = "Please correct errors and resubmit"
+        alert_message = driver.find_element_by_id("swal2-title").text
+        failure_msg = "Unable to Send Message"
         assert alert_message == failure_msg,\
             "message sent when it should not have been"
 
     def test_send_msg_via_review(self, driver):
         reviews = driver.find_element_by_id('reviews')
         review = reviews.find_elements_by_class_name('card')[0]
-        message_link = review.find_element_by_tag_name('button')
+        message_link = review.find_element_by_css_selector('a[data-target="#message-modal"]')
         driver.execute_script("arguments[0].scrollIntoView();", message_link)
         message_link.click()
         modal = driver.find_element_by_id('message-modal')
@@ -366,16 +355,14 @@ class TestUserProfile(object):
         body.send_keys('this is a test message')
         submit = modal.find_element_by_id('usermessage_form_submit')
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
+        alert_message = driver.find_element_by_id("swal2-title").text
         success_msg = "Message sent"
         failure_msg = "Please correct errors and resubmit"
         assert alert_message == success_msg,\
             "message not sent when it should have been"
         assert alert_message != failure_msg
-        modal = driver.find_element_by_id('message-modal')
-        assert not modal.is_displayed()
+        alert_button = driver.find_element_by_css_selector('button.swal2-confirm')
+        alert_button.click()
 
 
 class TestProvideProfile(object):
@@ -386,11 +373,12 @@ class TestProvideProfile(object):
     def test_send_reviewer_message(self, driver):
         reviews = driver.find_element_by_id("reviews")
         review = reviews.find_elements_by_class_name('card')[1]
-        message_link = review.find_element_by_tag_name('button')
+        message_link = review.find_element_by_css_selector('a[data-target="#message-modal"]')
         driver.execute_script("arguments[0].scrollIntoView();", message_link)
         message_link.click()
         modal = driver.find_element_by_id('message-modal')
         recipient = modal.find_element_by_id('recipient')
+        print(recipient.get_attribute('value'))
         assert recipient.get_attribute('value') == 'Mark Johnson',\
             'recipient not populating correctly'
         subject = modal.find_element_by_id('subject')
@@ -400,16 +388,14 @@ class TestProvideProfile(object):
         body.send_keys('this is a test message')
         submit = modal.find_element_by_id('usermessage_form_submit')
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
+        alert_message = driver.find_element_by_id("swal2-title").text
         success_msg = "Message sent"
         failure_msg = "Please correct errors and resubmit"
         assert alert_message == success_msg,\
             "message not sent when it should have been"
         assert alert_message != failure_msg
-        modal = driver.find_element_by_id('message-modal')
-        assert not modal.is_displayed()
+        alert_button = driver.find_element_by_css_selector('button.swal2-confirm')
+        alert_button.click()
 
 
 class TestMessages(object):
@@ -429,21 +415,21 @@ class TestMessages(object):
         message = driver.find_element_by_id('message-read')
         header = message.find_element_by_id('message-read-header')
         header_elements = header.find_elements_by_class_name('message-read')
-        assert header_elements[0].text == 'From: Sarah Smith'
-        assert header_elements[1].text == 'Subject: yet another test subject'
+        assert header_elements[0].text == 'Sarah Smith'
+        assert header_elements[1].text == 'yet another test subject'
         body = message.find_element_by_id('message-read-body')
         assert body.text == " yet another test body"
         next = driver.find_element_by_id('next-message')
         next.click()
         header = message.find_element_by_id('message-read-header')
         header_elements = header.find_elements_by_class_name('message-read')
-        assert header_elements[1].text == 'Subject: test subject'
+        assert header_elements[1].text == 'test subject'
         previous = driver.find_element_by_id("previous-message")
         previous.click()
         header = message.find_element_by_id('message-read-header')
         header_elements = header.find_elements_by_class_name('message-read')
-        assert header_elements[1].text == 'Subject: yet another test subject'
-        reply = driver.find_element_by_id("reply")
+        assert header_elements[1].text == 'yet another test subject'
+        reply = driver.find_element_by_id("reply-to")
         reply.click()
         recipient = driver.find_element_by_id("recipient")
         assert recipient.get_attribute('value') == "Sarah Smith"
@@ -452,10 +438,8 @@ class TestMessages(object):
         submit = driver.find_element_by_id("message-form-submit")
         driver.execute_script("arguments[0].scrollIntoView();", submit)
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        success_msg = "Message sent"
+        alert_message = driver.find_element_by_id("swal2-title").text
+        success_msg = "Message Sent"
         assert alert_message == success_msg,\
             "message not sent when it should have been"
 
@@ -478,10 +462,8 @@ class TestMessages(object):
         assert input.get_attribute('value') == 'Sarah Smith'
         submit = driver.find_element_by_id('message-form-submit')
         submit.click()
-        WebDriverWait(driver, 10).until(EC.alert_is_present())
-        alert_message = Alert(driver).text
-        Alert(driver).accept()
-        success_msg = "Message sent"
+        alert_message = driver.find_element_by_id("swal2-title").text
+        success_msg = "Message Sent"
         assert alert_message == success_msg,\
             "message not sent when it should have been"
 

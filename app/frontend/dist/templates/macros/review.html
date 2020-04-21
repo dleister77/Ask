@@ -11,7 +11,7 @@
 <div class="card">
         <div class="card-header">
             <div class="row justify-content-between">
-                <div class="col-8 col-md-6 align-self-center">
+                <div class="col-12 col-md-9 align-self-center">
                     <h4>
                         <a class="card-header-item"
                         href='{{url_for("main.provider", name=review.provider.name,
@@ -20,32 +20,34 @@
                         </a>
                     </h4>
                 </div>
-                <div class="col-3 col-md-2 align-self-center">
-                  <div class="row justify-content-center">
+                <div class="col-12 col-md-3 align-self-center">
+                  <div class="row justify-content-left justify-content-md-right d-flex">
                     {% if review.user_id == current_user.id %}
-                      <a href="{{ url_for('main.reviewEdit', id=review.id) }}"
-                        data-toggle="tooltip" title="Edit review">
-                          <i class="material-icons card-header-item nav-link">edit</i>
-                      </a>
-                      {% else %}
-                      <span
-                        class="mx-auto"
-                        tabindex="0"
-                        data-toggle="tooltip"
-                        title="Send reviewer message">
-                        <a
-                          href=""
-                          data-toggle="modal"
-                          data-target="#message-modal">
-                          <i class="material-icons card-header-item"
-                            data-id="{{ review.user_id }}"
-                            data-name="{{ reviewer_name }}"
-                            data-subject="{{ review.provider.name }}"
-                            @click="setFormPresets">
-                            mail
-                          </i>
+                    <div class="col-auto">
+                        <a href="{{ url_for('main.reviewEdit', id=review.id) }}"
+                          v-b-tooltip="{ title:'Edit review', disabled:isMobile }">
+                            <i class="material-icons card-header-item nav-link">edit</i>
+                            <small class="d-block d-md-none card-header-item">Edit Review</small>
                         </a>
-                      </span>
+
+                    </div>
+                      {% else %}
+                        <div class="col-auto">
+                            <a
+                              href=""
+                              data-toggle="modal"
+                              data-target="#message-modal"
+                              v-b-tooltip="{ title: 'Send reviewer message', disabled: isMobile }">
+                              <i class="material-icons card-header-item"
+                                data-id="{{ review.user_id }}"
+                                data-name="{{ reviewer_name }}"
+                                data-subject="{{ review.provider.name }}"
+                                @click="setFormPresets">
+                                mail
+                              </i>
+                              <small class="card-header-item d-block d-md-none">Message reviewer</small>
+                            </a>
+                        </div>
                       {% endif %}
                   </div>
                 </div>

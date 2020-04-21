@@ -1531,7 +1531,7 @@ class Review(Model):
         elif user_id is not None:
             q.filter_args.extend([User.id == user_id])
 
-        q.sort_args = [Review.timestamp]
+        q.sort_args = [Review.id]
         return q.all()
 
     # TODO add median to summary stat

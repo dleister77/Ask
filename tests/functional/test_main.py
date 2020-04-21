@@ -39,7 +39,7 @@ class TestUser(FunctionalTest):
     routeFunction = 'main.user'
     pwordmodal = '<form id = "modal_form_group" action="/passwordupdate" method="POST">'
     userupdatemodal = '<form id = "modal_form_group" action="/userupdate" method="POST">'
-    edituserinfo = '<a href="" data-toggle="modal" data-target="#modal_id">(edit)</a>'
+    edituserinfo = '<i class="material-icons">edit</i>'
     changepassword = '<a href="" data-toggle="modal" data-target="#modal_password">Click to update password</a>'
 
     def test_get(self, activeClient, testUser):
@@ -53,18 +53,18 @@ class TestUser(FunctionalTest):
         address = '<li class="list-group-item border-0 card-item py-1 px-0">Charlotte, NC, 28210</li>'
         assert address in responseDecoded
         num_reviews = '<dt class="col-4 text-left"># Reviews:</dt>'
-        num_reviews2 = '<dd class="col-8 text-right">4</dd>'
+        num_reviews2 = '<dd class="col-8 text-right">3</dd>'
         assert num_reviews in responseDecoded
         assert num_reviews2 in responseDecoded
-        avg_reviews = f'<dd class="col-8 text-right">{round(13/4,1)}</dd>'
+        avg_reviews = f'<dd class="col-8 text-right">4.0</dd>'
         assert avg_reviews in responseDecoded
         pag_link1 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=1">1</a></li>'
         pag_link2 = '<li class="page-item"><a class="page-link" href="/user/jjones?page=2">Next</a></li>'
         assert pag_link1 in responseDecoded
         assert pag_link2 in responseDecoded
         assert self.pwordmodal in responseDecoded
-        assert self.userupdatemodal in responseDecoded
         assert self.edituserinfo in responseDecoded
+        assert self.userupdatemodal in responseDecoded
         assert self.changepassword in responseDecoded
 
     def test_getPage2(self, activeClient, testUser):

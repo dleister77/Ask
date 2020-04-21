@@ -2,9 +2,13 @@ import axios from 'axios';
 import Vue from 'vue';
 import VueSweetalert2 from 'vue-sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
+import {BootstrapVue} from 'bootstrap-vue';
+import 'bootstrap/dist/css/bootstrap.css';
+import 'bootstrap-vue/dist/bootstrap-vue.css';
 
 import { postForm, makeForm } from '../../scripts/forms';
 
+import DeviceDetectionMixin from '../../components/mixins/deviceDetection';
 import MessageForm from '../../components/messages/message-form';
 import MessageRow from '../../components/messages/message-row';
 import MessageRead from '../../components/messages/message-read';
@@ -13,11 +17,13 @@ import folderNav from '../../components/folder-nav';
 
 
 Vue.use(VueSweetalert2);
+Vue.use(BootstrapVue);
 
 
 const messageApp = new Vue({
   el: '#messageApp',
   delimiters: ['[[', ']]'],
+  mixins: [DeviceDetectionMixin],
   components: {
     'message-row': MessageRow,
     'message-read': MessageRead,
@@ -64,6 +70,12 @@ const messageApp = new Vue({
     is_active() {
       return this.active_index != null;
     },
+    messagePosition() {
+      return {
+        current: this.active_index,
+        last: this.messages.length - 1,
+      };
+    },
     messageIsVisible() {
       return this.is_active && !this.newMessageIsVisible;
     },
@@ -98,9 +110,11 @@ const messageApp = new Vue({
       };
       postForm(this.urls.move, formData);
     },
-    replyToMessage() {
+    replyToMessage(id) {
       this.show.newMessage = true;
       this.is_reply = true;
+      this.$root.$emit('bv::hide::tooltip');
+
     },
     reverseMessages() {
       this.messages.reverse();
@@ -112,11 +126,13 @@ const messageApp = new Vue({
         this.markAsRead();
       }
     },
-    showNewMessage() {
+    showNewMessage(id) {
       this.show.newMessage = true;
       this.active_index = null;
+      this.$root.$emit('bv::hide::tooltip');
+
     },
-    showLastPage() {
+    showLastPage(id) {
       if (this.messageIsVisible) {
         this.active_index = null;
         this.selectedMessages = [];
@@ -128,10 +144,13 @@ const messageApp = new Vue({
         this.show.newMessage = false;
         this.is_reply = false;
       }
+      this.$root.$emit('bv::hide::tooltip');
     },
-    updateActiveMessage(adjust) {
+    updateActiveMessage(adjust, id) {
       if (0 <= (this.active_index + adjust) < this.messages.length) {
         this.active_index += adjust;
+        this.$root.$emit('bv::hide::tooltip');
+
       }
     },
     updateSelectedMessages(update) {
@@ -157,24 +176,25 @@ const messageApp = new Vue({
           v-bind:new-message-is-visible="newMessageIsVisible"
           v-bind:move-links-visible="moveLinksVisible"
           v-bind:event-signal="eventSignal"
-          v-on:update-active-message="updateActiveMessage($event)"
-          v-on:new-message="showNewMessage"
-          v-on:back-to-last="showLastPage"
-          v-on:reply-to-message="replyToMessage"
+          v-bind:messagePosition="messagePosition"
+          v-on:update-active-message="updateActiveMessage(...arguments)"
+          v-on:new-message="showNewMessage($event)"
+          v-on:back-to-last="showLastPage($event)"
+          v-on:reply-to-message="replyToMessage($event)"
           v-on:move-message="moveMessage($event)">
       </folder-nav>
 
       <div v-if="folderIsVisible" class="container-fluid p-1" id="folder">
           <div class="row">
-              <table class="table table-hover d-flex flex-column border-bottom">
-                  <thead>
+              <table class="table-sm table-borderless table-hover table-responsive d-flex flex-column border-top border-bottom">
+                  <thead class="d-none d-md-block">
                       <tr class="d-flex folder-header">
-                          <th class="d-none d-md-block col-1" scope="col"><input id="select_all" type="checkbox"></th>
+                          <th class="d-none d-md-block col-md-1" scope="col"><input id="select_all" type="checkbox"></th>
                           <th class="" hidden scope = "col"></th>
-                          <th class="col-2" scope="col">From</th>
-                          <th class="col-2" scope="col">Subject</th>
-                          <th class="col-6" scope="col">Body</th>
-                          <th class="col-2 col-md-1" scope="col">Time Sent</th>
+                          <th class="col-md-2 text-left" scope="col">From</th>
+                          <th class="col-md-2 text-left" scope="col">Subject</th>
+                          <th class="col-md-6 d-none d-md-block text-left" scope="col">Body</th>
+                          <th class="col-md-1 text-left" scope="col">Time Sent</th>
                       </tr>
                   </thead>
                   <tbody>

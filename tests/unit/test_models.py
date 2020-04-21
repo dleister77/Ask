@@ -43,7 +43,7 @@ class TestUser(object):
         u = User.query.filter_by(username="jjones").first()
         assert u.username == "jjones"
         assert u.email == "jjones@yahoo.com"
-        assert len(u.reviews) == 3
+        assert len(u.reviews) == 4
         assert u.email_verified is False
         assert u._email_token_key == 'verify_email'
         assert u._password_token_key == 'reset_password'
@@ -118,8 +118,8 @@ class TestUser(object):
         GroupRequest.create(requestor_id=testUser.id, group_id=2)
         assert testUser.address.user_id == 2
         assert len(User.query.all()) == 4
-        assert len(testUser.reviews) == 3
-        assert len(Review.query.all()) == 6
+        assert len(testUser.reviews) == 4
+        assert len(Review.query.all()) == 7
         assert len(FriendRequest.query.all()) == 1
         assert len(GroupRequest.query.all()) == 1
         testUser.delete()
@@ -402,7 +402,7 @@ class TestCategory(object):
     def test_attributes(self):
         testCategory = Category.query.get(1)
         assert testCategory.name == 'Electrician'
-        assert len(testCategory.reviews) == 6
+        assert len(testCategory.reviews) == 7
         assert len(testCategory.providers) == 4
         assert testCategory.sector.name == 'Home Services'
 

@@ -1,9 +1,17 @@
 import Vue from 'vue';
+import { BootstrapVue } from 'bootstrap-vue';
+import { VBTooltip } from 'bootstrap-vue';
 import TypeaheadMixin from '../../components/forms/typeahead_mixin';
 import makeMap from '../../scripts/maps';
 import { categoryGet } from '../../scripts/forms';
 import { getCurrentLocation } from '../../scripts/geo';
 import ModalFormSuggestionMixin from '../../components/modal-form-suggestion-mixin';
+import DeviceDetectionMixin from '../../components/mixins/deviceDetection';
+// import 'bootstrap/dist/css/bootstrap.css';
+import 'bootstrap-vue/dist/bootstrap-vue.css';
+
+
+Vue.use(BootstrapVue);
 
 const mapView = {
   template: '<div></div>',
@@ -12,6 +20,9 @@ const mapView = {
 const searchPage = new Vue({
   el: '#appContent',
   delimiters: ['[[', ']]'],
+  directives: {
+    'b-tooltip': VBTooltip,
+  },
   components: {
     'map-view': mapView,
   },
@@ -76,7 +87,7 @@ const searchPage = new Vue({
       this.activeBusiness = b;
     },
   },
-  mixins: [TypeaheadMixin, ModalFormSuggestionMixin],
+  mixins: [DeviceDetectionMixin, TypeaheadMixin, ModalFormSuggestionMixin],
   watch: {
     'form.location': function (locationSource) {
       if (locationSource === "gps") {
@@ -93,9 +104,6 @@ const searchPage = new Vue({
         this.form.gpsLong = '';
       }
     },
-  },
-  mounted() {
-    $('[data-toggle="tooltip"]').tooltip();
   },
 });
 

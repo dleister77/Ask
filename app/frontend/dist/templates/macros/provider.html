@@ -6,42 +6,42 @@
 
     <div class="card">
         <div class="card-header">
-            <div class="row justify-content-between">
-                <div class="col-9 col-md-7 align-self-center">
+            <div class="row">
+                <div class="col-12 col-md-9 align-self-center">
                     {% if provider.name not in request.view_args.values() %}
                     <h4><a class="card-header-item" id="{{provider.name}}-{{provider.id}}-link" href="{{url_for('main.provider', name=provider.name, id=provider.id, **filter)}}">{{provider.name}}</a></h4>
                     {% else %}
                     <h4>{{provider.name}}</h4>
                     {% endif %}
                 </div>
-                <div class="col-3 col-md-2 align-self-center">
-                    <div class="row justify-content-center">
-                        <a class="card-header-item mx-auto"
-                          href="{{ url_for('main.review', name=provider.name, id=provider.id) }}"
-                          data-toggle="tooltip"
-                          title="Add review">
-                          <i class="material-icons">
-                            post_add
-                          </i>
-                        </a>
-                        <span
-                          class="mx-auto"
-                          tabindex="0"
-                          data-toggle="tooltip"
-                          title="Make suggestion">
-                          <a
-                            href=""
-                            data-toggle="modal"
-                            data-target="#suggestion-modal">
-                            <i
-                              class="material-icons card-header-item"
-                              data-id="{{ provider.id }}"
-                              data-subject="{{ provider.name }}"
-                              @click="setSuggestionFormPresets"
-                              >feedback</i>
-                          </a>
-                        </span>
-                      </div>
+                <div class="col-12 col-md-3 align-self-center">
+                    <div class="row d-flex">
+                        <div class="col-auto col-md-6">
+                            <a class="card-header-item mx-auto"
+                              href="{{ url_for('main.review', name=provider.name, id=provider.id) }}"
+                              v-b-tooltip="{ title: 'Add review', disabled: isMobile }">
+                              <i class="material-icons">
+                                post_add
+                              </i>
+                              <small class="d-block d-md-none">Add Review</small>
+                            </a>
+                        </div>
+                        <div class="col-auto col-md-6">
+                              <a
+                                href=""
+                                data-toggle="modal"
+                                data-target="#suggestion-modal"
+                                v-b-tooltip="{ title: 'Make a sugestion', disabled: isMobile }">
+                                <i
+                                  class="material-icons card-header-item"
+                                  data-id="{{ provider.id }}"
+                                  data-subject="{{ provider.name }}"
+                                  @click="setSuggestionFormPresets"
+                                  >feedback</i>
+                              </a>
+                            <small class="d-block d-md-none">Make Suggestion</small>
+                        </div>
+                    </div>
                 </div>
             </div>    
         </div>
@@ -86,5 +86,5 @@
             </div>
         </div>
     </div>
-    
+
 {% endmacro %}     

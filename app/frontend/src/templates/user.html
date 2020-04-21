@@ -9,37 +9,40 @@
 
 
 <div class="card" id="user_profile">
-    <div class="card-header p-2">
-        <div class="row justify-content-end">
-            <div class="col-8">
-                <h4 class="text-center">Profile Information</h4>
+    <div class="card-header">
+        <div class="row">
+            <div class="col-12 col-md-9 justify-content-left align-self-center">
+                <h4 class="card-header-item">Profile Information</h4>
             </div>
-            <div class="col-2 align-self-center">
-                <div class="row justify-content-center">
+            <div class="col-12 col-md-3 align-self-center">
+                <div class="row justify-content-left justify-content-md-end d-flex">
                   {% if user == current_user %}
-                      <span 
-                        class="mx-auto"
-                        data-toggle="tooltip" data-placement="top" title="edit">
-                          <a href="" data-toggle="modal" data-target="#modal_id">
-                              <i class="material-icons card-header-item">edit</i>
-                          </a>
-                      </span>
+                    <div class="col-auto">
+                        <a
+                          class="card-header-item mx-auto"
+                          href="" data-toggle="modal" data-target="#modal_id"
+                          v-b-tooltip="{ title: 'edit', disabled: isMobile }">
+                            <i class="material-icons">edit</i>
+                            <small class="d-block d-md-none">Make Suggestion</small>
+                        </a>
+                    </div>
+
                   {% else %}
-                    <span
-                      class="mx-auto"
-                      data-toggle="tooltip" data-placement="top"
-                      title="Send {{ user.first_name }} message">
-                        <a href="" 
+                    <div class="col-auto">
+                        <a href=""
+                          class="card-header-item mx-auto"
                           data-toggle="modal"
-                          data-target="#message-modal">
-                          <i class="material-icons card-header-item"
+                          data-target="#message-modal"
+                          v-b-tooltip="{ title: 'Send {{ user.first_name }} message', disabled: isMobile }">
+                          <i class="material-icons"
                             data-id="{{ user.id }}"
                             data-name="{{ user.full_name }}"
                             @click="setFormPresets">
                             mail
                           </i>
+                          <small class="d-block d-md-none">Send {{ user.first_name }} message</small>
                         </a>
-                    </span>            
+                    </div>
                   {% endif %}
                 </div>
             </div>

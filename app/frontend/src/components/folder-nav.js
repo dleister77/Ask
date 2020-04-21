@@ -1,17 +1,28 @@
 import Vue from 'vue';
+import { VBTooltip } from 'bootstrap-vue';
 import NavListButton from './nav-list-button';
-import tooltip from './directives/tooltip';
+// import tooltip from './directives/tooltip';
+
 
 const folderNav = ('folder-nav', {
   components: {
     'nav-list-button': NavListButton,
   },
+  computed: {
+    is_first_message() {
+      return this.messagePosition.current === 0;
+    },
+    is_last_message() {
+      return this.messagePosition.current === this.messagePosition.last;
+    },
+  },
   directives: {
-    tooltip,
+    'b-tooltip': VBTooltip,
   },
   props: {
     eventSignal: Object,
     folderIsVisible: Boolean,
+    messagePosition: Object,
     messageIsVisible: Boolean,
     moveLinksVisible: Boolean,
     newMessageIsVisible: Boolean,
@@ -24,10 +35,11 @@ const folderNav = ('folder-nav', {
               id="back-button"
               ref="back-button"
               title="Back"
+              tooltipTitle="Navigate Back"
               v-if="messageIsVisible || newMessageIsVisible"
               v-bind:event-signal="eventSignal.backToLast"
               v-on:back-to-last="$emit(eventSignal.backToLast)"
-              v-tooltip:top="'Navigate back'">
+              >
                 <i class="material-icons">arrow_back</i>
             </nav-list-button>
 
@@ -47,10 +59,12 @@ const folderNav = ('folder-nav', {
              id="previous-message"
              ref="previous-message"
              title="Previous"
+             tooltipTitle="Previous Message"
+             :disabled="is_first_message ? true : false"
              v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.updateActive"
              v-on:update-active-message="$emit(eventSignal.updateActive, -1)"
-             v-tooltip:top="'Previous Message'">
+             >
                 <i class="material-icons">arrow_back_ios</i>
             </nav-list-button>
 
@@ -58,10 +72,12 @@ const folderNav = ('folder-nav', {
              ref="next-message"
              id="next-message"
              title="Next"
+             tooltipTitle="Next Message"
+             :disabled="is_last_message ? true : false"
              v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.updateActive"
              v-on:update-active-message="$emit(eventSignal.updateActive, +1)"
-             v-tooltip:top=" 'Next Message' ">
+             >
                 <i class="material-icons">arrow_forward_ios</i>
             </nav-list-button>
 
@@ -69,28 +85,30 @@ const folderNav = ('folder-nav', {
               class="d-none d-lg-block"
               ref="move-links-delete"
               title="Delete"
+              tooltipTitle="Delete"
               v-if="moveLinksVisible"
               v-bind:event-signal="eventSignal.moveMessage"
               v-on:move-message="$emit(eventSignal.moveMessage, 'trash')"
-              v-tooltip:top="'Delete message'">
-              <i class="material-icons md-36">delete</i>
+              >
+              <i class="material-icons">delete</i>
             </nav-list-button>
 
             <nav-list-button
               class="d-none d-lg-block"
               ref="move-links-archive"
               title="Archive"
+              tooltipTitle="Archive"
               v-if="moveLinksVisible"
               v-bind:event-signal="eventSignal.moveMessage"
               v-on:move-message="$emit(eventSignal.moveMessage, 'archive')"
-              v-tooltip:top="'Archive message'">
+              >
               <i class="material-icons">save</i> 
               </nav-list-button>
 
             <li v-if="moveLinksVisible"
               ref="move-list"
               class="d-block d-lg-none nav-item-dropdown"
-              v-tooltip:top="'Move'">
+              v-b-tooltip.hover="'Move'">
               <div class="row">
                 <div class="col-12 align-self-center">
                   <a class="nav-link dropdown-toggle py-0"
@@ -113,10 +131,11 @@ const folderNav = ('folder-nav', {
             <nav-list-button
                 id="new-message"
                 ref="new-message"
+                tooltipTitle="New Message"
                 v-if="folderIsVisible"
                 v-bind:event-signal="eventSignal.newMessage"
                 v-on:new-message="$emit(eventSignal.newMessage)"
-                v-tooltip:top="'New Message'">
+                >
                 New Message
             </nav-list-button>
 
@@ -124,10 +143,11 @@ const folderNav = ('folder-nav', {
              id="reply-to"
              ref="reply-to"
              title="Reply"
+             tooltipTitle="Reply"
              v-if="messageIsVisible"
              v-bind:event-signal="eventSignal.replyToMessage"
              v-on:reply-to-message="$emit(eventSignal.replyToMessage)"
-             v-tooltip:top=" 'Reply' ">
+             >
                 <i class="material-icons">reply</i>
             </nav-list-button>
         </ul>

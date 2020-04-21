@@ -69,7 +69,7 @@ const MessageForm = {
               icon: 'success',
             });
           } else {
-            let message = 'Unabled to send message. Please correct errors:\n';
+            let message = 'Unable to send message. Please correct errors:\n';
             message += response.data.errorMsg.join('\n');
             this.$swal(message);
           }

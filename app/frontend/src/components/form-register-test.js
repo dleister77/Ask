@@ -1,5 +1,9 @@
 /* eslint-disable no-alert */
 /* eslint-disable func-names */
+import Vue from 'vue';
+import VueSweetalert2 from 'vue-sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
+
 import required from 'vuelidate/lib/validators/required';
 import sameAs from 'vuelidate/lib/validators/sameAs';
 import maxLength from 'vuelidate/lib/validators/maxLength';
@@ -13,7 +17,7 @@ import FormInput from './forms/form-input';
 import FormInputSelect from './forms/form-input-select';
 import { states } from '../../supporting/states';
 
-
+Vue.use(VueSweetalert2);
 
 const FormRegister = {
   components: {
@@ -93,7 +97,11 @@ const FormRegister = {
   methods: {
     submit(event) {
       if (this.$v.$invalid) {
-        alert('Please correct errors and resubmit');
+        this.$swal({
+          title: 'Unable to submit registration',
+          text: 'Please correct errors and resubmit',
+          icon: 'error',
+        });
       } else {
         event.target.submit();
       }

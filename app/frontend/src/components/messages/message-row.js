@@ -1,19 +1,23 @@
 const MessageRow = {
   props: ['message'],
   template: `
-          <tr v-bind:style="!message.read ? 'font-weight:bold' : ''" class="d-flex">
-              <td class="d-none d-md-block col-1">
+          <tr
+            :style="!message.read ? 'font-weight:bold' : ''"
+            class="d-flex flex-wrap border-bottom">
+              <td class="d-none d-md-block col-1 order-md-1 folder-row">
                   <input
                   class="select"
                   type="checkbox"
                   v-bind:value="message.id"
                   v-on:change="updateList('selected-messages', [$event.target.checked, $event.target.value])">
                   </td>
-              <td class="inbox_id" hidden>{{message.id}}</td>
-              <td v-on:click="$emit('show-message')" class="col-2">{{message.sender_full_name}}</td>
-              <td v-on:click="$emit('show-message')" class="col-2">{{message.subject}}</td>
-              <td v-on:click="$emit('show-message')" class="col-6 folder-message-body">{{message.body}}</td>
-              <td v-on:click="$emit('show-message')" class="col-2 col-md-1">{{localize_time}}</td>
+              <td class="inbox_id folder-row" hidden>{{message.id}}</td>
+              <td v-on:click="$emit('show-message')" class="col-8 col-md-2 order-1 order-md-2 folder-row">{{message.sender_full_name}}</td>
+              <td
+                @click="$emit('show-message')"
+                class="col-12 col-md-2 folder-row order-3 order-md-3">{{message.subject}}</td>
+              <td v-on:click="$emit('show-message')" class="order-4 col-12 col-md-6 folder-message-body folder-row">{{message.body}}</td>
+              <td v-on:click="$emit('show-message')" class="order-2 order-md-4 col-4 col-md-1 folder-row">{{localize_time}}</td>
           </tr>`,
   computed: {
     localize_time() {
