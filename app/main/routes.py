@@ -1,5 +1,4 @@
 import os
-import re
 from urllib import parse
 
 from flask import flash, redirect, render_template, request, url_for, jsonify,\
@@ -9,16 +8,15 @@ import simplejson
 
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            ProviderFilterForm, ReviewEditForm,\
-                           UserMessageForm, ProviderSuggestionForm
+                           ProviderSuggestionForm
+from app.message.forms import UserMessageForm
 from app.auth.forms import UserUpdateForm, PasswordChangeForm
 from app.models import Address, Category, Picture, Provider, Review, Sector,\
-                       User, Message, Message_User,\
-                       Provider_Suggestion, Address_Suggestion
+                       User, Provider_Suggestion, Address_Suggestion
 from app.utilities.geo import AddressError, Location, sortByDistance
-from app.utilities.helpers import disableForm, email_verified, save_url
+from app.utilities.helpers import disableForm, email_verified
 from app.utilities.pagination import Pagination
 from app.main import bp
-from app.extensions import db
 
 
 @bp.route('/index')
@@ -424,7 +422,7 @@ def make_provider_suggestion():
             website, telephone, email = None, None, None
 
         if form.address_updated.data is True:
-            address = Address_Suggestion(
+            address = Address_Suggestion.create(
                 line1=form.line1.data,
                 line2=form.line2.data,
                 city=form.city.data,
@@ -435,11 +433,13 @@ def make_provider_suggestion():
         else:
             address = None
 
+        provider = Provider.query.get(form.id.data)
+
         Provider_Suggestion.create(
             user_id=current_user.id,
-            name=form.name.data,
+            name=form.name.data if form.name.data != provider.name else None,
             provider_id=form.id.data,
-            is_active=not form.is_not_active.data,
+            is_not_active=form.is_not_active.data,
             email=email,
             telephone=telephone,
             website=website,
@@ -493,133 +493,3 @@ def user(username):
         "user.html", title="User Profile", user=user, reviews=reviews,
         pag_urls=pag_urls, summary=summary, message=message
     )
-
-
-@bp.route('/message/send', methods=["POST"])
-@login_required
-def send_message():
-    """send message to another user"""
-    form = UserMessageForm()
-    if form.validate_on_submit():
-        message_id = form.message_user_id.data
-        if message_id == "" or message_id is None:
-            Message.send_new(
-                sender_dict=dict(user_id=current_user.id),
-                recipient_dict=dict(user_id=form.recipient_id.data),
-                subject=form.subject.data,
-                body=form.body.data
-            )
-
-        else:
-            existing_message = Message_User.query.get(message_id).message
-            existing_message.send_reply(
-                subject=form.subject.data,
-                body=form.body.data
-            )
-        return jsonify(dict(status="success"))
-    return jsonify(
-        dict(
-            status="failure",
-            errorMsg=form.errors
-        )
-    )
-
-
-@bp.route('/message/<folder>', methods=['GET'])
-@login_required
-@save_url
-def view_messages(folder):
-    messages = current_user.get_messages(folder)
-    page = request.args.get('page', 1, int)
-    pagination = Pagination(messages, page, current_app.config.get('PER_PAGE'))
-    pag_urls = pagination.get_urls('main.view_messages', dict(folder=folder))
-    messages = pagination.paginatedData
-    new_message = UserMessageForm()
-    messages_dict = [{"id": msg.id,
-                      "timestamp": msg.message.timestamp,
-                      "read": msg.read,
-                      "sender_id": msg.message.sender.user_id,
-                      "sender_full_name": msg.message.sender.full_name,
-                      "sender_user_name": msg.message.sender.user.username,
-                      "status": msg.tag,
-                      "subject": msg.message.subject,
-                      "body": msg.message.body} for msg in messages]
-    messages_json = json.dumps(messages_dict)
-    pagination_json = json.dumps(pag_urls)
-    return render_template(
-        "messages.html", title="messages", messages=messages,
-        pagination_json=pagination_json, new_message=new_message,
-        messages_json=messages_json
-    )
-
-
-@bp.route('/message/update/read', methods=["POST"])
-@login_required
-def message_update_read():
-    """update message as having been read."""
-    msg = Message_User.query.get(request.form.get('id'))
-    if msg is not None and msg.user_id == current_user.id:
-        msg.update(read=True)
-        return jsonify({"status": "success"})
-    else:
-        return jsonify({"status": "failure"})
-
-
-@bp.route('/message/move', methods=['POST'])
-@login_required
-def move_message():
-    message_ids = request.form.get('message_id').split(',')
-    tag = request.form.get('tag')
-    flash_status = {
-        'trash': 'deleted',
-        'archive': 'archived',
-        'inbox': 'moved to inbox'
-    }
-    if tag not in ['trash', 'archive', 'inbox']:
-        flash("Invalid request.  Please choose a valid folder.")
-    else:
-        moved = []
-        for id in message_ids:
-            msg = Message_User.query.get(id)
-            if msg is not None and msg.user_id == current_user.id:
-                msg.update(tag=tag)
-                moved.append(True)
-        if len(moved) == 1:
-            flash(f"Message {flash_status[tag]}.")
-        elif len(moved) > 1:
-            flash(f"Messages {flash_status[tag]}.")
-        else:
-            flash("Unable to move message(s). Please try again.")
-    return redirect(url_for('main.view_messages', folder="inbox"))
-
-
-@bp.route('/message/friends', methods=['GET'])
-@login_required
-def get_friends():
-    """Searches db for groups to populate friend search autocomplete"""
-    name = parse.unquote_plus(request.args.get("name"))
-    # remove non alpha characters and spaces if present
-    a = re.compile('[^a-zA-Z]+')
-    name = f'%{a.sub("", name)}%'
-    users = (db.session.query(User.id, User.first_name, User.last_name)
-                       .filter(User.friends.contains(current_user))
-                       .filter((User.first_name + User.last_name).ilike(name)
-                               | (User.last_name + User.first_name).ilike(name))
-                       .order_by(User.last_name, User.first_name)
-                       .limit(50))
-    users = users.all()
-    names = ([
-        {
-            "id": person.id, 
-            "full_name": f"{person.first_name} {person.last_name}"
-        }
-        for person in users
-    ])
-    return jsonify(names)
-
-
-@bp.route('/message/unread_count')
-@login_required
-def get_message_unread_count():
-    count = current_user.get_inbox_unread_count()
-    return jsonify({'unread_count': count})

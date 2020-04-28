@@ -5,6 +5,8 @@ from flask import (flash, redirect, render_template, request, url_for, jsonify,
                    current_app)
 from flask_login import current_user, login_required
 
+
+from app.extensions import db
 from app.relationship.forms import (GroupSearchForm, FriendDeleteForm,
                                     FriendSearchForm, GroupCreateForm,
                                     GroupEditForm, FriendApproveForm,
@@ -442,3 +444,27 @@ def network_friends():
 def network_groups():
     """Initial render of network page."""
     return groups_render()
+
+@bp.route('/relationship/friends', methods=['GET'])
+@login_required
+def get_friends():
+    """Searches db for friends to populate friend search autocomplete"""
+    name = parse.unquote_plus(request.args.get("name"))
+    # remove non alpha characters and spaces if present
+    a = re.compile('[^a-zA-Z]+')
+    name = f'%{a.sub("", name)}%'
+    users = (db.session.query(User.id, User.first_name, User.last_name)
+                       .filter(User.friends.contains(current_user))
+                       .filter((User.first_name + User.last_name).ilike(name)
+                               | (User.last_name + User.first_name).ilike(name))
+                       .order_by(User.last_name, User.first_name)
+                       .limit(50))
+    users = users.all()
+    names = ([
+        {
+            "id": person.id, 
+            "full_name": f"{person.first_name} {person.last_name}"
+        }
+        for person in users
+    ])
+    return jsonify(names)

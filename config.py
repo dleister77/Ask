@@ -42,6 +42,8 @@ class Config(object):
     #API Keys
     GEOCODIO_API_KEY = os.environ.get('GEOCODIO_API_KEY')
     TAMU_API_KEY = os.environ.get('TAMU_API_KEY')
+    RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC')
+    RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE')
 
 class ProductionConfig(Config):
     DEBUG = False

@@ -10,7 +10,7 @@ from app.relationship.forms import (GroupCreateForm, FriendSearchForm,
 									GroupSearchForm, GroupEditForm,
 									FriendDeleteForm, FriendApproveForm,
 									GroupDeleteForm, GroupMemberApproveForm)
-from app.admin.forms import MessageForm as FooterContactForm
+from app.message.forms import ContactMessageForm as FooterContactForm
 from app.utilities.geo import Location		
 from config import TestConfig
 
@@ -53,35 +53,35 @@ class FormTest(object):
 
 
 def make_form(formClass, providerDict):
-	form = ImmutableMultiDict(providerDict)
-	form = formClass(formdata=form)
-	return form
+    form = ImmutableMultiDict(providerDict)
+    form = formClass(formdata=form)
+    return form
 
 
 def form_test(app, test_form, test_case):
-	"""Test form validation.
-	test_form: form to be tested
-	test_case: dict containing tuple of field value and expected error messages (list)
-	"""
-	# generate test_form values to populate form for testing
-	test_args = {}
-	test_errors = {}
-	for key in test_case:
-		test_args[key] = test_case[key][0]
-		if test_case[key][1] is not None:
-			test_errors[key] = test_case[key][1]
-	test_args = ImmutableMultiDict(test_args)
-	with app.app_context():
-		form = test_form(formdata=test_args)
-		# if no validation errors to check form, check that form validates
-		if len(test_errors) == 0:
-			assert form.validate()
-		# otherwise check that it doesn't validate and correct value errors are included
-		else:
-			assert not form.validate()
-			for key in test_errors:
-				assert key in form.errors
-				assert test_errors[key] in form.errors[key]
+    """Test form validation.
+    test_form: form to be tested
+    test_case: dict containing tuple of field value and expected error messages (list)
+    """
+    # generate test_form values to populate form for testing
+    test_args = {}
+    test_errors = {}
+    for key in test_case:
+        test_args[key] = test_case[key][0]
+        if test_case[key][1] is not None:
+            test_errors[key] = test_case[key][1]
+    test_args = ImmutableMultiDict(test_args)
+    with app.app_context():
+        form = test_form(formdata=test_args)
+        # if no validation errors to check form, check that form validates
+        if len(test_errors) == 0:
+            assert form.validate()
+        # otherwise check that it doesn't validate and correct value errors are included
+        else:
+            assert not form.validate()
+            for key in test_errors:
+                assert key in form.errors
+                assert test_errors[key] in form.errors[key]
 
 
 @pytest.mark.usefixtures("activeClient")
@@ -131,152 +131,154 @@ class TestGroupMemberApprove(FormTest):
 @pytest.mark.usefixtures("activeClient")
 class TestGroupDelete(FormTest):
 
-	formType = GroupDeleteForm
+    formType = GroupDeleteForm
 
-	def make_form(self, formDict):
-		super().make_form(formDict)
-		self.form.populate_choices(current_user)
+    def make_form(self, formDict):
+        super().make_form(formDict)
+        self.form.populate_choices(current_user)
 
-	def test_new(self, testGroup):
-		testCase = {"name": testGroup.id}
-		self.new(testCase)
-	
-	def test_missingRequired(self):
-		testCase = {}
-		key = 'name'
-		errorMsg = "At least one group must be selected."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
-	
-	def test_notOnGroupList(self, testGroup2):
-		testCase = {"name": testGroup2.id}
-		key = 'name'
-		errorMsg = "Please select a group from the list."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
+    def test_new(self, testGroup):
+        testCase = {"name": testGroup.id}
+        self.new(testCase)
 
-	def test_groupDoesNotExist(self, testGroup2):
-		testCase = {"name": 100}
-		key = 'name'
-		errorMsg = "Please select a group from the list."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)	
+    def test_missingRequired(self):
+        testCase = {}
+        key = 'name'
+        errorMsg = "At least one group must be selected."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
 
-	def test_populateChoices(self):
-		self.form = self.formType()
-		self.form.populate_choices(current_user)
-		assert self.form.name.choices == [(1, 'QHIV HOA')]
+    def test_notOnGroupList(self, testGroup2):
+        testCase = {"name": testGroup2.id}
+        key = 'name'
+        errorMsg = "Please select a group from the list."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_groupDoesNotExist(self, testGroup2):
+        testCase = {"name": 100}
+        key = 'name'
+        errorMsg = "Please select a group from the list."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_populateChoices(self):
+        self.form = self.formType()
+        self.form.populate_choices(current_user)
+        assert self.form.name.choices == [(1, 'QHIV HOA')]
+
 
 @pytest.mark.usefixtures("activeClient")
 class TestFriendDelete(FormTest):
 
-	formType = FriendDeleteForm
+    formType = FriendDeleteForm
 
-	def make_form(self, formDict):
-		"""Helper method to generate Provider form for tests."""
-		super().make_form(formDict)
-		self.form.populate_choices(current_user)
+    def make_form(self, formDict):
+        """Helper method to generate Provider form for tests."""
+        super().make_form(formDict)
+        self.form.populate_choices(current_user)
 
-	def test_new(self, testUser2):
-		testCase = {"name": testUser2.id}
-		self.new(testCase)
-	
-	def test_missingRequired(self):
-		testCase = {}
-		key = 'name'
-		errorMsg = "At least one name must be selected."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
-	
-	def test_notFriend(self, testUser3):
-		testCase = {"name": testUser3.id}
-		key = 'name'
-		errorMsg = "Please select friend from list."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)		
+    def test_new(self, testUser2):
+        testCase = {"name": testUser2.id}
+        self.new(testCase)
 
-	def test_populateChoices(self):
-		self.form = self.formType()
-		self.form.populate_choices(current_user)
-		assert self.form.name.choices == [(1, 'Sarah Smith')]
+    def test_missingRequired(self):
+        testCase = {}
+        key = 'name'
+        errorMsg = "At least one name must be selected."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_notFriend(self, testUser3):
+        testCase = {"name": testUser3.id}
+        key = 'name'
+        errorMsg = "Please select friend from list."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)		
+
+    def test_populateChoices(self):
+        self.form = self.formType()
+        self.form.populate_choices(current_user)
+        assert self.form.name.choices == [(1, 'Sarah Smith')]
+
 
 @pytest.mark.usefixtures("activeClient")
 class TestFriendApprove(FormTest):
 
-	formType = FriendApproveForm
+    formType = FriendApproveForm
 
-	def make_form(self, formDict):
-		"""Override FormTest make form to populate choices"""
-		super().make_form(formDict)
-		self.form.populate_choices(current_user)
-	
-	def test_new(self, testFriendrequest):
-		testCase = {"name": [testFriendrequest.id]}
-		self.new(testCase)
-	
-	def test_newMultiple(self, testFriendrequest, testFriendrequest2):
-		testCase = {"name":[testFriendrequest.id, testFriendrequest2.id]}
-		self.new(testCase)
-		
-	def test_missingRequired(self, testFriendrequest):
-		testCase = {}
-		key = 'name'
-		errorMsg = "Please select at least one name to approve."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)
+    def make_form(self, formDict):
+        """Override FormTest make form to populate choices"""
+        super().make_form(formDict)
+        self.form.populate_choices(current_user)
 
-	def test_invalidName(self, testFriendrequest):
-		testCase = {"name": testFriendrequest.id + 1}
-		key = 'name'
-		errorMsg = "Please select name from the list."
-		self.make_form(testCase)
-		self.assertNot(key, errorMsg)	
-	
+    def test_new(self, testFriendrequest):
+        testCase = {"name": [testFriendrequest.id]}
+        self.new(testCase)
+
+    def test_newMultiple(self, testFriendrequest, testFriendrequest2):
+        testCase = {"name": [testFriendrequest.id, testFriendrequest2.id]}
+        self.new(testCase)
+
+    def test_missingRequired(self, testFriendrequest):
+        testCase = {}
+        key = 'name'
+        errorMsg = "Please select at least one name to approve."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
+    def test_invalidName(self, testFriendrequest):
+        testCase = {"name": testFriendrequest.id + 1}
+        key = 'name'
+        errorMsg = "Please select name from the list."
+        self.make_form(testCase)
+        self.assertNot(key, errorMsg)
+
 
 class TestGroupCreate(FormTest):
 
-	formType = GroupCreateForm
+    formType = GroupCreateForm
 
-	def test_new(self, baseGroupNew):
-		self.new(baseGroupNew)
-	
-	@pytest.mark.parametrize('key, errorMsg', [
-		('name', 'Group name is required.'),
-		('description', 'Description is required.')
-	])
-	def test_missingRequired(self, baseGroupNew, key, errorMsg):
-		self.missingRequired(baseGroupNew, key, errorMsg)
+    def test_new(self, baseGroupNew):
+        self.new(baseGroupNew)
 
-	def test_duplicateName(self, baseGroupNew):
-		key = 'name'
-		errorMsg = 'Name is already registered.'
-		baseGroupNew[key] = "Shannon's Bees"
-		self.make_form(baseGroupNew)
-		self.assertNot(key, errorMsg)
+    @pytest.mark.parametrize('key, errorMsg', [
+        ('name', 'Group name is required.'),
+        ('description', 'Description is required.')
+    ])
+    def test_missingRequired(self, baseGroupNew, key, errorMsg):
+        self.missingRequired(baseGroupNew, key, errorMsg)
+
+    def test_duplicateName(self, baseGroupNew):
+        key = 'name'
+        errorMsg = 'Name is already registered.'
+        baseGroupNew[key] = "Shannon's Bees"
+        self.make_form(baseGroupNew)
+        self.assertNot(key, errorMsg)
 
 
 @pytest.mark.usefixtures("activeClient")
 class TestFriendSearch(FormTest):
-    
+
     formType = FriendSearchForm
-    
+
     def test_new(self, baseFriendSearch):
         self.new(baseFriendSearch)
 
     @pytest.mark.parametrize("key, errorMsg", [
             ('id', "Name is required."),
             ('name', 'Name is required.')
-    ])    
+    ])
     def test_missingRequired(self, baseFriendSearch, key, errorMsg):
         self.missingRequired(baseFriendSearch, key, errorMsg)
-    
+
     def test_alreadyFriends(self):
         search = {'id': 1, 'name': "Sarah Smith"}
         key = 'id'
         errorMsg = 'You are already friends with this person.'
         self.make_form(search)
         self.assertNot(key, errorMsg)
-    
+
     def test_oneself(self):
         search = {'id': current_user.id, 'name': current_user.full_name}
         key = 'id'
@@ -306,152 +308,148 @@ class TestGroupSearch(FormTest):
         self.missingRequired(baseGroupSearch, key, errorMsg)
 
 
-
 class TestGroupEdit(FormTest):
 
-	formType = GroupEditForm
-	
-	def test_new(self, baseGroup):
-		self.new(baseGroup)
-	
-	@pytest.mark.parametrize('key, errorMsg',[
-		('name', 'Group name is required.'),
-		('description', 'Description is required.'),
-		('id', 'Group ID is required.  Please do not remove.')
-	])
-	def test_missingRequired(self, baseGroup, key, errorMsg):
-		self.missingRequired(baseGroup, key, errorMsg)
-	
-	def test_idDoesNotExist(self, baseGroup):
-		key = 'id'
-		baseGroup[key] = 8
-		errorMsg = "Invalid update. Group does not exist. Refresh and try again."
-		self.make_form(baseGroup)
-		self.assertNot(key, errorMsg)
-	
-	def test_duplicateGroupName(self, baseGroup):
-		key = 'name'
-		baseGroup[key] = "Shawshank Redemption Fans"
-		errorMsg = "Group name is already registered."
-		self.make_form(baseGroup)
-		self.assertNot(key, errorMsg)		
-	
+    formType = GroupEditForm
+
+    def test_new(self, baseGroup):
+        self.new(baseGroup)
+
+
+    @pytest.mark.parametrize('key, errorMsg',[
+        ('name', 'Group name is required.'),
+        ('description', 'Description is required.'),
+        ('id', 'Group ID is required.  Please do not remove.')
+    ])
+    def test_missingRequired(self, baseGroup, key, errorMsg):
+        self.missingRequired(baseGroup, key, errorMsg)
+
+    def test_idDoesNotExist(self, baseGroup):
+        key = 'id'
+        baseGroup[key] = 8
+        errorMsg = "Invalid update. Group does not exist. Refresh and try again."
+        self.make_form(baseGroup)
+        self.assertNot(key, errorMsg)
+
+    def test_duplicateGroupName(self, baseGroup):
+        key = 'name'
+        baseGroup[key] = "Shawshank Redemption Fans"
+        errorMsg = "Group name is already registered."
+        self.make_form(baseGroup)
+        self.assertNot(key, errorMsg)		
+
 
 class TestAddress(FormTest):
-	"""Test address field."""
+    """Test address field."""
 
-	formType = AddressField
+    formType = AddressField
 
-	def make_form(self, formDict):
-		"""Override FormTest make form to populate choices"""
-		super().make_form(formDict)
-		self.form.state.choices = State.list()
+    def make_form(self, formDict):
+        """Override FormTest make form to populate choices"""
+        super().make_form(formDict)
+        self.form.state.choices = State.list()
 
-	def test_new(self, baseAddress):
-		self.new(baseAddress)
+    def test_new(self, baseAddress):
+        self.new(baseAddress)
 
-	@pytest.mark.parametrize('key, errorMsg', [
-		('line1', 'Street address is required.'),
-		('city', 'City is required.'),
-		('state', 'State is required.'),
-		('zip', 'Zip code is required.')
-	])		
-	def test_missingRequired(self, baseAddress, key, errorMsg):
-		self.missingRequired(baseAddress, key, errorMsg)
-	
-	def test_zipTooShort(self, baseAddress):
-		baseAddress['zip'] = "282"
-		self.make_form(baseAddress)
-		errorMsg = "Please enter a 5 digit zip code."
-		self.assertNot('zip', errorMsg)
+    @pytest.mark.parametrize('key, errorMsg', [
+        ('line1', 'Street address is required.'),
+        ('city', 'City is required.'),
+        ('state', 'State is required.'),
+        ('zip', 'Zip code is required.')
+    ])
+    def test_missingRequired(self, baseAddress, key, errorMsg):
+        self.missingRequired(baseAddress, key, errorMsg)
 
-	def test_zipWithLetters(self, baseAddress):
-		baseAddress['zip'] = "2821a"
-		self.make_form(baseAddress)
-		errorMsg = "Only include numbers in zip code."
-		self.assertNot('zip', errorMsg)
-	
+    def test_zipTooShort(self, baseAddress):
+        baseAddress['zip'] = "282"
+        self.make_form(baseAddress)
+        errorMsg = "Please enter a 5 digit zip code."
+        self.assertNot('zip', errorMsg)
+
+    def test_zipWithLetters(self, baseAddress):
+        baseAddress['zip'] = "2821a"
+        self.make_form(baseAddress)
+        errorMsg = "Only include numbers in zip code."
+        self.assertNot('zip', errorMsg)
+
 
 class TestLogin(FormTest):
-	"""Test user login form."""
+    """Test user login form."""
 
-	formType = LoginForm
+    formType = LoginForm
 
-	def test_new(self, baseLogin):
-		self.new(baseLogin)
-	
-	@pytest.mark.parametrize('key, errorMsg', [
-		('username', 'Username is required.'),
-		('password', 'Password is required.'),
-	])		
-	def test_missingRequired(self, baseLogin, key, errorMsg):
-		self.missingRequired(baseLogin, key, errorMsg)
+    def test_new(self, baseLogin):
+        self.new(baseLogin)
+
+    @pytest.mark.parametrize('key, errorMsg', [
+        ('username', 'Username is required.'),
+        ('password', 'Password is required.'),
+    ])		
+    def test_missingRequired(self, baseLogin, key, errorMsg):
+        self.missingRequired(baseLogin, key, errorMsg)
+
 
 class TestRegister(FormTest):
-	"""Tests for User Registration form."""
+    """Tests for User Registration form."""
 
-	formType = RegistrationForm
+    formType = RegistrationForm
 
-	def make_form(self, formDict):
-		"""Override FormTest make form to populate choices"""
-		super().make_form(formDict)
-		self.form.populate_choices()
+    def make_form(self, formDict):
+        """Override FormTest make form to populate choices"""
+        super().make_form(formDict)
+        self.form.populate_choices()
 
-	def test_new(self, baseUserNew):
-		self.new(baseUserNew)
-	
-	@pytest.mark.parametrize('key, errorMsg', [
-		('first_name', 'First name is required.'),
-		('last_name', 'Last name is required.'),
-		('email', 'Email address is required.'),
-		('username', 'Username is required.'),
-		('password', 'Password is required.'),
-		('confirmation', 'Password confirmation is required.')
-	])
-	def test_missingRequired(self, baseUserNew, key, errorMsg):
-		self.missingRequired(baseUserNew, key, errorMsg)
+    def test_new(self, baseUserNew):
+        self.new(baseUserNew)
 
-	def test_duplicateEmail(self, baseUserNew):
-		baseUserNew['email'] = "sarahsmith@yahoo.com"
-		errorMsg = 'Email address is already registered.'
-		self.make_form(baseUserNew)
-		self.assertNot('email', errorMsg)
-	
-	def test_duplicateUsername(self, baseUserNew):
-		baseUserNew['username'] = "sarahsmith"
-		errorMsg = 'Username is already registered.'
-		self.make_form(baseUserNew)
-		self.assertNot('username', errorMsg)
-	
-	def test_invalidEmail(self, baseUserNew):
-		baseUserNew['email'] = "invalidemailyahoo.com"
-		errorMsg = 'Invalid email address.'
-		self.make_form(baseUserNew)
-		self.assertNot('email', errorMsg)
+    @pytest.mark.parametrize('key, errorMsg', [
+        ('first_name', 'First name is required.'),
+        ('last_name', 'Last name is required.'),
+        ('email', 'Email address is required.'),
+        ('username', 'Username is required.'),
+        ('password', 'Password is required.'),
+        ('confirmation', 'Password confirmation is required.')
+    ])
+    def test_missingRequired(self, baseUserNew, key, errorMsg):
+        self.missingRequired(baseUserNew, key, errorMsg)
 
-	def test_passwordTooShort(self, baseUserNew):
-		baseUserNew['password'] = 'short'
-		errorMsg = 'Field must be between 7 and 15 characters long.'
-		self.make_form(baseUserNew)
-		self.assertNot('password', errorMsg)
+    def test_duplicateEmail(self, baseUserNew):
+        baseUserNew['email'] = "sarahsmith@yahoo.com"
+        errorMsg = 'Email address is already registered.'
+        self.make_form(baseUserNew)
+        self.assertNot('email', errorMsg)
 
-	def test_passwordTooLong(self, baseUserNew):
-		baseUserNew['password'] = 'nottooshortbutwaywaytoolong'
-		errorMsg = 'Field must be between 7 and 15 characters long.'
-		self.make_form(baseUserNew)
-		self.assertNot('password', errorMsg)
+    def test_duplicateUsername(self, baseUserNew):
+        baseUserNew['username'] = "sarahsmith"
+        errorMsg = 'Username is already registered.'
+        self.make_form(baseUserNew)
+        self.assertNot('username', errorMsg)
 
-	def test_invalidEmail(self, baseUserNew):
-		baseUserNew['email'] = "invalidemailyahoo.com"
-		errorMsg = 'Invalid email address.'
-		self.make_form(baseUserNew)
-		self.assertNot('email', errorMsg)
-	
-	def test_passwordConfirmationMismatch(self, baseUserNew):
-		baseUserNew['confirmation'] = "different"
-		errorMsg = 'Passwords must match.'
-		self.make_form(baseUserNew)
-		self.assertNot('confirmation', errorMsg)		
+    def test_invalidEmail(self, baseUserNew):
+        baseUserNew['email'] = "invalidemailyahoo.com"
+        errorMsg = 'Invalid email address.'
+        self.make_form(baseUserNew)
+        self.assertNot('email', errorMsg)
+
+    def test_passwordTooShort(self, baseUserNew):
+        baseUserNew['password'] = 'short'
+        errorMsg = 'Field must be between 7 and 15 characters long.'
+        self.make_form(baseUserNew)
+        self.assertNot('password', errorMsg)
+
+    def test_passwordTooLong(self, baseUserNew):
+        baseUserNew['password'] = 'nottooshortbutwaywaytoolong'
+        errorMsg = 'Field must be between 7 and 15 characters long.'
+        self.make_form(baseUserNew)
+        self.assertNot('password', errorMsg)
+
+    def test_passwordConfirmationMismatch(self, baseUserNew):
+        baseUserNew['confirmation'] = "different"
+        errorMsg = 'Passwords must match.'
+        self.make_form(baseUserNew)
+        self.assertNot('confirmation', errorMsg)
+
 
 @pytest.mark.usefixtures("activeClient")
 class TestPasswordUpdate(FormTest):
@@ -530,76 +528,91 @@ class TestUserUpdate(FormTest):
 		self.assertNot('email', errorMsg)		
 
 class TestReview(FormTest):
-	"""Test review form validation."""
+    """Test review form validation."""
 
-	formType = ReviewForm
+    formType = ReviewForm
 
-	def make_form(self, formDict):
-		super().make_form(formDict)
-		try:
-			biz = Provider.query.get(formDict['id'])
-			categories = biz.categories
-		except KeyError:
-			categories = Category.query.all()
-		catList = [(c.id, c.name) for c in categories]
-		self.form.category.choices = catList
+    def make_form(self, formDict):
+        super().make_form(formDict)
+        try:
+            biz = Provider.query.get(formDict['id'])
+            categories = biz.categories
+        except KeyError:
+            categories = Category.query.all()
+        catList = [(c.id, c.name) for c in categories]
+        self.form.category.choices = catList
 
-	def add_picture(self, formDict, filename, content_type, app):
-		path = os.path.join(app.config['MEDIA_FOLDER'], 'source', filename)
-		f = open(path, 'rb')
-		fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
-		formDict['picture'] = [fs]
+    def add_picture(self, formDict, filename, content_type, app):
+        path = os.path.join(app.config['MEDIA_FOLDER'], 'source', filename)
+        f = open(path, 'rb')
+        fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
+        formDict['picture'] = [fs]
 
-	def test_new(self, baseReview):
-		self.new(baseReview)
+    def test_new(self, baseReview):
+        self.new(baseReview)
 
-	@pytest.mark.parametrize('key, errorMsg', [
-		('name', 'Business name is required.'),
-		('id', "Business id is required. Do not remove from form submission."),
-		('category', 'Category is required.'),
-		('rating', 'Rating is required.'),
-		('cost', 'Cost is required.'),
-		('certify', 'Review unable to be submitted unless reviewer confirms agreement.')])
-	def test_missingRequired(self, baseReview, key, errorMsg):
-		self.missingRequired(baseReview, key, errorMsg)
+
+    def test_new_dollar_value(self, baseReview):
+        baseReview['price_paid'] = '$100.00'
+        self.new(baseReview)
+
+
+    @pytest.mark.parametrize('key, errorMsg', [
+        ('name', 'Business name is required.'),
+        ('id', "Business id is required. Do not remove from form submission."),
+        ('category', 'Category is required.'),
+        ('rating', 'Rating is required.'),
+        ('cost', 'Cost is required.'),
+        ('certify', 'Review unable to be submitted unless reviewer confirms agreement.')])
+    def test_missingRequired(self, baseReview, key, errorMsg):
+        self.missingRequired(baseReview, key, errorMsg)
+
+    def test_idNameMismatch(self, baseReview):
+        baseReview['id'] = 3
+        self.make_form(baseReview)
+        errorMsg = "Submitted name and id combination are invalid."
+        self.assertNot('name', errorMsg)
+
+    def test_invalidCategory(self, baseReview):
+        baseReview['category'] = 2
+        self.make_form(baseReview)
+        errorMsg = "Category not valid for business being reviewed."
+        self.assertNot('category', errorMsg)
+
+    def test_invalidRating(self, baseReview):
+        baseReview['rating'] = 7
+        self.make_form(baseReview)
+        errorMsg = "Not a valid choice"
+        self.assertNot('rating', errorMsg)
+
+    def test_invalidCost(self, baseReview):
+        baseReview['cost'] = 7
+        self.make_form(baseReview)
+        errorMsg = "Not a valid choice"
+        self.assertNot('cost', errorMsg)
+
+    def test_withPicture(self, baseReview, app):
+        file = "test.jpg"
+        self.add_picture(baseReview, file, 'image/jpeg', app)
+        self.make_form(baseReview)
+        assert self.form.validate()
+
+    def test_invalidPicture(self, baseReview, app):
+        file = "Week1.pdf"
+        self.add_picture(baseReview, file, 'application/pdf', app)
+        self.make_form(baseReview)
+        msg = "Please choose an image file."
+        self.assertNot('picture', msg)
+
+    def test_price_paid(self, baseReview):
+        baseReview['price_paid'] = '$7'
+        self.new(baseReview)
 	
-	def test_idNameMismatch(self, baseReview):
-		baseReview['id'] = 3
-		self.make_form(baseReview)
-		errorMsg = "Submitted name and id combination are invalid."
-		self.assertNot('name', errorMsg)
-	
-	def test_invalidCategory(self, baseReview):
-		baseReview['category'] = 2
-		self.make_form(baseReview)
-		errorMsg = "Category not valid for business being reviewed."
-		self.assertNot('category', errorMsg)
+    def test_price_paid_none(self, baseReview):
+        baseReview['price_paid'] = None
+        self.new(baseReview)	
 
-	def test_invalidRating(self, baseReview):
-		baseReview['rating'] = 7
-		self.make_form(baseReview)
-		errorMsg = "Not a valid choice"
-		self.assertNot('rating', errorMsg)
-	
-	def test_invalidCost(self, baseReview):
-		baseReview['cost'] = 7
-		self.make_form(baseReview)
-		errorMsg = "Not a valid choice"
-		self.assertNot('cost', errorMsg)
 
-	def test_withPicture(self, baseReview, app):
-		file = "test.jpg"
-		self.add_picture(baseReview, file, 'image/jpeg', app)
-		self.make_form(baseReview)
-		assert self.form.validate()
-
-	def test_invalidPicture(self, baseReview, app):
-		file = "Week1.pdf"
-		self.add_picture(baseReview, file, 'application/pdf', app)
-		self.make_form(baseReview)
-		msg = "Please choose an image file."
-		self.assertNot('picture', msg)
-	
 class TestReviewEdit(FormTest):
 
 	formType = ReviewEditForm
@@ -921,7 +934,7 @@ class TestProviderSuggestion(FormTest):
 			city="Charlotte",
 			state="1",
 			zip="28209",
-			is_coordinate_error="false",
+			coordinate_error="false",
 			other=""
 		)
 		self.make_form(test_case)
@@ -947,7 +960,7 @@ class TestProviderSuggestion(FormTest):
 			city="Charlotte",
 			state="1",
 			zip="28209",
-			is_coordinate_error="false",
+			coordinate_error="false",
 			other=""
 		)
 		self.make_form(test_case)
@@ -973,13 +986,40 @@ class TestProviderSuggestion(FormTest):
 			city=testProvider.address.city,	
 			state=testProvider.address.state_id,
 			zip=testProvider.address.zip,
-			is_coordinate_error="false",
+			coordinate_error="false",
 			other=""
 		)
 		self.make_form(test_case)
 		self.form.populate_choices()
 		check = self.form.validate()
 		assert not check
+
+
+	def test_address_updated_same_except_coordinate(self, testProvider):
+		test_case = dict(
+			id=testProvider.id,
+			name="Douthit Electrical",
+			is_not_active="false",
+			category_updated=True,
+			sector=1,
+			category=2,
+			contact_info_updated=True,
+			telephone="7044103875",
+			website="www.test.com",
+			email="test@testing.com",
+			address_updated=True,
+			line1=testProvider.address.line1,
+			line2=testProvider.address.line2,
+			city=testProvider.address.city,	
+			state=testProvider.address.state_id,
+			zip=testProvider.address.zip,
+			coordinate_error=True,
+			other=""
+		)
+		self.make_form(test_case)
+		self.form.populate_choices()
+		check = self.form.validate()
+		assert check
 
 	def test_category_updated_error(self, testProvider):
 		cat_ids = [cat.id for cat in testProvider.categories]

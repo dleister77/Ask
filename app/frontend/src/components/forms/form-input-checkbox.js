@@ -10,13 +10,13 @@ const FormInputCheckbox = {
     },
   },
   template: `
-  <div class="form-group">
-  <div class="form-check">
+  <div class="form-group form-check">
     <input
       type="checkbox"
       class="form-check-input"
       :class="error_class"
       :checked="value"
+      :name="name"
       value="true"
       :id="name"
       v-on:change="updateValue($event.target.checked)">
@@ -42,7 +42,6 @@ const FormInputCheckbox = {
         </template>
 
     <slot name="errors"></slot>
-  </div>
   </div>
   `,
 };

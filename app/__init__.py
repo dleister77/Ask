@@ -8,6 +8,8 @@ import config
 from app.extensions import csrf, db, login, mail, migrate, sess
 from app.models import User, Address, State, Category, Review, Provider, Group
 from app.utilities.jinja import date_today, date_filter, time_filter
+from app.utilities.admin import configure_admin
+
 
 def register_extensions(app):
     """Register extension with app."""
@@ -32,8 +34,8 @@ def register_blueprints(app):
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)
 
-    from app.admin import bp as admin_bp
-    app.register_blueprint(admin_bp)
+    from app.message import bp as message_bp
+    app.register_blueprint(message_bp)
 
 
 def register_shell(app):
@@ -100,6 +102,7 @@ def create_app(configClass=None):
     register_context_processors(app)
     register_jinja_filters(app)
     configure_logging(app)
+    configure_admin(app)
     register_shell(app)
     return app
 

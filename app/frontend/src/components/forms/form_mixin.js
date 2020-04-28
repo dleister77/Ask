@@ -4,7 +4,7 @@ import axios from 'axios';
 import VueSweetalert2 from 'vue-sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
-import { resetForm, setForm } from '../../scripts/forms';
+import { resetForm, setForm, makeForm } from '../../scripts/forms';
 
 Vue.use(Vuelidate);
 Vue.use(VueSweetalert2);
@@ -47,7 +47,7 @@ const FormMixin = {
   },
   methods: {
     populate_form() {
-      return new FormData(this.$refs.form_ref);
+      return new FormData(document.getElementById(this.form_id));
     },
     reset_form() {
       this.$v.$reset();

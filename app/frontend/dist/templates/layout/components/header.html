@@ -9,12 +9,15 @@
         <div class="collapse navbar-collapse" id="navbar">
             <ul class="navbar-nav ml-auto mt-2">
                 {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                        {{ Navlink('admin.index', 'Admin')}}
+                    {% endif %}
                     {{ Navlink('main.index', 'Search') }}
                     {{ Navlink('main.user', 'Profile', username=current_user.username)}}
                     {{ Navlink('relationship.network_friends', 'Friends')}}
                     {{ Navlink('relationship.network_groups', 'Groups')}}
 
-                    {% set msg_view = 'main.view_messages' %}
+                    {% set msg_view = 'message.view_messages' %}
 
                     <li class="nav-item {% if request.endpoint != msg_view %}
                     {% else %} active {% endif %}">
@@ -38,7 +41,7 @@
 
 <script>
 
-let unread_url = "{{ url_for('main.get_message_unread_count') }}";
+let unread_url = "{{ url_for('message.get_message_unread_count') }}";
 let initial_unread_count = {{ 0 if not current_user.is_authenticated else current_user.get_inbox_unread_count() }};
 
 </script>

@@ -8,6 +8,8 @@
         <!-- global css and js imports -->
         {% include "/layout/components/imports.html" %}
 
+        {% block page_imports %} {% endblock %}
+
         {% block title %}<title> Ask Your Peeps: {{title}} </title>{% endblock %}
 
     </head>
@@ -15,6 +17,7 @@
     <body>
 
         {% include "/layout/components/header.html" %}
+        {% block page_header %} {% endblock %}
 
         {% include "/layout/components/flash_message.html" %}
 

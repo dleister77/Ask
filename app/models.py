@@ -310,9 +310,12 @@ class Address(Model):
         distance = getDistance(origin, self.coordinates)
         return distance
 
-    def __repr__(self):
-        return f"<Address {self.line1}, {self.city}, {self.state}>"
 
+    def __repr__(self):
+        return f"<Address {self.line1}, {self.city}, {self.state.name}>"
+
+    def __str__(self):
+        return f"{self.line1}, {self.city}, {self.state.name} {self.zip}"
 
 class Address_Suggestion(Model):
     """Address update suggestion provided by users.
@@ -351,7 +354,7 @@ class Address_Suggestion(Model):
         unique=True
     )
     state_id = db.Column(db.Integer, db.ForeignKey("state.id"), nullable=False)
-    is_coordinate_error = db.Column(db.Boolean, index=True)
+    is_coordinate_error = db.Column(db.Boolean, default=False, index=True)
 
     def __repr__(self):
         return f"<Address Suggestion {self.line1}, {self.city}, {self.state}>"
@@ -478,6 +481,15 @@ class User(UserMixin, Model):
             self._email = email
         else:
             pass
+
+    @validates('role')
+    def validate_role(self, key, role):
+        if role not in ['individual', 'admin']:
+            raise ValueError('Invalid user role provided')
+        return role
+
+    def is_admin(self):
+        return self.role == 'admin'
 
     def get_inbox_unread_count(self):
         count = db.session.query(func.count(Message_User.id))\
@@ -677,6 +689,8 @@ class User(UserMixin, Model):
     def __repr__(self):
         return f"<User {self.username}>"
 
+    def __str__(self):
+        return f"{self.full_name} - {self.username}"
 
 class FriendRequest(Model):
     """Request for 1 user to become friends with another user.
@@ -1348,6 +1362,9 @@ class Provider(Model):
     def __repr__(self):
         return f"<Provider {self.name}>"
 
+    def __str__(self):
+        return f"{self.name}"
+
 
 class Provider_Suggestion(Model):
     """Suggestions from users to correct provider information.
@@ -1361,7 +1378,8 @@ class Provider_Suggestion(Model):
         telephone (str): 10 digit telephone number
         address (Address): address of business
         categories (list): list of categories that business serves
-        is_active (bool): status of suggestion
+        is_not_active (bool): whether or not business is closed, default=False
+        status (bool): status of suggestion
         other (str): additional suggestions or provided clarifications
 
     Relationship:
@@ -1383,17 +1401,40 @@ class Provider_Suggestion(Model):
         db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False
     )
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     name = db.Column(db.String(64), index=True)
     email = db.Column(db.String(120))
     telephone = db.Column(db.String(24))
     website = db.Column(db.String(120))
-    is_active = db.Column(db.Boolean, default=True, index=True)
+    is_not_active = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(10), default="open", index=True)
     other = db.Column(db.String(1000))
 
     address = db.relationship(
         "Address_Suggestion", backref="provider_suggestion", uselist=False,
         passive_deletes=True, cascade="all, delete-orphan"
     )
+
+    @validates('status')
+    def validate_status(self, key, status):
+        if status is None:
+            raise ValueError("Invalid status")
+        elif status.lower() not in ['open', 'closed']:
+            raise ValueError("Invalid status.  Must be open or closed.")
+        return status
+
+    @hybrid_property
+    def is_address_error(self):
+        return self.address is not None
+
+    @hybrid_property
+    def is_contact_error(self):
+        return self.email is not None or self.website is not None\
+            or self.telephone is not None
+    
+    @hybrid_property
+    def is_category_error(self):
+        return str(self.categories) != str(list())
 
     def __repr__(self):
         return f"<Provider Suggestion {self.provider.name}>"
@@ -1608,6 +1649,11 @@ class Review(Model):
         summary = q.getQuery().first()
         return summary
 
+    def __repr__(self):
+        return f"<Review: {self.user.full_name} --> {self.provider.name}>"
+
+    def __str__(self):
+        return f"Review: {self.user.full_name} --> {self.provider.name}"
 
 class Picture(Model):
     """Pictures that are contained in reviews.

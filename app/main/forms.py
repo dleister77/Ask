@@ -10,13 +10,14 @@ from wtforms import (StringField, BooleanField, SelectField,
                      FloatField, IntegerField)
 from wtforms.validators import (DataRequired, Email, AnyOf,
                                 ValidationError, Optional, NumberRange,
-                                Regexp, InputRequired, StopValidation, Length)
+                                Regexp, InputRequired, StopValidation)
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
 from app.models import (Address, Category, Provider, Sector, State, Review,
-                        Picture, User, Message_User)
-from app.utilities.forms import MultiCheckboxField, requiredIf
+                        Picture)
+from app.utilities.forms import MultiCheckboxField, requiredIf, validate_zip,\
+    dollar_filter, int_filter
 from app.utilities.helpers import url_check
 
 
@@ -75,14 +76,6 @@ def NotEqualTo(comparisonField):
         if field.data is True and compare_field.data is True:
             raise ValidationError(message)
     return _notEqualTo
-
-
-
-def validate_zip(form, field):
-    if len(field.data) != 5:
-        raise ValidationError('Please enter a 5 digit zip code.')
-    elif not field.data.isdigit():
-        raise ValidationError('Only include numbers in zip code.')
 
 
 def validate_website(form, field):
@@ -282,13 +275,10 @@ class ReviewForm(FlaskForm):
         validators=[
             InputRequired(message="Cost is required.")
         ])
-    price_paid = IntegerField(
+    price_paid = StringField(
         "Price Paid",
+        filters=(dollar_filter, int_filter),
         validators=[
-            NumberRange(
-                min=0,
-                message="Dollar cost must be greater "
-                        "than 0."),
             Optional()
         ])
     description = StringField(
@@ -350,6 +340,12 @@ class ReviewForm(FlaskForm):
                     "Category not valid for business being reviewed."
                 )
 
+    def validate_price_paid(self, price_paid):
+        if price_paid.data is not None and price_paid.data != '':
+            if int(price_paid.data) < 0:
+                raise ValidationError(
+                    "Dollar cost must be greater than 0."
+                )
 
 class ReviewEditForm(ReviewForm):
     id = HiddenField("Review ID",
@@ -664,17 +660,21 @@ class ProviderSuggestionForm(FlaskForm):
 
     Fields:
         name (str): name of business
+        is_not_active (bool): indicates that business is no longer active
         sector (select): macro sector that business belongs to
+        category_updated (bool): indicates change to category/sector
         category (select): categories (w/in sector) that business belongs to
+        contact_info_updated (bool): indicates change to contact information
         email (str): optional, email address of business
         website (str): optional, website of business
         telephone (str): telephone number of business
-        address-line1 (str): 1st address line
-        address-line2 (str): optional, 2nd address line
-        address-city (str): city name
-        address-state (select): address state, select is combination of id,name
-        address-zip (str): zip/postal code
-        address-coordinate_error (bool): whether map coordinates match actual
+        address_updated (bool): indicates change to address
+        line1 (str): 1st address line
+        line2 (str): optional, 2nd address line
+        city (str): city name
+        state (select): address state, select is combination of id,name
+        zip (str): zip/postal code
+        coordinate_error (bool): whether map coordinates match actual
         location
         other (str): additional comments
 
@@ -756,11 +756,13 @@ class ProviderSuggestionForm(FlaskForm):
     def validate_address_updated(self, address_updated):
         current = Provider.query.filter_by(id=self.id.data).first().address
         if address_updated:
-            if (self.line1.data == current.line1
+            check = (self.line1.data == current.line1
                and self.line2.data == current.line2
                and self.city.data == current.city
                and self.state.data == current.state_id
-               and self.zip.data == current.zip):
+               and self.zip.data == current.zip
+               and self.coordinate_error.data is False)
+            if check:
                 raise ValidationError(
                     "Address updated selected without any changes to address."
                 )
@@ -791,53 +793,3 @@ class ProviderSuggestionForm(FlaskForm):
         self.category.choices = Category.list(sector)
         self.state.choices = State.list()
         return self
-
-
-class UserMessageForm(FlaskForm):
-    """Form for users to send each other messages."""
-    recipient_id = IntegerField(
-        "to_id", id="msg_new_recipient_id",
-        render_kw={
-            "readonly": True, "hidden": True
-        },
-        validators=[InputRequired("Recipient ID is required.")]
-    )
-    message_user_id = IntegerField(
-        "message_user_id", id="message_user_id",
-        render_kw={
-            "readonly": True, "hidden": True
-        },
-        validators=[Optional(strip_whitespace=True)]
-    )
-    recipient = StringField(
-        "To", id="msg_new_recipient",
-        render_kw={
-            "readonly": True
-        },
-        validators=[InputRequired("Recipient is required.")]
-    )
-    subject = StringField("Subject", id="msg_new_subject")
-    body = TextAreaField(
-        "Message Body", render_kw=dict(rows=6), id="msg_new_body",
-        validators=[Length(min=0, max=1000)]
-    )
-    submit = SubmitField("Send", id="submit_msg")
-
-    def validate_recipient_id(self, recipient_id):
-        recipient = User.query.filter_by(id=recipient_id.data).first()
-        if recipient is None:
-            raise ValidationError(
-                f"User ({self.recipient.data}) does not exist."
-            )
-
-    def validate_message_user_id(self, message_user_id):
-        id = message_user_id.data
-        if id is None:
-            pass
-        else:
-            message = Message_User.query.get(id).message
-            if message is None or message.recipient.user_id != current_user.id:
-                raise ValidationError(
-                    "Not a valid message to reply to. Please refresh and try"
-                    " again."
-                )

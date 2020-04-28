@@ -13,7 +13,7 @@ import FormInputCheckbox from './forms/form-input-checkbox';
 import FormInputSelectMultiple from './forms/form-input-select-multiple';
 import { states } from '../../supporting/states';
 
-import { getCategoryList, getSectorList } from '../scripts/forms';
+import { getCategoryList, getSectorList, makeForm } from '../scripts/forms';
 import { isEmpty, telephone } from '../scripts/validators';
 
 
@@ -142,6 +142,10 @@ const FormSuggestion = {
       const c = await getCategoryList(sector);
       return c;
     },
+    // populate_form() {
+    //   const newForm = makeForm(this.form);
+    //   return newForm;
+    // },
   },
   async created() {
     this.options.sectors = await this.get_sector_list();
@@ -164,7 +168,6 @@ const FormSuggestion = {
             
             <form-input
               name="name"
-              :readonly="true"
               :required="true"
               :validator="$v.form.name"
               v-model="$v.form.name.$model"

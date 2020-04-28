@@ -1,4 +1,5 @@
 from collections import namedtuple
+import datetime
 from decimal import Decimal
 import os
 from pathlib import Path
@@ -990,11 +991,12 @@ class TestProviderSuggestion(object):
             line2="",
             city="Charlotte",
             state_id=1,
-            zip="28210"
+            zip="28210",
+            is_coordinate_error=False,
         )
         suggestion = Provider_Suggestion.create(
             provider_id=testProvider.id,
-            is_active=True,
+            is_not_active=True,
             user_id=current_user.id,
             name="Joe's Electric",
             email="new_email_address@yahoo.com",
@@ -1006,10 +1008,17 @@ class TestProviderSuggestion(object):
         assert suggestion.user == current_user
         assert suggestion.name == "Joe's Electric"
         assert suggestion.email == "new_email_address@yahoo.com"
-        assert suggestion.is_active is True
+        assert suggestion.is_contact_error is True
+        assert suggestion.is_not_active is True
+        assert suggestion.status == 'open'
+        assert suggestion.is_address_error is True
+        assert suggestion.is_category_error is True
+        assert suggestion.timestamp.date() == datetime.date.today()
         assert address.provider_suggestion_id == suggestion.id
         assert suggestion.address.line1 == "7708 Covey Chase Dr"
+        assert suggestion.address.is_coordinate_error is False
         assert suggestion.categories == [c]
+        assert Address_Suggestion.query.first() == suggestion.address
 
     def test_delete_cascade(self, testProvider):
         c = Category.query.get(3)
@@ -1022,7 +1031,7 @@ class TestProviderSuggestion(object):
         )
         Provider_Suggestion.create(
             provider_id=testProvider.id,
-            is_active=True,
+            is_not_active=True,
             user_id=current_user.id,
             name="Joe's Electric",
             email="new_email_address@yahoo.com",
@@ -1034,3 +1043,25 @@ class TestProviderSuggestion(object):
         testProvider.delete()
         suggestions = Provider_Suggestion.query.all()
         assert len(suggestions) == 0
+
+    def test_invalid_status(self, testProvider):
+        c = Category.query.get(3)
+        address = Address_Suggestion.create(
+            line1="7708 Covey Chase Dr",
+            line2="",
+            city="Charlotte",
+            state_id=1,
+            zip="28210",
+            is_coordinate_error=False,
+        )
+        with pytest.raises(ValueError):
+            Provider_Suggestion.create(
+                provider_id=testProvider.id,
+                is_not_active=True,
+                user_id=current_user.id,
+                name="Joe's Electric",
+                status="excellent",
+                email="new_email_address@yahoo.com",
+                address=address,
+                categories=[c]
+        )

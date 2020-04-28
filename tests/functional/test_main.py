@@ -1,14 +1,15 @@
 from datetime import date
+import json
 import os
 from pathlib import Path
-import re
+import pprint
 from shutil import rmtree
 
 from flask import url_for, json, current_app
 from flask_login import current_user
 
-from app.models import Category, Provider, Review, User, State, Message_User, Provider_Suggestion
-from .test_auth import login, logout
+from app.models import Category, Provider, Review, Provider_Suggestion,\
+    Address_Suggestion
 from tests.conftest import FunctionalTest
 
 
@@ -431,168 +432,6 @@ class TestProviderProfile(FunctionalTest):
         flash = b'Provider not found.  Please try a different search.'
         assert flash in response.data
 
-class TestMessageSend(FunctionalTest):
-
-    routeFunction = 'main.send_message'
-
-    def test_success_new(self, activeClient, testUser2):
-        self.form = {
-            "subject": "test subject",
-            "body": "This is a test message.",
-            "recipient_id": testUser2.id,
-            "recipient": testUser2.full_name
-        }
-        u2_inbox = testUser2.get_inbox_unread_count()
-        u1_sent = len(current_user.get_messages('sent'))
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        check = {"status":"success"}
-        output = json.loads(response.data.decode())
-        print(output)
-        assert check == output
-        assert len(current_user.get_messages('sent')) == u1_sent + 1
-        assert testUser2.get_inbox_unread_count() == u2_inbox + 1
-
-    def test_success_reply(self, activeClient, testUser2):
-        test_message_id = current_user.get_messages('inbox')[0].id
-        u2_inbox = testUser2.get_inbox_unread_count()
-        u1_sent = len(current_user.get_messages('sent'))
-        self.form = {
-            "message_user_id": test_message_id,
-            "subject": "test subject",
-            "body": "This is a test message.",
-            "recipient_id": testUser2.id,
-            "recipient": testUser2.full_name
-        }
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        check = {"status":"success"}
-        output = json.loads(response.data.decode())
-        assert check == output
-        assert len(current_user.get_messages('sent')) == u1_sent + 1
-        assert testUser2.get_inbox_unread_count() == u2_inbox + 1
-
-    def test_error_missing_recipient_id(self, activeClient, testUser2):
-        test_message_id = current_user.get_messages('inbox')[0].id
-        u2_inbox = testUser2.get_inbox_unread_count()
-        u1_sent = len(current_user.get_messages('sent'))
-        self.form = {
-            "message_user_id": test_message_id,
-            "subject": "test subject",
-            "body": "This is a test message.",
-            "recipient": testUser2.full_name
-        }
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        check = {"status":"failure", "errorMsg": "Recipient ID is required"}
-        for k,v in check.items():
-            assert k,v in response.json.items()
-
-        assert len(current_user.get_messages('sent')) == u1_sent
-        assert testUser2.get_inbox_unread_count() == u2_inbox
-
-class TestMessageFolder(FunctionalTest):
-
-    routeFunction = "main.view_messages"
-
-    def test_success_inbox(self, activeClient):
-        folder = "inbox"
-        response = self.getRequest(activeClient, folder=folder)
-        assert response.status_code == 200
-        msg = current_user.get_messages('inbox')[0]
-        test_message = {
-            "id": msg.id,
-            "timestamp": msg.message.timestamp,
-            "read": msg.read,
-            "sender_id": msg.message.sender.user_id,
-            "sender_full_name": msg.message.sender.full_name,
-            "sender_user_name": msg.message.sender.user.username,
-            "status": msg.tag,
-            "subject": msg.message.subject,
-            "body": msg.message.body 
-        }
-        assert json.dumps(test_message) in response.data.decode()
-
-class TestMessageMove(FunctionalTest):
-
-    routeFunction = "main.move_message"
-
-    def test_move_success(self, activeClient):
-        archive_count = len(current_user.get_messages('archive'))
-        assert archive_count == 0
-        inbox_count = len(current_user.get_messages('inbox'))
-        assert inbox_count == 2        
-        self.form = {"message_id": 2, "tag": "archive"}
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        flash = b"Message archived"
-        assert flash in response.data
-        archive_count = len(current_user.get_messages('archive'))
-        assert archive_count == 1
-        inbox_count = len(current_user.get_messages('inbox'))
-        assert inbox_count == 1
-
-    def test_move_multiple(self, activeClient):
-        archive_count = len(current_user.get_messages('archive'))
-        assert archive_count == 0
-        inbox_count = len(current_user.get_messages('inbox'))
-        assert inbox_count == 2        
-        self.form = {"message_id": "2,6", "tag": "archive"}
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        flash = b"Messages archived"
-        assert flash in response.data
-        archive_count = len(current_user.get_messages('archive'))
-        assert archive_count == 2
-        inbox_count = len(current_user.get_messages('inbox'))
-        assert inbox_count == 0
-
-    def test_move_invalid_status(self, activeClient):
-        self.form = {"message_id": 2, "tag": "invalid folder name"}
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        flash = b"Invalid request.  Please choose a valid folder."
-        assert flash in response.data
- 
-class TestMessageRead(FunctionalTest):
-
-    routeFunction = "main.message_update_read"
-
-    def test_success(self, activeClient):
-        test_case = current_user.get_messages('inbox')[0]
-        assert test_case.read == False
-        self.form = {"id": test_case.id}
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        assert "status", "success" in response.json.items()
-        assert test_case.read == True
-
-    def test_failure(self, activeClient, testUser2):
-        test_case = Message_User.query.filter_by(full_name="admin")[0]
-        assert test_case.read == False
-        self.form = {"id": test_case.id}
-        response = self.postRequest(activeClient)
-        assert response.status_code == 200
-        assert "status", "failure" in response.json.items()
-        assert test_case.read == False
-
-class TestMessageGetFriends(FunctionalTest):
-
-    routeFunction = "main.get_friends"
-
-    def test_success(self, activeClient):
-        test_case = "sa"
-        response = self.getRequest(activeClient, name=test_case)
-        assert response.status_code == 200
-        check = {"id": 1, "full_name": "Sarah Smith"}
-        for k,v in check.items():
-            assert k,v in response.json.items()
-
-    def test_failure(self, activeClient):
-        test_case = "Jim"
-        response = self.getRequest(activeClient, name=test_case)
-        assert response.status_code == 200
-        assert b'[]' in response.data
 
 class TestProviderSuggestion(FunctionalTest):
 
@@ -621,9 +460,11 @@ class TestProviderSuggestion(FunctionalTest):
             is_coordinate_error=False,
         )
         response = self.postRequest(activeClient)
-        assert response.status_code == 200
+        assert response.status_code == 200, f'Incorrect Status Code: expected 200, received {response.status_code}, {json.loads(response.data.decode())}'
         num_suggestions = len(Provider_Suggestion.query.all())
         assert num_suggestions == 1
+        num_addr_suggestion = len(Address_Suggestion.query.all())
+        assert num_addr_suggestion == 1
 
 
     def test_success_no_address(self, activeClient):

@@ -11,14 +11,14 @@
 
     let list = {{ messages_json | safe }};
     let links = {
-        view_inbox: '{{url_for("main.view_messages", folder="inbox")}}',
-        view_archive: '{{url_for("main.view_messages", folder="archive")}}',
-        view_trash: '{{url_for("main.view_messages", folder="trash")}}',
-        view_sent: '{{url_for("main.view_messages", folder="sent")}}',
-        send_message: '{{ url_for("main.send_message") }}',
-        move: '{{ url_for("main.move_message") }}',
-        updateMessageRead: '{{ url_for("main.message_update_read") }}',
-        autocomplete: '{{ url_for("main.get_friends") }}',
+        view_inbox: '{{url_for("message.view_messages", folder="inbox")}}',
+        view_archive: '{{url_for("message.view_messages", folder="archive")}}',
+        view_trash: '{{url_for("message.view_messages", folder="trash")}}',
+        view_sent: '{{url_for("message.view_messages", folder="sent")}}',
+        send_message: '{{ url_for("message.send_message") }}',
+        move: '{{ url_for("message.move_message") }}',
+        updateMessageRead: '{{ url_for("message.message_update_read") }}',
+        autocomplete: '{{ url_for("relationship.get_friends") }}',
     };
     let csrf = '{{ csrf_token() }}';
     let pagination_urls = {{ pagination_json | safe }}

@@ -90,14 +90,14 @@
 <script>
     let providerJson = JSON.parse({{ provider_json|safe|tojson }});
     let links = {
-        send_message: "{{ url_for('main.send_message') }}",
+        send_message: "{{ url_for('message.send_message') }}",
         
     };
     let csrf = "{{ csrf_token() }}"
 </script>
 
 
-    <script src="/static/js/providerProfile.91dead580fe6ddf56999.js"></script>
+    <script src="/static/js/providerProfile.8a962e2f1bc43d4ee60e.js"></script>
 
 
 {% endblock %}

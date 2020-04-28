@@ -1,3 +1,4 @@
+import re
 
 from wtforms import SelectMultipleField, widgets
 from wtforms.validators import ValidationError
@@ -57,3 +58,28 @@ def requiredIf(checkField, checkValue=True):
         elif field_to_check.data != checkValue:
             field.errors = []
     return _requiredIf
+
+
+def validate_zip(form, field):
+    zip_re = re.compile(r'^\s*[\d]{5}[ -]{0,3}[\d]{4}\s*$|^\s*[\d]{5}\s*$')
+    if zip_re.search(field.data) is None:
+        raise ValidationError('Please enter a 5 or 9 digit zip code.')
+
+
+def dollar_filter(data):
+    if data is None:
+        return data
+    else:
+        try:
+            dollar_re = re.compile(r'^[\s$]*(?P<num>[\d]+)')
+            num = dollar_re.search(data).group('num')
+            return num
+        except AttributeError:
+            raise ValidationError('Entered value must be an integer or $ value')
+
+
+def int_filter(data):
+    if data is None:
+        return data
+    else:
+        return int(data)
