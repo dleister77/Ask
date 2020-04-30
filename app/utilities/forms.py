@@ -67,7 +67,7 @@ def validate_zip(form, field):
 
 
 def dollar_filter(data):
-    if data is None:
+    if data is None or type(data) == int:
         return data
     else:
         try:

@@ -115,7 +115,7 @@ class TestReview(FunctionalTest):
             return super().postRequest(client, **kwargs)
 
     def test_postNew(self, activeClient, testUser, baseReview):
-        #add review with required information
+        # add review with required information
         testUser.emailVerified = True
         self.form = baseReview
         response = self.postRequest(activeClient)

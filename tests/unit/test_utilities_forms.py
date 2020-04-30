@@ -34,9 +34,9 @@ class TestDollarFilter():
 
     @pytest.mark.parametrize(
         'data',
-        ['290', '$290', '$290.00', ' $290 ']
+        ['290', '$290', '$290.00', ' $290 ', 290]
     )
     def test_values(self, data):
         test_case = data
         check = dollar_filter(test_case)
-        assert check == '290'
+        assert str(check) == '290'
