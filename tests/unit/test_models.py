@@ -851,7 +851,12 @@ class TestPicture(object):
                 filename
                 )
             )
-            assert path.is_file()
+            check_path = Path(os.path.join(
+                current_app.config['MEDIA_FOLDER'], str(current_user.id),
+                f'{current_user.username}_1.jpg'
+                )
+            )
+            assert check_path.is_file()
         finally:
             path = os.path.join(
                 current_app.config['MEDIA_FOLDER'], str(current_user.id)
@@ -859,7 +864,9 @@ class TestPicture(object):
             rmtree(path)
 
     def test_deletePictures(self, activeClient, testPicture):
-        testform = form(None, deletePictures(['1']))
+        name = testPicture.name
+        id = Picture.query.filter_by(name=name).first().id
+        testform = form(None, deletePictures([id]))
         assert testPicture.is_file()
         Picture.deletePictures(testform)
         assert not testPicture.is_file()

@@ -2,6 +2,7 @@ from collections import namedtuple
 import copy
 from datetime import datetime, date
 import os
+import pathlib
 import re
 
 from flask import current_app, render_template, session
@@ -1696,13 +1697,18 @@ class Picture(Model):
                                 str(current_user.id))
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
+            num_pics = len(os.listdir(path))
             for picture in form.picture.data:
-                filename = secure_filename(picture.filename)
+                file_ext = pathlib.Path(picture.filename).suffix
+                filename = secure_filename(
+                    f'{current_user.username}_{num_pics + 1}{file_ext}'
+                )
                 filename = name_check(path, filename)
                 file_location = os.path.join(path, filename)
                 thumbnail_from_buffer(picture, (400, 400), filename, path)
                 pictures.append(Picture(path=file_location,
                                         name=filename))
+                num_pics += 1
         return pictures
 
     @staticmethod
@@ -1720,12 +1726,16 @@ class Picture(Model):
             picture = Picture.query.get(picId)
             try:
                 os.remove(picture.path)
+                picture.delete()
             except FileNotFoundError:
                 path = os.path.join(current_app.instance_path,
                                     current_app.config['MEDIA_FOLDER'],
                                     str(current_user.id))
-                os.remove(os.path.join(path, picture.name))
-            picture.delete()
+                try:
+                    os.remove(os.path.join(path, picture.name))
+                    picture.delete()
+                except FileNotFoundError:
+                    raise FileNotFoundError("Unable to delete picture. Please try again later")
 
 
 class Group(Model):

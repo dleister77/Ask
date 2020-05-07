@@ -2,14 +2,13 @@ from datetime import date
 import json
 import os
 from pathlib import Path
-import pprint
 from shutil import rmtree
 
-from flask import url_for, json, current_app
+from flask import url_for, current_app
 from flask_login import current_user
 
 from app.models import Category, Provider, Review, Provider_Suggestion,\
-    Address_Suggestion
+    Address_Suggestion, Picture
 from tests.conftest import FunctionalTest
 
 
@@ -34,6 +33,7 @@ def addPicsToForm(client, form, app):
 
     return client.post(url_for('main.review', _external=False), data=form,
                        follow_redirects=True, buffered=True, content_type='multipart/form-data')
+
 
 class TestUser(FunctionalTest):
 
@@ -148,10 +148,24 @@ class TestReview(FunctionalTest):
         try:
             assert b'review added' in response.data
             assert response.status_code == 200
-            path = Path(os.path.join(app.config['MEDIA_FOLDER'], str(testUser.id), 'test.jpg'))
-            path2 = Path(os.path.join(app.config['MEDIA_FOLDER'], str(testUser.id), 'nyc.jpg'))
-            assert path.is_file()
+            path1 = Path(
+                os.path.join(
+                    app.config['MEDIA_FOLDER'], str(testUser.id),
+                    f'{testUser.username}_1.jpg'
+                )
+            )
+            path2 = Path(
+                os.path.join(
+                    app.config['MEDIA_FOLDER'], str(testUser.id),
+                    f'{testUser.username}_2.jpg'
+                )
+            )
+            assert path1.is_file()
             assert path2.is_file()
+            picture1 = Picture.query.filter_by(path=str(path1)).first()
+            assert picture1 is not None
+            picture2 = Picture.query.filter_by(path=str(path2)).first()
+            assert picture2 is not None
             review = Review.query.filter_by(provider_id=baseReview['id']).all()
             review = review[0]
             assert review.service_date == date(2019, 4, 15)
@@ -184,8 +198,8 @@ class TestReview(FunctionalTest):
         assert response.data.decode().count(var) == 21
         var2 = 'readonly'
         assert response.data.decode().count(var2) == 2
-    
-    
+
+  
     def test_getNoArgs(self, activeClient):
         response = self.getRequest(activeClient)
         flash = b'Invalid request. Please search for provider first and then add review.'
@@ -196,6 +210,18 @@ class TestReview(FunctionalTest):
 class TestReviewEdit(FunctionalTest):
 
     routeFunction = 'main.reviewEdit'
+
+    def cleanup(self):
+        path = Path(
+            os.path.join(
+                current_app.config['MEDIA_FOLDER'],
+                str(current_user.id)
+            )
+        )
+        try:
+            rmtree(path)
+        except FileNotFoundError:
+            raise
 
     def postRequest(self, client, app=None, **kwargs):
         """Add review and return response."""
@@ -231,23 +257,67 @@ class TestReviewEdit(FunctionalTest):
         img = f'<img src="{url}" alt="" class="thumbnail">'  
         assert img.encode() in response.data
     
-    def test_PostValid(self, activeClient, baseReviewEdit, app, testPicture):
+    def test_PostValidDeletePicture(self, activeClient, baseReviewEdit, app, testPicture):
         current_user.email_verified = True
         assert testPicture.is_file()
-        baseReviewEdit['picture'] = ['nyc.jpg']
-        baseReviewEdit['deletePictures'] = ['1']
+        picture_name = testPicture.name
+        id = Picture.query.filter_by(name=picture_name).first().id
+        baseReviewEdit['deletePictures'] = [id]
         self.form = baseReviewEdit
         response = self.postRequest(activeClient, app=app, id=self.form['id'])
         assert response.status_code == 200
-        newPicture = Path(os.path.join(current_app.config['MEDIA_FOLDER'], str(current_user.id), baseReviewEdit['picture'][0][1]))
         assert not testPicture.is_file()
-        assert newPicture.is_file()
+        self.cleanup()
+
+    def test_PostValidAddPicture(self, activeClient, baseReviewEdit, app):
+        current_user.email_verified = True
+        baseReviewEdit.update({"picture": ["nyc.jpg"]})
+        self.form = baseReviewEdit
+        response = self.postRequest(activeClient, app=app, id=self.form['id'])
+        assert response.status_code == 200
+        new_picture_path = Path(
+            os.path.join(
+                current_app.config['MEDIA_FOLDER'], str(current_user.id),
+                f'{current_user.username}_1.jpg'
+            )
+        )
+        assert new_picture_path.is_file()
+        review = Review.query.get(self.form.get('id'))
+        assert review is not None
+        assert len(review.pictures) == 2
+        self.cleanup()
+
+
+    def test_PostValidAddDeletePicture(self, activeClient, testPicture, baseReviewEdit, app):
+        current_user.email_verified = True
+        baseReviewEdit.update({"picture": ["nyc.jpg"]})
+        picture_name = testPicture.name
+        id = Picture.query.filter_by(name=picture_name).first().id
+        baseReviewEdit['deletePictures'] = [id]
+        self.form = baseReviewEdit
+        response = self.postRequest(activeClient, app=app, id=self.form['id'])
+        assert response.status_code == 200
+        new_picture_path = Path(
+            os.path.join(
+                current_app.config['MEDIA_FOLDER'], str(current_user.id),
+                f'{current_user.username}_1.jpg'
+            )
+        )
+        assert new_picture_path.is_file()
+        review = Review.query.get(self.form.get('id'))
+        assert review is not None
+        assert len(review.pictures) == 2
+        num_pics = len(os.listdir(new_picture_path.parent))
+        assert num_pics == 1
+        self.cleanup()
 
     def test_postInvalid(self, activeClient, baseReviewEdit, app, testPicture):
         current_user.email_verified = True
         baseReviewEdit.pop('rating')
         self.form = baseReviewEdit
-        response = self.postRequest(activeClient, app=app, id=self.form.get('id'))
+        response = self.postRequest(
+            activeClient, app=app, id=self.form.get('id')
+        )
         assert response.status_code == 422
         flash = 'Please correct form errors.'
         assert flash.encode() in response.data

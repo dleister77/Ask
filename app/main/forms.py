@@ -8,16 +8,17 @@ from wtforms import (StringField, BooleanField, SelectField,
                      SubmitField, FormField, TextAreaField, RadioField,
                      SelectMultipleField, MultipleFileField, HiddenField,
                      FloatField, IntegerField)
+from wtforms.fields.html5 import TelField, URLField, EmailField
 from wtforms.validators import (DataRequired, Email, AnyOf,
                                 ValidationError, Optional, NumberRange,
-                                Regexp, InputRequired, StopValidation)
+                                Regexp, InputRequired, StopValidation, URL)
 from wtforms.ext.dateutil.fields import DateField
 
 from app.auth.forms import AddressField
 from app.models import (Address, Category, Provider, Sector, State, Review,
                         Picture)
 from app.utilities.forms import MultiCheckboxField, requiredIf, validate_zip,\
-    dollar_filter, int_filter
+    dollar_filter, int_filter, validate_date, validate_telephone
 from app.utilities.helpers import url_check
 
 
@@ -285,7 +286,7 @@ class ReviewForm(FlaskForm):
         "Service Description", validators=[Optional()]
     )
     service_date = DateField(
-        "Service Date", validators=[Optional()]
+        "Service Date", validators=[validate_date, Optional()]
     )
     comments = TextAreaField(
         "Comments",
@@ -342,7 +343,8 @@ class ReviewForm(FlaskForm):
 
     def validate_price_paid(self, price_paid):
         if price_paid.data is not None and price_paid.data != '':
-            if int(price_paid.data) < 0:
+            price_paid_num = int(price_paid.data)
+            if price_paid_num < 0:
                 raise ValidationError(
                     "Dollar cost must be greater than 0."
                 )
@@ -382,7 +384,7 @@ class ReviewEditForm(ReviewForm):
             pass
         else:
             review = Review.query.get(self.id.data)
-            if review is not None:
+            if review is not None and deletePictures.data is not None:
                 for picID in deletePictures.data:
                     picture = Picture.query.get(picID)
                     if picture not in review.pictures:
@@ -461,21 +463,29 @@ class ProviderAddForm(FlaskForm):
                                    coerce=int,
                                    id="category")
     address = FormField(ProviderAddress)
-    email = StringField("Email",
-                        validators=[
-                            Email(),
-                            unique_check(Provider, Provider.email),
-                            Optional()
-                        ])
-    website = StringField("Website")
-    telephone = StringField("Telephone",
-                            validators=[
-                                InputRequired(
-                                    message="Telephone number is required."),
-                                Regexp(
-                                    "[(]?[0-9]{3}[)-]{0,2}\s*[0-9]{3}[-]?[0-9]{4}"),
-                                unique_check(Provider, Provider.telephone)
-                            ])
+    email = EmailField(
+        "Email",
+        validators=[
+            Email(),
+            unique_check(Provider, Provider.email),
+            Optional()
+        ]
+    )
+    website = StringField(
+        "Website",
+        validators=[
+            Optional()
+        ]
+    )
+    telephone = TelField(
+        "Telephone",
+        validators=[
+            InputRequired(
+                message="Telephone number is required."),
+            validate_telephone,
+            unique_check(Provider, Provider.telephone)
+        ]
+    )
     submit = SubmitField("Submit", id="provider_submit")
 
     def validate_name(self, name):
@@ -501,10 +511,11 @@ class ProviderAddForm(FlaskForm):
         if website.data != "" and not url_check(website.data):
             raise ValidationError("Invalid website url")
 
-    def populate_choices(self, sector=1):
+    def populate_choices(self):
         """Populate choices for sector and category drop downs."""
         self.sector.choices = Sector.list()
-        self.category.choices = Category.list(sector)
+        cat_sector = 1 if self.sector.data is None else self.sector.data
+        self.category.choices = Category.list(cat_sector)
         self.address.state.choices = State.list()
         return self
 

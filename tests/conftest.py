@@ -405,17 +405,22 @@ def testPicture(activeClient):
     f = open(p, 'rb')
     fs = FileStorage(stream=f, filename=filename, content_type='image/jpeg')
     testform = form(picture([fs]), None)
-    Picture.savePictures(testform)
+    pic = Picture.savePictures(testform)[0]
+    pic.review_id = 1
+    db.session.add(pic)
+    db.session.commit()
     path = Path(
         os.path.join(
-            current_app.config['MEDIA_FOLDER'], str(current_user.id), filename
+            current_app.config['MEDIA_FOLDER'], str(current_user.id),
+            f'{current_user.username}_1.jpg'
         )
     )
     yield path
     try:
         rmtree(path.parent)
-    except FileNotFoundError:
-        raise
+    except FileNotFoundError as e:
+        print(e)
+        pass
 
 
 @pytest.fixture()
@@ -583,7 +588,7 @@ def baseReviewEdit(test_db):
         "description": str(testReview.description),
         "service_date": str(testReview.service_date),
         "comments": str(testReview.comments),
-        "deletePictures": ["1"],
+        "deletePictures": [],
         "certify": "True",
         "picture": ""
     }

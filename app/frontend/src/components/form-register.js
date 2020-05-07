@@ -15,6 +15,7 @@ import FormMixin from './forms/form_mixin';
 import ErrorMessage from './forms/error-message';
 import FormInput from './forms/form-input';
 import FormInputSelect from './forms/form-input-select';
+import placesAutocomplete from './mixins/placesAutocomplete';
 import { states } from '../../supporting/states';
 
 Vue.use(VueSweetalert2);
@@ -25,7 +26,7 @@ const FormRegister = {
     'form-input': FormInput,
     'form-input-select': FormInputSelect,
   },
-  mixins: [FormMixin],
+  mixins: [FormMixin, placesAutocomplete],
   computed: {},
   data() {
     return {

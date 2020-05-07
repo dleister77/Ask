@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from wtforms import SelectMultipleField, widgets
@@ -66,20 +67,36 @@ def validate_zip(form, field):
         raise ValidationError('Please enter a 5 or 9 digit zip code.')
 
 
+def validate_date(form, field):
+    date = field.data
+    if date is not None and date > datetime.date.today():
+        raise ValidationError('Date entered is in the future.  Please enter a valid date')
+
+
+def validate_telephone(form, field):
+    tel_re = re.compile(r"[ ]*[(]?[0-9]{3}[)\- ]{0,2}\s*[0-9]{3}[\- ]?[0-9]{4}[ ]*$")
+    tel_num = tel_re.match(field.data)
+    if tel_num is None:
+        raise ValidationError("Please submit telephone number in '(###)###-####' format.")
+
+
 def dollar_filter(data):
-    if data is None or type(data) == int:
+    msg = 'Entered value must be an integer or $ value'
+    if data is None or data == '' or type(data) == int:
         return data
     else:
-        try:
-            dollar_re = re.compile(r'^[\s$]*(?P<num>[\d]+)')
-            num = dollar_re.search(data).group('num')
-            return num
-        except AttributeError:
-            raise ValidationError('Entered value must be an integer or $ value')
+        data = data.strip()
+        dollar_re = re.compile(r'\$? ?[\d,]*$')
+        check = dollar_re.match(data).group()
+        if check is None:
+            raise ValidationError(msg)
+        else:
+            val = re.sub(r'\$ ?', '', data)
+            return val
 
 
 def int_filter(data):
-    if data is None:
-        return data
+    if data is None or data == '':
+        return None
     else:
         return int(data)

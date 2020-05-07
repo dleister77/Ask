@@ -13,27 +13,27 @@
             {{field_render(form.category, **{'v-model':'form.category'})}}
             {{field_render(form.email, **{'v-model':'form.email'})}}
             {{field_render(form.website, **{'v-model':'form.website'})}}
-            {{field_render(form.telephone, **{'v-model':'form.telephone'})}}
+            {{field_render(form.telephone, **{'v-model':'form.telephone', 'v-mask': "'(###)-###-####'"})}}
             <div class="form-group row mx-2">
                 <div class="col">
-                {{form.address.unknown(class_="form-check-input", **{'v-model':"show.full_address"})}}
+                {{form.address.unknown(class_="form-check-input", **{'v-model':"form.address.unknown"})}}
                 {{form.address.unknown.label(class_="form-check-label")}}
                 </div>
             </div>
             <p
-                v-if="show.full_address"
+                v-if="form.address.unknown"
                 class="form-toggle-alert pl-1" id="toggle_message">
                 Please enter city and state.</p>
-            <keep-alive v-if="!show.full_address">
-                {{ field_render(form.address.line1, **{'v-model':'form.line1'}) }}
+            <keep-alive v-if="!form.address.unknown">
+                {{ field_render(form.address.line1, **{'v-model':'form.address.line1'}) }}
             </keep-alive>
-            <keep-alive v-if="!show.full_address">
-                {{ field_render(form.address.line2, **{'v-model':'form.line2'}) }}
+            <keep-alive v-if="!form.address.unknown">
+                {{ field_render(form.address.line2, **{'v-model':'form.address.line2'}) }}
             </keep-alive>
-            {{field_render(form.address.city, **{'v-model':'form.city'})}}
-            {{field_render(form.address.state, **{'v-model':'form.state'})}}
-            <keep-alive v-if="!show.full_address">
-                {{field_render(form.address.zip, **{'v-model':'form.zip'})}}
+            {{field_render(form.address.city, **{'v-model':'form.address.city'})}}
+            {{field_render(form.address.state, **{'v-model':'form.address.state'})}}
+            <keep-alive v-if="!form.address.unknown">
+                {{field_render(form.address.zip, **{'v-model':'form.address.zip'})}}
             </keep-alive>
             {{field_render(form.submit)}}
         </form>
@@ -47,6 +47,8 @@
     let links = {
         categoryList: "{{ url_for('main.category_list') }}",
     };
+    let form_dict = '{{ form.data|tojson }}'
+    let form_server = JSON.parse(form_dict)
 
 </script>
 

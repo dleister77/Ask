@@ -13,7 +13,7 @@
         {{field_render(form.rating)}}
         {{field_render(form.cost)}}
         {{field_render(form.description)}}
-        {{field_render(form.price_paid)}}
+        {{field_render(form.price_paid, **{'v-model.lazy':'form.price_paid', 'v-money': "show_money ? money: null"})}}
         {{field_render(form.service_date)}}
         {{field_render(form.comments)}}
         {{field_render(form.picture)}}
@@ -26,7 +26,7 @@
 {% block jsScripts %}
 
 
-    <script src="/static/js/review.46a70a479bc1e8eeed4f.js"></script>
+    <script src="/static/js/review.f43b66ca5a513b1e916a.js"></script>
 
 
 {% endblock %}

@@ -26,6 +26,7 @@ const searchPage = new Vue({
   components: {
     'map-view': mapView,
   },
+  mixins: [DeviceDetectionMixin, TypeaheadMixin, ModalFormSuggestionMixin],
   computed: {
     showManualLocation() {
       return this.form.location === 'manual';
@@ -87,10 +88,14 @@ const searchPage = new Vue({
       this.activeBusiness = b;
     },
   },
-  mixins: [DeviceDetectionMixin, TypeaheadMixin, ModalFormSuggestionMixin],
+  mounted() {
+    if (this.form.sector === 0 && this.isMobile) {
+      this.form.location = 'gps';
+    }
+  },
   watch: {
     'form.location': function (locationSource) {
-      if (locationSource === "gps") {
+      if (locationSource === 'gps') {
         getCurrentLocation()
           .then((position) => {
             this.form.gpsLat = position.latitude;

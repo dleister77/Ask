@@ -672,7 +672,7 @@ class TestProviderAdd(FormTest):
 	
 	def make_form(self, formDict):
 		super().make_form(formDict)
-		self.form.populate_choices(self.formDict.get('sector'))
+		self.form.populate_choices()
 
 	def test_new(self, baseProviderNew):
 		self.new(baseProviderNew)

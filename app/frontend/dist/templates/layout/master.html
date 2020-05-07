@@ -19,10 +19,16 @@
         {% include "/layout/components/header.html" %}
         {% block page_header %} {% endblock %}
 
-        {% include "/layout/components/flash_message.html" %}
-
-        <main class="container-fluid">
         
+        <main class="container-fluid">
+            <br>
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-10 col-lg-9 col-xl-8">
+                    {% include "/layout/components/flash_message.html" %}
+                </div>
+            </div>
+
+            
             {% block main %} 
             <!-- content block -->
             {% endblock %}

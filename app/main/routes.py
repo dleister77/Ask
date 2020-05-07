@@ -5,6 +5,7 @@ from flask import flash, redirect, render_template, request, url_for, jsonify,\
                   send_from_directory, current_app, session, json
 from flask_login import current_user, login_required
 import simplejson
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.main.forms import ReviewForm, ProviderAddForm, ProviderSearchForm,\
                            ProviderFilterForm, ReviewEditForm,\
@@ -118,10 +119,8 @@ def provider(name, id):
 def provider_add():
     """Adds provider to db."""
     form = ProviderAddForm()
-    if request.method == 'POST':
-        form.populate_choices(form.sector.data)
-    else:
-        form.populate_choices()
+    form.populate_choices()
+    form_dict = form.data
     if form.validate_on_submit():
         address = Address(unknown=form.address.unknown.data,
                           line1=form.address.line1.data,
@@ -137,14 +136,16 @@ def provider_add():
         address.get_coordinates()
         flash(provider.name + " added.")
         return redirect(url_for("main.index"))
-    elif request.method == "POST":
+    elif request.method == "POST" and not form.validate():
         flash("Failed to add provider")
         return render_template("provideradd.html", title="Add Provider",
-                               form=form), 422
+                               form=form, form_dict=form_dict), 422
     if not current_user.email_verified:
         disableForm(form)
         flash("Form disabled. Please verify email to unlock.")
-    return render_template("provideradd.html", title="Add Provider", form=form)
+    return render_template(
+        "provideradd.html", title="Add Provider", form=form,
+        form_dict=form_dict)
 
 
 @bp.route('/provider/list/dropdown', methods=['GET'])
@@ -257,18 +258,30 @@ def reviewEdit(id):
         form.populate_choices(review)
         if form.validate_on_submit():
             if form.deletePictures.data is not None:
-                Picture.deletePictures(form)
-            review.update(
-                category_id=form.category.data,
-                rating=form.rating.data,
-                cost=form.cost.data,
-                price_paid=form.price_paid.data,
-                description=form.description.data,
-                service_date=form.service_date.data,
-                comments=form.comments.data,
-                pictures=Picture.savePictures(form, review.pictures)
-            )
-            flash("Review updated.")
+                try:
+                    Picture.deletePictures(form)
+                except FileNotFoundError as e:
+                    flash(str(e))
+            if form.picture.data:
+                new_pictures = Picture.savePictures(form, review.pictures)
+            try:
+                review.update(
+                    category_id=form.category.data,
+                    rating=form.rating.data,
+                    cost=form.cost.data,
+                    price_paid=form.price_paid.data,
+                    description=form.description.data,
+                    service_date=form.service_date.data,
+                    comments=form.comments.data,
+                    pictures=new_pictures
+                )
+                flash("Review updated.")
+            except SQLAlchemyError as e:
+                flash(str(e))
+                return render_template(
+                    "review_edit.html", title="Review - Edit", form=form
+                ), 422
+
             try:
                 url = session['referrer']
                 session.pop('referrer')
