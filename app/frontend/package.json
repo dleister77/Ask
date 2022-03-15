@@ -43,7 +43,7 @@
     "bootstrap-vue": "^2.11.0",
     "clean-webpack-plugin": "^3.0.0",
     "html-webpack-plugin": "^3.2.0",
-    "lodash-es": "^4.17.15",
+    "lodash-es": "^4.17.21",
     "places.js": "^1.18.2",
     "sweetalert2": "^9.10.12",
     "v-mask": "^2.1.0",
