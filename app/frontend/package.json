@@ -30,7 +30,7 @@
     "esm": "^3.2.25",
     "ignore-styles": "^5.0.1",
     "jquery": "^3.4.1",
-    "jsdom": "^16.1.0",
+    "jsdom": "^16.5.0",
     "jsdom-global": "^3.0.2",
     "mocha": "^7.0.1",
     "popper.js": "^1.16.1",
